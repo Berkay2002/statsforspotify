@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     });
 
     if (error) {
-      return NextResponse.redirect(`${origin}/login?error=${error.message}`);
+      return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
     }
 
     if (data.url) {
@@ -46,6 +46,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Return to login with error
-  return NextResponse.redirect(`${origin}/login?error=Could not authenticate`);
+  // Return to home with error
+  return NextResponse.redirect(`${origin}/?error=${encodeURIComponent("Could not authenticate")}`);
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
 import { Music, BarChart3, Clock, TrendingUp } from "lucide-react";
@@ -67,6 +68,10 @@ export default function HomePage() {
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>© {new Date().getFullYear()} Stats for Spotify. Not affiliated with Spotify AB.</p>
+          <div className="mt-2 flex justify-center gap-4">
+            <Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-foreground">Terms of Service</Link>
+          </div>
         </div>
       </footer>
     </div>
