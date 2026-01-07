@@ -1,0 +1,47 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function TracksLoading() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-5 w-64" />
+        </div>
+        <Skeleton className="h-8 w-32" />
+      </div>
+
+      {/* Tabs skeleton */}
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        {/* List of tracks */}
+        <div className="space-y-2">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div key={i} className="bg-transparent rounded-md">
+              <div className="p-3 px-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 flex flex-col items-center justify-center flex-shrink-0">
+                    <Skeleton className="h-4 w-6 mb-0.5" />
+                    <Skeleton className="h-7 w-7" />
+                  </div>
+                  <Skeleton className="h-16 w-16 rounded-[4px] flex-shrink-0" />
+                  <div className="flex-1 min-w-0 overflow-hidden space-y-1.5">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-[14px] w-72 max-w-[300px] sm:max-w-[400px] md:max-w-[500px]" />
+                  </div>
+                  <Skeleton className="h-[14px] w-10 flex-shrink-0 hidden sm:block" />
+                  <Skeleton className="h-5 w-5 flex-shrink-0 mr-2" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

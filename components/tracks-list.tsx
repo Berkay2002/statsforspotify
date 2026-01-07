@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,8 +20,11 @@ interface Track {
 }
 
 interface TracksListProps {
-  tracks: Track[];
-  timeRange: TimeRange;
+  tracksByTimeRange: {
+    short_term: Track[];
+    medium_term: Track[];
+    long_term: Track[];
+  };
 }
 
 function formatDuration(ms: number): string {
@@ -28,26 +33,29 @@ function formatDuration(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function TracksList({ tracks, timeRange }: TracksListProps) {
+export function TracksList({ tracksByTimeRange }: TracksListProps) {
+  const [timeRange, setTimeRange] = useState<TimeRange>("short_term");
+  const tracks = tracksByTimeRange[timeRange];
+
   return (
     <SparklineLoader itemIds={tracks.map((t) => t.id)} type="track">
       {(sparklines, loading) => (
-        <Tabs defaultValue={timeRange} className="w-full">
+        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
           <TabsList>
-            <TabsTrigger value="short_term" asChild>
-              <Link href="?time_range=short_term">Last 4 Weeks</Link>
+            <TabsTrigger value="short_term">
+              Last 4 Weeks
             </TabsTrigger>
-            <TabsTrigger value="medium_term" asChild>
-              <Link href="?time_range=medium_term">Last 6 Months</Link>
+            <TabsTrigger value="medium_term">
+              Last 6 Months
             </TabsTrigger>
-            <TabsTrigger value="long_term" asChild>
-              <Link href="?time_range=long_term">All Time</Link>
+            <TabsTrigger value="long_term">
+              All Time
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value={timeRange} className="mt-6">
             <div className="space-y-2">
-              {tracks.map((track) => (
+              {tracks.map((track, index) => (
                 <div key={track.id} className="bg-transparent transition-colors hover:bg-muted/30 rounded-md">
                   <div className="p-3 px-0">
                     <div className="flex items-center gap-3">
@@ -65,6 +73,10 @@ export function TracksList({ tracks, timeRange }: TracksListProps) {
                             width={64}
                             height={64}
                             className="rounded-[4px] object-cover flex-shrink-0"
+                            loading={index < 10 ? "eager" : "lazy"}
+                            priority={index < 5}
+                            placeholder="blur"
+                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMjcyNzI3Ii8+PC9zdmc+"
                           />
                         ) : (
                           <div className="h-16 w-16 rounded-[4px] bg-muted flex-shrink-0" />

@@ -1,17 +1,16 @@
 import { getTopArtists } from "@/lib/spotify/api";
-import type { TimeRange } from "@/lib/spotify/types";
 import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { ArtistsList } from "@/components/artists-list";
 
-interface PageProps {
-  searchParams: Promise<{ time_range?: string }>;
-}
-
-export default async function ArtistsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const timeRange = (params.time_range || "medium_term") as TimeRange;
-
-  const artists = await getTopArtists(timeRange, 50);
+export default async function ArtistsPage() {
+  // Priority: Fetch default tab (short_term) first for faster initial render
+  const shortTerm = await getTopArtists("short_term", 50);
+  
+  // Background: Fetch other time ranges in parallel
+  const [mediumTerm, longTerm] = await Promise.all([
+    getTopArtists("medium_term", 50),
+    getTopArtists("long_term", 50),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -25,7 +24,13 @@ export default async function ArtistsPage({ searchParams }: PageProps) {
         <SpotifyAttribution />
       </div>
 
-      <ArtistsList artists={artists} timeRange={timeRange} />
+      <ArtistsList 
+        artistsByTimeRange={{
+          short_term: shortTerm,
+          medium_term: mediumTerm,
+          long_term: longTerm,
+        }}
+      />
     </div>
   );
 }

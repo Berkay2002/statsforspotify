@@ -82,14 +82,20 @@ export async function getTopArtists(
     `/me/top/artists?time_range=${timeRange}&limit=${limit}`
   );
 
-  return response.items.map((artist, index) => ({
-    rank: index + 1,
-    id: artist.id,
-    name: artist.name,
-    imageUrl: artist.images[0]?.url ?? null,
-    genres: artist.genres,
-    popularity: artist.popularity,
-  }));
+  return response.items.map((artist, index) => {
+    // Prefer medium-sized images (index 1) for better performance
+    // Spotify typically returns [large, medium, small]
+    const imageUrl = artist.images[1]?.url ?? artist.images[0]?.url ?? null;
+    
+    return {
+      rank: index + 1,
+      id: artist.id,
+      name: artist.name,
+      imageUrl,
+      genres: artist.genres,
+      popularity: artist.popularity,
+    };
+  });
 }
 
 export async function getTopTracks(
@@ -100,18 +106,23 @@ export async function getTopTracks(
     `/me/top/tracks?time_range=${timeRange}&limit=${limit}`
   );
 
-  return response.items.map((track, index) => ({
-    rank: index + 1,
-    id: track.id,
-    name: track.name,
-    imageUrl: track.album.images[0]?.url ?? null,
-    artistId: track.artists[0]?.id ?? "",
-    artistName: track.artists.map((a) => a.name).join(", "),
-    albumId: track.album.id,
-    albumName: track.album.name,
-    durationMs: track.duration_ms,
-    popularity: track.popularity,
-  }));
+  return response.items.map((track, index) => {
+    // Prefer medium-sized images (index 1) for better performance
+    const imageUrl = track.album.images[1]?.url ?? track.album.images[0]?.url ?? null;
+    
+    return {
+      rank: index + 1,
+      id: track.id,
+      name: track.name,
+      imageUrl,
+      artistId: track.artists[0]?.id ?? "",
+      artistName: track.artists.map((a) => a.name).join(", "),
+      albumId: track.album.id,
+      albumName: track.album.name,
+      durationMs: track.duration_ms,
+      popularity: track.popularity,
+    };
+  });
 }
 
 export function extractAlbumsFromTracks(tracks: RankedTrack[]): RankedAlbum[] {

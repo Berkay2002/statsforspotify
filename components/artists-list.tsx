@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,30 +18,36 @@ interface Artist {
 }
 
 interface ArtistsListProps {
-  artists: Artist[];
-  timeRange: TimeRange;
+  artistsByTimeRange: {
+    short_term: Artist[];
+    medium_term: Artist[];
+    long_term: Artist[];
+  };
 }
 
-export function ArtistsList({ artists, timeRange }: ArtistsListProps) {
+export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
+  const [timeRange, setTimeRange] = useState<TimeRange>("short_term");
+  const artists = artistsByTimeRange[timeRange];
+
   return (
     <SparklineLoader itemIds={artists.map((a) => a.id)} type="artist">
       {(sparklines, loading) => (
-        <Tabs defaultValue={timeRange} className="w-full">
+        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
           <TabsList>
-            <TabsTrigger value="short_term" asChild>
-              <Link href="?time_range=short_term">Last 4 Weeks</Link>
+            <TabsTrigger value="short_term">
+              Last 4 Weeks
             </TabsTrigger>
-            <TabsTrigger value="medium_term" asChild>
-              <Link href="?time_range=medium_term">Last 6 Months</Link>
+            <TabsTrigger value="medium_term">
+              Last 6 Months
             </TabsTrigger>
-            <TabsTrigger value="long_term" asChild>
-              <Link href="?time_range=long_term">All Time</Link>
+            <TabsTrigger value="long_term">
+              All Time
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value={timeRange} className="mt-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {artists.map((artist) => (
+              {artists.map((artist, index) => (
                 <Card key={artist.id} className="group overflow-hidden transition-all hover:shadow-lg flex flex-col p-0">
                   <Link href={`/dashboard/artists/${artist.id}`} className="relative h-64 w-full flex-shrink-0 block">
                     {artist.imageUrl ? (
@@ -50,6 +57,11 @@ export function ArtistsList({ artists, timeRange }: ArtistsListProps) {
                           alt={artist.name}
                           fill
                           className="object-cover"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                          loading={index < 8 ? "eager" : "lazy"}
+                          priority={index < 4}
+                          placeholder="blur"
+                          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI3MjcyNyIvPjwvc3ZnPg=="
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-30% via-card/40 via-60% to-card" />
                       </>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,30 +19,36 @@ interface Album {
 }
 
 interface AlbumsListProps {
-  albums: Album[];
-  timeRange: TimeRange;
+  albumsByTimeRange: {
+    short_term: Album[];
+    medium_term: Album[];
+    long_term: Album[];
+  };
 }
 
-export function AlbumsList({ albums, timeRange }: AlbumsListProps) {
+export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
+  const [timeRange, setTimeRange] = useState<TimeRange>("short_term");
+  const albums = albumsByTimeRange[timeRange];
+
   return (
     <SparklineLoader itemIds={albums.map((a) => a.id)} type="album">
       {(sparklines, loading) => (
-        <Tabs defaultValue={timeRange} className="w-full">
+        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
           <TabsList>
-            <TabsTrigger value="short_term" asChild>
-              <Link href="?time_range=short_term">Last 4 Weeks</Link>
+            <TabsTrigger value="short_term">
+              Last 4 Weeks
             </TabsTrigger>
-            <TabsTrigger value="medium_term" asChild>
-              <Link href="?time_range=medium_term">Last 6 Months</Link>
+            <TabsTrigger value="medium_term">
+              Last 6 Months
             </TabsTrigger>
-            <TabsTrigger value="long_term" asChild>
-              <Link href="?time_range=long_term">All Time</Link>
+            <TabsTrigger value="long_term">
+              All Time
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value={timeRange} className="mt-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {albums.map((album) => (
+              {albums.map((album, index) => (
                 <Link key={album.id} href={`/dashboard/albums/${album.id}`}>
                   <Card className="transition-colors hover:bg-muted/50">
                     <CardContent className="p-4">
@@ -59,6 +66,11 @@ export function AlbumsList({ albums, timeRange }: AlbumsListProps) {
                             width={120}
                             height={120}
                             className="rounded-lg object-cover shadow-md"
+                            sizes="120px"
+                            loading={index < 8 ? "eager" : "lazy"}
+                            priority={index < 4}
+                            placeholder="blur"
+                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iIzI3MjcyNyIvPjwvc3ZnPg=="
                           />
                         ) : (
                           <div className="h-[120px] w-[120px] rounded-lg bg-muted" />

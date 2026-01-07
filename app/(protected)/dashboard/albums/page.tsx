@@ -1,16 +1,15 @@
 import { getTopAlbums } from "@/lib/spotify/api";
-import type { TimeRange } from "@/lib/spotify/types";
 import { AlbumsList } from "@/components/albums-list";
 
-interface PageProps {
-  searchParams: Promise<{ time_range?: string }>;
-}
-
-export default async function AlbumsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const timeRange = (params.time_range || "medium_term") as TimeRange;
-
-  const albums = await getTopAlbums(timeRange, 50);
+export default async function AlbumsPage() {
+  // Priority: Fetch default tab (short_term) first for faster initial render
+  const shortTerm = await getTopAlbums("short_term", 50);
+  
+  // Background: Fetch other time ranges in parallel
+  const [mediumTerm, longTerm] = await Promise.all([
+    getTopAlbums("medium_term", 50),
+    getTopAlbums("long_term", 50),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -21,7 +20,13 @@ export default async function AlbumsPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <AlbumsList albums={albums} timeRange={timeRange} />
+      <AlbumsList 
+        albumsByTimeRange={{
+          short_term: shortTerm,
+          medium_term: mediumTerm,
+          long_term: longTerm,
+        }}
+      />
     </div>
   );
 }
