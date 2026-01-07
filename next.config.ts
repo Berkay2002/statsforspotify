@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
         pathname: "/image/**",
       },
     ],
+    // Cache optimized images for 30 days (Spotify images rarely change)
+    // Album art is immutable, artist images change infrequently
+    minimumCacheTTL: 2592000, // 30 days in seconds
   },
 };
 
