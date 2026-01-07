@@ -3,8 +3,8 @@ import { getTopArtists, getTopTracks, extractAlbumsFromTracks } from "@/lib/spot
 import { NextResponse } from "next/server";
 import type { TimeRange } from "@/lib/spotify/types";
 
-// Rate limiting - allow one snapshot per hour per user
-const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 hour
+// Allow one snapshot per 24 hours for auto-collection
+const SNAPSHOT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check rate limit - get last snapshot
+    // Check if snapshot is needed
     const { data: lastSnapshot } = await supabase
       .from("snapshots")
       .select("created_at")
@@ -30,12 +30,18 @@ export async function POST(request: Request) {
     if (lastSnapshot) {
       const lastSnapshotTime = new Date(lastSnapshot.created_at).getTime();
       const now = Date.now();
-      if (now - lastSnapshotTime < RATE_LIMIT_MS) {
-        const remainingMs = RATE_LIMIT_MS - (now - lastSnapshotTime);
-        const remainingMins = Math.ceil(remainingMs / 60000);
+      const timeSinceLastSnapshot = now - lastSnapshotTime;
+      
+      // If snapshot is less than 24 hours old, skip collection
+      if (timeSinceLastSnapshot < SNAPSHOT_INTERVAL_MS) {
         return NextResponse.json(
-          { error: `Rate limited. Try again in ${remainingMins} minutes.` },
-          { status: 429 }
+          { 
+            success: true, 
+            skipped: true, 
+            message: "Snapshot is up to date",
+            lastSnapshot: lastSnapshot.created_at
+          },
+          { status: 200 }
         );
       }
     }
@@ -148,9 +154,13 @@ export async function POST(request: Request) {
       console.error("Failed to update artist stats:", statsError);
     }
 
-    // Redirect back to dashboard with success
-    return NextResponse.redirect(
-      new URL("/dashboard?snapshot=success", request.url)
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: "Snapshot collected successfully",
+        snapshotId: snapshot.id
+      },
+      { status: 200 }
     );
   } catch (error) {
     console.error("Snapshot error:", error);

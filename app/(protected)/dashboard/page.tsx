@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
 import { SpotifyAttribution } from "@/components/spotify-stats-logo";
-import { Users, Music, Music2, ChevronRight, RefreshCw } from "lucide-react";
+import { AutoSnapshotTrigger } from "@/components/auto-snapshot-trigger";
+import { Users, Music, Music2, ChevronRight } from "lucide-react";
 
 export default async function DashboardPage() {
   let artists: Awaited<ReturnType<typeof getTopArtists>> | undefined;
@@ -37,6 +38,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <AutoSnapshotTrigger />
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
@@ -233,24 +235,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Snapshot CTA */}
-      <Card>
-        <CardContent className="flex items-center justify-between p-6">
-          <div>
-            <h3 className="font-medium">Save a Snapshot</h3>
-            <p className="text-sm text-muted-foreground">
-              Capture your current rankings to track changes over time
-            </p>
-          </div>
-          <form action="/api/snapshot" method="POST">
-            <Button type="submit">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Save Snapshot
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
     </div>
   );
 }
