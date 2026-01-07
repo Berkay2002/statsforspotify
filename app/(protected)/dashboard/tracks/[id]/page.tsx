@@ -2,13 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTopTracks } from "@/lib/spotify/api";
-import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RankingChart } from "@/components/charts/ranking-chart";
+import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
 import { ArrowLeft, ExternalLink, Clock } from "lucide-react";
-import type { RankingHistory } from "@/lib/spotify/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -29,28 +27,6 @@ export default async function TrackDetailPage({ params }: PageProps) {
 
   if (!track) {
     notFound();
-  }
-
-  // Get historical rankings from database
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let history: RankingHistory[] = [];
-
-  if (user) {
-    const { data: rankings } = await supabase
-      .from("track_rankings")
-      .select("rank, created_at")
-      .eq("user_id", user.id)
-      .eq("track_id", id)
-      .order("created_at", { ascending: true });
-
-    if (rankings) {
-      history = rankings.map((r) => ({
-        date: r.created_at,
-        rank: r.rank,
-      }));
-    }
   }
 
   return (
@@ -126,7 +102,7 @@ export default async function TrackDetailPage({ params }: PageProps) {
         </Card>
 
         {/* Ranking History Chart */}
-        <RankingChart title="Ranking History" data={history} />
+        <RankingHistoryLoader itemId={id} itemType="track" />
       </div>
     </div>
   );

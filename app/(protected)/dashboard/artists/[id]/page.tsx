@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
 import { ArrowLeft, Play, UserPlus } from "lucide-react";
 
 interface ArtistDetails {
@@ -291,6 +292,11 @@ export default function ArtistDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Ranking History */}
+      <div className="px-6 pt-8">
+        <RankingHistoryLoader itemId={id} itemType="artist" />
+      </div>
     </div>
   );
 }

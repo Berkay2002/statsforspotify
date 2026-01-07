@@ -2,13 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTopAlbums, getTopTracks } from "@/lib/spotify/api";
-import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RankingChart } from "@/components/charts/ranking-chart";
+import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import type { RankingHistory } from "@/lib/spotify/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -31,28 +29,6 @@ export default async function AlbumDetailPage({ params }: PageProps) {
 
   // Get tracks from this album that are in user's top tracks
   const albumTracks = tracks.filter((t) => t.albumId === id);
-
-  // Get historical rankings from database
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let history: RankingHistory[] = [];
-
-  if (user) {
-    const { data: rankings } = await supabase
-      .from("album_rankings")
-      .select("rank, created_at")
-      .eq("user_id", user.id)
-      .eq("album_id", id)
-      .order("created_at", { ascending: true });
-
-    if (rankings) {
-      history = rankings.map((r) => ({
-        date: r.created_at,
-        rank: r.rank,
-      }));
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -115,7 +91,7 @@ export default async function AlbumDetailPage({ params }: PageProps) {
         </Card>
 
         {/* Ranking History Chart */}
-        <RankingChart title="Ranking History" data={history} />
+        <RankingHistoryLoader itemId={id} itemType="album" />
       </div>
 
       {/* Tracks from this album in user's top tracks */}

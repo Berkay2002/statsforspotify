@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RankingHistory } from "@/lib/spotify/types";
@@ -16,12 +17,18 @@ interface RankingChartProps {
   title: string;
   data: RankingHistory[];
   color?: string;
+  peakPosition?: number;
+  timeRange?: "short_term" | "medium_term" | "long_term" | "all";
+  showPeakLabel?: boolean;
 }
 
 export function RankingChart({
   title,
   data,
   color = "hsl(var(--primary))",
+  peakPosition,
+  timeRange,
+  showPeakLabel = true,
 }: RankingChartProps) {
   if (data.length === 0) {
     return (
@@ -48,12 +55,27 @@ export function RankingChart({
     rank: item.rank,
     // Inverted for visual - lower rank is better
     displayRank: 51 - item.rank,
+    isPeak: peakPosition ? item.rank === peakPosition : false,
   }));
+
+  const timeRangeLabels: Record<string, string> = {
+    short_term: "Last 4 Weeks",
+    medium_term: "Last 6 Months",
+    long_term: "All Time",
+    all: "All Time",
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          {timeRange && (
+            <span className="text-sm text-muted-foreground">
+              {timeRangeLabels[timeRange] || "All Time"}
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -84,20 +106,40 @@ export function RankingChart({
             <Tooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
+                  const isPeak = payload[0].payload.isPeak;
                   return (
                     <div className="rounded-lg border bg-background p-2 shadow-sm">
-                      <div className="text-sm font-medium">
+                      <div className="text-sm font-medium flex items-center gap-1">
                         Rank #{payload[0].payload.rank}
+                        {isPeak && <span>🏆</span>}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {payload[0].payload.date}
                       </div>
+                      {isPeak && (
+                        <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                          Peak Position
+                        </div>
+                      )}
                     </div>
                   );
                 }
                 return null;
               }}
             />
+            {peakPosition && showPeakLabel && (
+              <ReferenceLine
+                y={peakPosition}
+                stroke="hsl(var(--chart-4))"
+                strokeDasharray="4 4"
+                label={{
+                  value: `Peak: #${peakPosition}`,
+                  position: "right",
+                  fill: "hsl(var(--chart-4))",
+                  fontSize: 12,
+                }}
+              />
+            )}
             <Line
               type="monotone"
               dataKey="rank"

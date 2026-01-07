@@ -124,6 +124,31 @@ export interface RankedGenre {
 export interface RankingHistory {
   date: string;
   rank: number;
+  isNewEntry?: boolean;
+  isReentry?: boolean;
+}
+
+export interface RankingHistoryMetadata {
+  peakRank: number;
+  peakDate: string;
+  totalSnapshots: number;
+  firstSeen: string;
+  lastSeen: string;
+  currentRank: number | null;
+}
+
+export interface RankingHistoryResponse {
+  history: RankingHistory[];
+  metadata: RankingHistoryMetadata;
+}
+
+export interface SparklineData {
+  date: string;
+  rank: number;
+}
+
+export interface SparklineResponse {
+  sparklines: Record<string, SparklineData[]>;
 }
 
 export interface ArtistWithHistory extends RankedArtist {
