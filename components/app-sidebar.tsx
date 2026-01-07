@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { LayoutDashboard, Users, Music, Music2, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { SpotifyStatsLogo } from "@/components/spotify-stats-logo";
+import { SpotifyBrand } from "@/components/spotify-stats-logo";
 import { SidebarNavigation, type NavRoute } from "@/components/sidebar-navigation";
 import { UserMenu } from "@/components/user-menu";
 
@@ -66,14 +66,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
           "flex",
           isCollapsed
             ? "flex-col items-start justify-start pt-2"
-            : "flex-row items-center justify-between md:pt-3.5"
+            : "flex-row items-center justify-between md:pt-3.5 px-2"
         )}
       >
         {!isCollapsed && (
-          <a href="/dashboard" className="flex items-center justify-center flex-1">
-            <span className="font-[family-name:var(--font-ultra)] text-base tracking-tight bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent whitespace-nowrap">
-              Stats for Spotify
-            </span>
+          <a href="/dashboard" className="flex items-center flex-1 min-w-0 ml-2">
+            <SpotifyBrand className="h-8 w-auto text-[#1ed760]" />
           </a>
         )}
 

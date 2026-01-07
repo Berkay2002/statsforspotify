@@ -104,15 +104,27 @@ export default function PrivacyPage() {
               </p>
               <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
                 <li><strong>Access</strong>: Export all your data at any time from your profile page</li>
-                <li><strong>Delete</strong>: Permanently delete all your data from our systems</li>
-                <li><strong>Revoke</strong>: Disconnect your Spotify account at any time through your <a href="https://www.spotify.com/account/apps/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Spotify account settings</a></li>
+                <li><strong>Delete</strong>: Permanently delete all your data from our systems via your profile page</li>
+                <li><strong>Revoke</strong>: Disconnect your Spotify account and revoke access at any time through your <a href="https://www.spotify.com/account/apps/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Spotify account settings</a>. When you revoke access, we can no longer access your Spotify data, and any subsequent login will require re-authorization.</li>
               </ul>
+              <p className="mt-4 text-muted-foreground">
+                <strong>Important:</strong> Revoking access in Spotify settings does not automatically delete your stored data from our database. To completely remove all your data, please use the &quot;Delete All Data&quot; button on your profile page before or after revoking access.
+              </p>
             </section>
 
             <section className="mt-8">
               <h2 className="text-2xl font-semibold">7. Data Retention</h2>
               <p className="mt-4 text-muted-foreground">
-                We retain your data for as long as you have an active account. If you delete your account, all your data will be permanently removed within 30 days.
+                We retain your data only for as long as necessary to provide our service:
+              </p>
+              <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
+                <li><strong>Listening History Snapshots</strong>: Stored to track changes in your music preferences over time. You can delete individual snapshots or all data at any time from your profile page.</li>
+                <li><strong>Account Data</strong>: Basic profile information (name, email) is retained while your account is active.</li>
+                <li><strong>Data Deletion</strong>: When you delete your account or revoke access, all your data (snapshots, rankings, and profile information) will be permanently removed within 30 days.</li>
+                <li><strong>Spotify Content</strong>: We store historical rankings but regularly refresh artist names, track titles, and album artwork from Spotify to ensure accuracy.</li>
+              </ul>
+              <p className="mt-4 text-muted-foreground">
+                You have full control over your data and can export or delete it at any time through your profile settings.
               </p>
             </section>
 

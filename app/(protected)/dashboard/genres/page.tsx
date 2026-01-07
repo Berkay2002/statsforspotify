@@ -4,6 +4,7 @@ import type { TimeRange } from "@/lib/spotify/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { Music2 } from "lucide-react";
 
 interface PageProps {
@@ -18,11 +19,14 @@ export default async function GenresPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Top Genres</h1>
-        <p className="text-muted-foreground">
-          Genres from your most played artists
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Top Genres</h1>
+          <p className="text-muted-foreground">
+            Genres from your most played artists
+          </p>
+        </div>
+        <SpotifyAttribution />
       </div>
 
       <Tabs defaultValue={timeRange} className="w-full">
