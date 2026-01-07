@@ -1,122 +1,296 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getTopArtists } from "@/lib/spotify/api";
-import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RankingChart } from "@/components/charts/ranking-chart";
-import { ArrowLeft, ExternalLink } from "lucide-react";
-import type { RankingHistory } from "@/lib/spotify/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, Play, UserPlus } from "lucide-react";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
+interface ArtistDetails {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  genres: string[];
+  followers: number;
+  popularity: number;
 }
 
-export default async function ArtistDetailPage({ params }: PageProps) {
-  const { id } = await params;
-  
-  // Get current artist from Spotify
-  const artists = await getTopArtists("medium_term", 50);
-  const artist = artists.find((a) => a.id === id);
+interface ArtistStats {
+  totalHoursListened: number;
+  uniqueTracksCount: number;
+  totalPlayCount: number;
+}
 
-  if (!artist) {
-    notFound();
+interface Track {
+  rank: number;
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  albumName: string;
+  durationMs: number;
+  popularity: number;
+}
+
+export default function ArtistDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
+  
+  const [artist, setArtist] = useState<ArtistDetails | null>(null);
+  const [stats, setStats] = useState<ArtistStats | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [showAllTracks, setShowAllTracks] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadArtistData() {
+      try {
+        setLoading(true);
+        
+        // Fetch artist details, stats, and top tracks in parallel
+        const [detailsRes, statsRes, tracksRes] = await Promise.all([
+          fetch(`/api/artists/${id}`),
+          fetch(`/api/artists/${id}/stats`),
+          fetch(`/api/artists/${id}/tracks`),
+        ]);
+
+        if (!detailsRes.ok) throw new Error("Failed to load artist details");
+        
+        const detailsData = await detailsRes.json();
+        setArtist(detailsData);
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setStats(statsData);
+        }
+
+        if (tracksRes.ok) {
+          const tracksData = await tracksRes.json();
+          setTracks(tracksData);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (id) {
+      loadArtistData();
+    }
+  }, [id]);
+
+  const formatDuration = (ms: number) => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const displayedTracks = showAllTracks ? tracks : tracks.slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   }
 
-  // Get historical rankings from database
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  let history: RankingHistory[] = [];
-  
-  if (user) {
-    const { data: rankings } = await supabase
-      .from("artist_rankings")
-      .select("rank, created_at")
-      .eq("user_id", user.id)
-      .eq("artist_id", id)
-      .order("created_at", { ascending: true });
-
-    if (rankings) {
-      history = rankings.map((r) => ({
-        date: r.created_at,
-        rank: r.rank,
-      }));
-    }
+  if (error || !artist) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-lg text-muted-foreground">
+          {error || "Artist not found"}
+        </p>
+        <Button asChild>
+          <Link href="/dashboard/artists">Back to Artists</Link>
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/artists">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{artist.name}</h1>
-          <p className="text-muted-foreground">Artist Details</p>
+    <div className="space-y-0 -mt-6 -mx-6 pb-6">
+      {/* Hero Section with Background */}
+      <div className="relative h-[500px] overflow-hidden">
+        {/* Background Image with Gradient Overlay */}
+        <div className="absolute inset-0">
+          {artist.imageUrl ? (
+            <>
+              <Image
+                src={artist.imageUrl}
+                alt={artist.name}
+                fill
+                className="object-cover object-center"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/60 to-background" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
+          )}
+        </div>
+
+        {/* Content Overlay */}
+        <div className="relative h-full flex flex-col justify-end px-6 pb-8">
+          {/* Back Button */}
+          <div className="absolute top-6 left-6">
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
+              <Link href="/dashboard/artists">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+
+          {/* Artist Name and Stats */}
+          <div className="space-y-6">
+            <h1 className="text-7xl font-bold text-white tracking-tight">
+              {artist.name}
+            </h1>
+            
+            {/* Stats Row - Always visible */}
+            <div className="flex items-center gap-6 text-white text-base">
+              {stats && stats.totalHoursListened > 0 ? (
+                <>
+                  <span className="font-semibold">
+                    {stats.totalHoursListened.toFixed(1)} hours listened
+                  </span>
+                  <span className="text-white/60">•</span>
+                  <span className="font-medium">
+                    {stats.uniqueTracksCount} unique tracks
+                  </span>
+                </>
+              ) : (
+                <span className="font-medium text-white/80">
+                  Start listening to see your stats
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Artist Info Card */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-              {artist.imageUrl ? (
-                <Image
-                  src={artist.imageUrl}
-                  alt={artist.name}
-                  width={160}
-                  height={160}
-                  className="rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-40 w-40 rounded-full bg-muted" />
-              )}
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex items-center justify-center gap-2 sm:justify-start">
-                  <Badge variant="default" className="text-lg px-3 py-1">
-                    #{artist.rank}
-                  </Badge>
-                </div>
-                <h2 className="mt-3 text-2xl font-bold">{artist.name}</h2>
-                <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-                  {artist.genres.map((genre) => (
-                    <Badge key={genre} variant="secondary">
-                      {genre}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Popularity: {artist.popularity}/100
-                  </p>
-                </div>
-                <Button className="mt-4" asChild>
-                  <a
-                    href={`https://open.spotify.com/artist/${artist.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open in Spotify
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Ranking History Chart */}
-        <RankingChart
-          title="Ranking History"
-          data={history}
-        />
+      {/* Action Buttons */}
+      <div className="px-6 pt-6 flex items-center gap-4">
+        <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
+          <a
+            href={`https://open.spotify.com/artist/${artist.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Play on Spotify"
+          >
+            <Play className="h-6 w-6 fill-current" />
+          </a>
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          className="rounded-full px-8"
+          asChild
+        >
+          <a
+            href={`https://open.spotify.com/artist/${artist.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <UserPlus className="h-5 w-5 mr-2" />
+            Follow
+          </a>
+        </Button>
       </div>
+
+      {/* My Top Tracks Section */}
+      {tracks.length > 0 && (
+        <div className="px-6 pt-8">
+          <h2 className="text-2xl font-bold mb-6">My Top Tracks</h2>
+          
+          <div className="space-y-1">
+            {displayedTracks.map((track) => (
+              <div
+                key={track.id}
+                className="rounded-lg hover:bg-accent/50 transition-colors cursor-pointer bg-transparent"
+              >
+                <div className="p-5">
+                  <div className="flex items-center gap-5">
+                    {/* Rank */}
+                    <div className="w-10 text-center">
+                      <span className="text-xl font-semibold text-foreground">
+                        {track.rank}
+                      </span>
+                    </div>
+
+                    {/* Album Art */}
+                    {track.imageUrl ? (
+                      <Image
+                        src={track.imageUrl}
+                        alt={track.name}
+                        width={64}
+                        height={64}
+                        className="rounded object-cover"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded bg-muted" />
+                    )}
+
+                    {/* Track Info */}
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/dashboard/tracks/${track.id}`}
+                        className="hover:underline"
+                      >
+                        <p className="text-base font-semibold truncate">{track.name}</p>
+                      </Link>
+                      <p className="text-base text-muted-foreground truncate mt-1">
+                        {track.albumName}
+                      </p>
+                    </div>
+
+                    {/* Play Count Badge (if available) */}
+                    <Badge variant="secondary" className="hidden sm:inline-flex text-sm px-3 py-1">
+                      {track.popularity}% popularity
+                    </Badge>
+
+                    {/* Duration */}
+                    <div className="text-base text-muted-foreground tabular-nums">
+                      {formatDuration(track.durationMs)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* See More Button */}
+          {tracks.length > 5 && (
+            <div className="mt-6 text-center">
+              <Button
+                variant="ghost"
+                onClick={() => setShowAllTracks(!showAllTracks)}
+              >
+                {showAllTracks ? "Show Less" : `See More (${tracks.length - 5} more)`}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Genres */}
+      {artist.genres.length > 0 && (
+        <div className="px-6 pt-8">
+          <h3 className="text-lg font-semibold mb-3">Genres</h3>
+          <div className="flex flex-wrap gap-2">
+            {artist.genres.map((genre) => (
+              <Badge key={genre} variant="secondary" className="text-sm">
+                {genre}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

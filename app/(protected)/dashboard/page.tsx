@@ -1,23 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getTopArtists, getTopTracks, getTopAlbums } from "@/lib/spotify/api";
+import { getTopArtists, getTopTracks, getTopGenres } from "@/lib/spotify/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
-import { Users, Music, Disc, ChevronRight, RefreshCw } from "lucide-react";
+import { Users, Music, Music2, ChevronRight, RefreshCw } from "lucide-react";
 
 export default async function DashboardPage() {
   let artists: Awaited<ReturnType<typeof getTopArtists>> | undefined;
   let tracks: Awaited<ReturnType<typeof getTopTracks>> | undefined;
-  let albums: Awaited<ReturnType<typeof getTopAlbums>> | undefined;
+  let genres: Awaited<ReturnType<typeof getTopGenres>> | undefined;
   let error: string | null = null;
 
   try {
-    [artists, tracks, albums] = await Promise.all([
+    [artists, tracks, genres] = await Promise.all([
       getTopArtists("medium_term", 5),
       getTopTracks("medium_term", 5),
-      getTopAlbums("medium_term", 5),
+      getTopGenres("medium_term", 5),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load data";
@@ -58,10 +58,10 @@ export default async function DashboardPage() {
           href="/dashboard/tracks"
         />
         <StatCard
-          title="Top Albums"
-          value={albums?.length ?? 0}
-          icon={<Disc className="h-4 w-4" />}
-          href="/dashboard/albums"
+          title="Top Genres"
+          value={genres?.length ?? 0}
+          icon={<Music2 className="h-4 w-4" />}
+          href="/dashboard/genres"
         />
       </div>
 
@@ -163,15 +163,15 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Top Albums */}
+        {/* Top Genres */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Top Albums</CardTitle>
-              <CardDescription>Albums from your top tracks</CardDescription>
+              <CardTitle className="text-lg">Top Genres</CardTitle>
+              <CardDescription>Your favorite music genres</CardDescription>
             </div>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard/albums">
+              <Link href="/dashboard/genres">
                 View all
                 <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
@@ -179,36 +179,27 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {albums?.map((album) => (
-                <Link
-                  key={album.id}
-                  href={`/dashboard/albums/${album.id}`}
+              {genres?.map((genre) => (
+                <div
+                  key={genre.name}
                   className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted"
                 >
                   <span className="w-5 text-sm font-medium text-muted-foreground">
-                    {album.rank}
+                    {genre.rank}
                   </span>
-                  {album.imageUrl ? (
-                    <Image
-                      src={album.imageUrl}
-                      alt={album.name}
-                      width={40}
-                      height={40}
-                      className="rounded object-cover"
-                    />
-                  ) : (
-                    <div className="h-10 w-10 rounded bg-muted" />
-                  )}
+                  <div className="rounded-lg bg-primary/10 p-2">
+                    <Music2 className="h-5 w-5 text-primary" />
+                  </div>
                   <div className="flex-1 truncate">
-                    <p className="truncate font-medium">{album.name}</p>
+                    <p className="truncate font-medium capitalize">{genre.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {album.artistName}
+                      {genre.artistCount} {genre.artistCount === 1 ? "artist" : "artists"}
                     </p>
                   </div>
                   <Badge variant="secondary" className="ml-auto">
-                    {album.trackCount} {album.trackCount === 1 ? "track" : "tracks"}
+                    #{genre.rank}
                   </Badge>
-                </Link>
+                </div>
               ))}
             </div>
           </CardContent>

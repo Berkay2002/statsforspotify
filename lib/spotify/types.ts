@@ -113,6 +113,14 @@ export interface RankedAlbum {
   trackCount: number; // How many tracks from this album appear in top tracks
 }
 
+export interface RankedGenre {
+  rank: number;
+  name: string;
+  trackCount: number; // How many tracks in this genre
+  artistCount: number; // How many artists tagged with this genre
+  topArtists: string[]; // Names of top artists in this genre
+}
+
 export interface RankingHistory {
   date: string;
   rank: number;

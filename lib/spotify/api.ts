@@ -8,6 +8,7 @@ import type {
   RankedArtist,
   RankedTrack,
   RankedAlbum,
+  RankedGenre,
 } from "./types";
 
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
@@ -152,6 +153,70 @@ export async function getTopAlbums(
 ): Promise<RankedAlbum[]> {
   const tracks = await getTopTracks(timeRange, limit);
   return extractAlbumsFromTracks(tracks);
+}
+
+export function extractGenresFromArtists(artists: RankedArtist[]): RankedGenre[] {
+  const genreMap = new Map<string, { trackCount: number; artists: Set<string> }>();
+
+  artists.forEach((artist) => {
+    artist.genres.forEach((genre) => {
+      const existing = genreMap.get(genre);
+      if (existing) {
+        existing.artists.add(artist.name);
+      } else {
+        genreMap.set(genre, {
+          trackCount: 0,
+          artists: new Set([artist.name]),
+        });
+      }
+    });
+  });
+
+  // Sort by artist count (most artists first) and assign ranks
+  const sortedGenres = Array.from(genreMap.entries())
+    .sort((a, b) => b[1].artists.size - a[1].artists.size)
+    .map(([name, data], index) => ({
+      rank: index + 1,
+      name,
+      trackCount: 0, // Not easily calculable without fetching all tracks per artist
+      artistCount: data.artists.size,
+      topArtists: Array.from(data.artists).slice(0, 3),
+    }));
+
+  return sortedGenres;
+}
+
+export async function getTopGenres(
+  timeRange: TimeRange = "medium_term",
+  limit: number = 50
+): Promise<RankedGenre[]> {
+  // Always fetch 50 artists for consistent genre rankings
+  const artists = await getTopArtists(timeRange, 50);
+  const allGenres = extractGenresFromArtists(artists);
+  
+  // Return only the requested number of top genres
+  return allGenres.slice(0, limit);
+}
+
+// Get detailed artist information
+export async function getArtistDetails(artistId: string): Promise<SpotifyArtist> {
+  return spotifyFetch<SpotifyArtist>(`/artists/${artistId}`);
+}
+
+// Get user's top tracks from a specific artist
+export async function getArtistTopTracks(
+  artistId: string,
+  timeRange: TimeRange = "medium_term",
+  limit: number = 10
+): Promise<RankedTrack[]> {
+  // Get all user's top tracks
+  const allTopTracks = await getTopTracks(timeRange, 50);
+  
+  // Filter tracks by the specific artist
+  const artistTracks = allTopTracks.filter(track => track.artistId === artistId);
+  
+  // Return limited number
+  return artistTracks.slice(0, limit);
 }
 
 // Utility to check if we need to re-authenticate

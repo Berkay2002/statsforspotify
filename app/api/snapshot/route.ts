@@ -141,6 +141,13 @@ export async function POST(request: Request) {
       console.error("Failed to insert album rankings:", albumError);
     }
 
+    // Update artist listening stats
+    const { error: statsError } = await supabase.rpc("update_artist_listening_stats");
+
+    if (statsError) {
+      console.error("Failed to update artist stats:", statsError);
+    }
+
     // Redirect back to dashboard with success
     return NextResponse.redirect(
       new URL("/dashboard?snapshot=success", request.url)

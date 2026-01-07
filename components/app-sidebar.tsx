@@ -1,62 +1,48 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Users,
-  Music,
-  Disc,
-  User,
-  LogOut,
-  Moon,
-  Sun,
-} from "lucide-react";
-import { useTheme } from "next-themes";
-
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
+  SidebarTrigger,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  SidebarMenuButton,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { LayoutDashboard, Users, Music, Music2, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
+import { SpotifyStatsLogo } from "@/components/spotify-stats-logo";
+import { SidebarNavigation, type NavRoute } from "@/components/sidebar-navigation";
+import { UserMenu } from "@/components/user-menu";
 
-const navItems = [
+const navRoutes: NavRoute[] = [
   {
+    id: "overview",
     title: "Overview",
+    icon: <LayoutDashboard className="size-4" />,
     href: "/dashboard",
-    icon: LayoutDashboard,
   },
   {
+    id: "artists",
     title: "Artists",
+    icon: <Users className="size-4" />,
     href: "/dashboard/artists",
-    icon: Users,
   },
   {
+    id: "tracks",
     title: "Tracks",
+    icon: <Music className="size-4" />,
     href: "/dashboard/tracks",
-    icon: Music,
   },
   {
-    title: "Albums",
-    href: "/dashboard/albums",
-    icon: Disc,
+    id: "genres",
+    title: "Genres",
+    icon: <Music2 className="size-4" />,
+    href: "/dashboard/genres",
   },
 ];
 
@@ -69,43 +55,45 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ user }: AppSidebarProps) {
-  const pathname = usePathname();
+  const { state } = useSidebar();
   const { theme, setTheme } = useTheme();
+  const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b p-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Music className="h-6 w-6 text-primary" />
-          <span className="text-lg font-bold">Stats for Spotify</span>
-        </Link>
+    <Sidebar variant="floating" collapsible="icon">
+      <SidebarHeader
+        className={cn(
+          "flex",
+          isCollapsed
+            ? "flex-col items-start justify-start pt-2"
+            : "flex-row items-center justify-between md:pt-3.5"
+        )}
+      >
+        {!isCollapsed && (
+          <a href="/dashboard" className="flex items-center justify-center flex-1">
+            <span className="font-[family-name:var(--font-ultra)] text-base tracking-tight bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent whitespace-nowrap">
+              Stats for Spotify
+            </span>
+          </a>
+        )}
+
+        <motion.div
+          key={isCollapsed ? "header-collapsed" : "header-expanded"}
+          className={cn(
+            "flex items-center gap-2",
+            isCollapsed ? "flex-row md:flex-col-reverse" : "flex-row"
+          )}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          <SidebarTrigger />
+        </motion.div>
       </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+      <SidebarContent className="gap-4 px-2 py-4">
+        <SidebarNavigation routes={navRoutes} />
       </SidebarContent>
-
-      <SidebarFooter className="border-t p-2">
+      <SidebarFooter className="px-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -114,49 +102,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
             >
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              <span>Toggle theme</span>
+              {!isCollapsed && <span>Theme</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarSeparator className="my-2" />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 px-2"
-            >
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={user.avatarUrl} alt={user.name} />
-                <AvatarFallback>
-                  {user.name?.charAt(0)?.toUpperCase() ?? "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col items-start text-sm">
-                <span className="font-medium">{user.name}</span>
-                <span className="text-xs text-muted-foreground truncate max-w-[140px]">
-                  {user.email}
-                </span>
-              </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuItem asChild>
-              <Link href="/profile">
-                <User className="mr-2 h-4 w-4" />
-                Profile & Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <form action="/auth/signout" method="POST" className="w-full">
-                <button type="submit" className="flex w-full items-center">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
-                </button>
-              </form>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <UserMenu user={user} />
       </SidebarFooter>
     </Sidebar>
   );
