@@ -45,17 +45,20 @@ export default function ArtistDetailPage() {
   const [showAllTracks, setShowAllTracks] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     async function loadArtistData() {
       try {
         setLoading(true);
         
-        // Fetch artist details, stats, and top tracks in parallel
-        const [detailsRes, statsRes, tracksRes] = await Promise.all([
+        // Fetch artist details, stats, top tracks, and follow status in parallel
+        const [detailsRes, statsRes, tracksRes, followRes] = await Promise.all([
           fetch(`/api/artists/${id}`),
           fetch(`/api/artists/${id}/stats`),
           fetch(`/api/artists/${id}/tracks`),
+          fetch(`/api/artists/${id}/follow`),
         ]);
 
         if (!detailsRes.ok) throw new Error("Failed to load artist details");
@@ -71,6 +74,11 @@ export default function ArtistDetailPage() {
         if (tracksRes.ok) {
           const tracksData = await tracksRes.json();
           setTracks(tracksData);
+        }
+
+        if (followRes.ok) {
+          const followData = await followRes.json();
+          setIsFollowing(followData.isFollowing);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
@@ -88,6 +96,30 @@ export default function ArtistDetailPage() {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const handleFollowToggle = async () => {
+    if (!artist || followLoading) return;
+
+    try {
+      setFollowLoading(true);
+      
+      const method = isFollowing ? "DELETE" : "PUT";
+      const response = await fetch(`/api/artists/${id}/follow`, {
+        method,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${isFollowing ? "unfollow" : "follow"} artist`);
+      }
+
+      setIsFollowing(!isFollowing);
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+      // Optionally show an error message to the user
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   const displayedTracks = showAllTracks ? tracks : tracks.slice(0, 5);
@@ -188,19 +220,20 @@ export default function ArtistDetailPage() {
           </a>
         </Button>
         <Button
-          variant="outline"
+          variant={isFollowing ? "secondary" : "outline"}
           size="lg"
           className="rounded-full px-8"
-          asChild
+          onClick={handleFollowToggle}
+          disabled={followLoading}
         >
-          <a
-            href={`https://open.spotify.com/artist/${artist.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <UserPlus className="h-5 w-5 mr-2" />
-            Follow
-          </a>
+          {followLoading ? (
+            <>Loading...</>
+          ) : (
+            <>
+              <UserPlus className="h-5 w-5 mr-2" />
+              {isFollowing ? "Following" : "Follow"}
+            </>
+          )}
         </Button>
       </div>
 

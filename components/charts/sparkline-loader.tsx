@@ -68,8 +68,36 @@ interface InlineSparklineProps {
 
 export function InlineSparkline({ itemId, sparklines, loading }: InlineSparklineProps) {
   if (loading) {
-    return <Skeleton className="w-16 h-6" />;
+    return null;
   }
 
-  return <SparklineChart data={sparklines[itemId] ?? []} width={64} height={24} />;
+  const data = sparklines[itemId];
+  if (!data || data.length < 2) {
+    return null;
+  }
+
+  const firstRank = data[0].rank;
+  const lastRank = data[data.length - 1].rank;
+  
+  // Lower rank number = better position (went up)
+  // Higher rank number = worse position (went down)
+  if (lastRank < firstRank) {
+    return (
+      <div className="flex items-center justify-center text-green-500">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </div>
+    );
+  } else if (lastRank > firstRank) {
+    return (
+      <div className="flex items-center justify-center text-red-500">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+        </svg>
+      </div>
+    );
+  }
+  
+  return null;
 }

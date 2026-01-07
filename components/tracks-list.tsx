@@ -48,35 +48,37 @@ export function TracksList({ tracks, timeRange }: TracksListProps) {
           <TabsContent value={timeRange} className="mt-6">
             <div className="space-y-2">
               {tracks.map((track) => (
-                <Card key={track.id} className="transition-colors hover:bg-muted/50">
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-4">
-                      <span className="w-8 text-center text-lg font-bold text-muted-foreground">
-                        {track.rank}
-                      </span>
-                      <InlineSparkline itemId={track.id} sparklines={sparklines} loading={loading} />
-                      <Link href={`/dashboard/tracks/${track.id}`} className="flex items-center gap-4 flex-1 min-w-0">
+                <div key={track.id} className="bg-transparent transition-colors hover:bg-muted/30 rounded-md">
+                  <div className="p-3 px-0">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 flex flex-col items-center justify-center flex-shrink-0">
+                        <InlineSparkline itemId={track.id} sparklines={sparklines} loading={loading} />
+                        <span className="text-xl font-bold text-muted-foreground">
+                          {track.rank}
+                        </span>
+                      </div>
+                      <Link href={`/dashboard/tracks/${track.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                         {track.imageUrl ? (
                           <Image
                             src={track.imageUrl}
                             alt={track.name}
-                            width={48}
-                            height={48}
-                            className="rounded-[4px] object-cover"
+                            width={64}
+                            height={64}
+                            className="rounded-[4px] object-cover flex-shrink-0"
                           />
                         ) : (
-                          <div className="h-12 w-12 rounded-[4px] bg-muted" />
+                          <div className="h-16 w-16 rounded-[4px] bg-muted flex-shrink-0" />
                         )}
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate font-semibold">{track.name}</p>
-                          <p className="truncate text-sm text-muted-foreground">
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <p className="truncate font-semibold text-base">{track.name}</p>
+                          <p className="truncate text-sm text-muted-foreground max-w-[300px] sm:max-w-[400px] md:max-w-[500px]">
                             {track.artistName} • {track.albumName}
                           </p>
                         </div>
-                        <span className="text-sm text-muted-foreground">
-                          {formatDuration(track.durationMs)}
-                        </span>
                       </Link>
+                      <span className="text-sm text-muted-foreground flex-shrink-0 hidden sm:block">
+                        {formatDuration(track.durationMs)}
+                      </span>
                       <a
                         href={`https://open.spotify.com/track/${track.id}`}
                         target="_blank"
@@ -89,8 +91,8 @@ export function TracksList({ tracks, timeRange }: TracksListProps) {
                         </svg>
                       </a>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           </TabsContent>

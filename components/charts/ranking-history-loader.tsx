@@ -43,7 +43,13 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
 
         if (!res.ok) {
           if (res.status === 404) {
-            throw new Error("No ranking history found yet");
+            // No history yet - this is expected for new items, handle gracefully
+            if (!cancelled) {
+              setData(null);
+              setError(null);
+              setLoading(false);
+            }
+            return;
           }
           throw new Error("Failed to fetch ranking history");
         }
