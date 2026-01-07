@@ -29,7 +29,8 @@ export function LoginDialog({ children }: LoginDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">
-          <form action="/auth/callback?action=login" method="GET">
+          <form action="/auth/callback" method="GET">
+            <input type="hidden" name="action" value="login" />
             <Button type="submit" className="w-full gap-2" size="lg">
               <SpotifyIcon className="h-5 w-5" />
               Continue with Spotify

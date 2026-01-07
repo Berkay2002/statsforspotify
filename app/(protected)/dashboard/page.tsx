@@ -4,6 +4,7 @@ import { getTopArtists, getTopTracks, getTopAlbums } from "@/lib/spotify/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoginDialog } from "@/components/login-dialog";
 import { Users, Music, Disc, ChevronRight, RefreshCw } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -26,9 +27,9 @@ export default async function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12">
         <p className="text-muted-foreground">{error}</p>
-        <Button asChild>
-          <Link href="/login">Re-authenticate with Spotify</Link>
-        </Button>
+        <LoginDialog>
+          <Button>Re-authenticate with Spotify</Button>
+        </LoginDialog>
       </div>
     );
   }

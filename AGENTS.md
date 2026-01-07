@@ -26,7 +26,7 @@ This is a Next.js 16 app using the App Router, Supabase for auth/database, and R
 
 ## Key Files
 
-- `middleware.ts` — Protects `/dashboard/*` routes, refreshes Supabase sessions
+- `proxy.ts` — Protects `/dashboard/*` routes, refreshes Supabase sessions (renamed from middleware.ts in Next.js 16)
 - `lib/spotify/api.ts` — `getTopArtists()`, `getTopTracks()`, `getTopAlbums()`
 - `lib/spotify/types.ts` — TypeScript interfaces for Spotify data
 - `components/app-sidebar.tsx` — Dashboard sidebar with navigation and theme toggle
