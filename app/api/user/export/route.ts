@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { getAuthenticatedUser, serverErrorResponse } from "@/lib/api/utils";
 import type { Database } from "@/lib/supabase/database";
 
 type Snapshot = Database['public']['Tables']['snapshots']['Row'];
@@ -17,17 +17,16 @@ interface ExportData {
 }
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const format = searchParams.get("format") || "json";
-
   try {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { user, supabase } = authResult;
+    const { searchParams } = new URL(request.url);
+    const format = searchParams.get("format") || "json";
+
     // Use the database function to export user data
     const { data, error } = await supabase.rpc("export_user_data", {
       target_user_id: user.id,
@@ -35,10 +34,7 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error("Export user data error:", error);
-      return NextResponse.json(
-        { error: "Failed to export data" },
-        { status: 500 }
-      );
+      return serverErrorResponse("Failed to export data");
     }
 
     const exportData = data as ExportData;
@@ -63,10 +59,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Export error:", error);
-    return NextResponse.json(
-      { error: "Failed to export data" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to export data");
   }
 }
 

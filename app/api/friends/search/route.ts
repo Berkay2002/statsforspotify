@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser, serverErrorResponse } from "@/lib/api/utils";
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
+    const { user, supabase } = authResult;
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
     
@@ -62,12 +61,8 @@ export async function GET(request: Request) {
     }));
     
     return NextResponse.json({ results });
-    
   } catch (error) {
     console.error("Error searching friends:", error);
-    return NextResponse.json(
-      { error: "Failed to search users" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to search users");
   }
 }
