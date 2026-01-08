@@ -103,10 +103,15 @@ This is a Next.js 16 app using the App Router, Supabase for auth/database, and R
 - Keep client components small and focused
 - Pass data from Server Components to Client Components via props
 
-### Database Types (IMPORTANT)
+### Database Types (CRITICAL - STRICT RULE)
 - **ALWAYS use generated types from `lib/supabase/database.ts`** - DO NOT manually create database interfaces
+- **ALWAYS use Supabase CLI in terminal to regenerate types** - DO NOT use MCP tools or any other method
 - Types are auto-generated from the live database schema using Supabase CLI
-- To regenerate types after schema changes: `supabase gen types typescript --project-id <project-id> > lib/supabase/database.ts`
+- **To regenerate types after schema changes, run this command in terminal:**
+  ```bash
+  supabase gen types typescript --project-id <project-id> > lib/supabase/database.ts
+  ```
+- Never use `mcp_supabase_generate_typescript_types` or other MCP tools for type generation
 - Import and use like this:
 
 ```typescript
@@ -195,11 +200,19 @@ Spotify OAuth is configured in Supabase Dashboard, not in env vars.
 3. Add indexes for frequently queried columns
 4. Test SQL in Supabase SQL Editor before committing
 5. Run migration manually via Supabase Dashboard > SQL Editor
+6. **After migration, regenerate types using terminal:** `supabase gen types typescript --project-id <project-id> > lib/supabase/database.ts`
+database schema
+1. Create a migration file in `supabase/migrations/`
+2. Apply the migration via Supabase Dashboard > SQL Editor
+3. **Regenerate database types in terminal:** `supabase gen types typescript --project-id <project-id> > lib/supabase/database.ts`
+4. Update affected TypeScript code to use the new types
+5. Run `bun run build` to check for type errors
 
 ### Modifying Spotify data types
 1. Update TypeScript interfaces in `lib/spotify/types.ts`
 2. Update API functions in `lib/spotify/api.ts` if needed
-3. Update database schema if storing the new fields
+3. Update database schema if storing the new fields (follow "Modifying database schema" above)
+4. Run `bunatabase schema if storing the new fields
 4. Run `npm run build` to check for type errors
 
 ## Error Handling

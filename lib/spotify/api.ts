@@ -295,7 +295,7 @@ export const getFollowingUsers = cache(async (
     : `/me/following?type=user&limit=50`;
   
   const response = await spotifyFetch<{
-    artists: {
+    users: {
       items: Array<{ id: string }>;
       next: string | null;
       cursors: { after: string | null };
@@ -303,8 +303,8 @@ export const getFollowingUsers = cache(async (
   }>(endpoint);
 
   return {
-    users: response.artists.items.map(user => user.id),
-    nextCursor: response.artists.cursors.after,
+    users: response.users.items.map(user => user.id),
+    nextCursor: response.users.cursors.after,
   };
 });
 

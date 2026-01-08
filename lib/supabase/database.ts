@@ -280,6 +280,7 @@ export type Database = {
           display_name: string
           id: string
           spotify_user_id: string
+          spotify_user_name: string | null
           stats_visibility: string
           updated_at: string
           user_id: string
@@ -291,6 +292,7 @@ export type Database = {
           display_name: string
           id?: string
           spotify_user_id: string
+          spotify_user_name?: string | null
           stats_visibility?: string
           updated_at?: string
           user_id: string
@@ -302,6 +304,7 @@ export type Database = {
           display_name?: string
           id?: string
           spotify_user_id?: string
+          spotify_user_name?: string | null
           stats_visibility?: string
           updated_at?: string
           user_id?: string
@@ -310,7 +313,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_needing_real_user_id: {
+        Row: {
+          created_at: string | null
+          discriminator: string | null
+          display_name: string | null
+          id: string | null
+          id_status: string | null
+          spotify_user_id: string | null
+          spotify_user_name: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          discriminator?: string | null
+          display_name?: string | null
+          id?: string | null
+          id_status?: never
+          spotify_user_id?: string | null
+          spotify_user_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          discriminator?: string | null
+          display_name?: string | null
+          id?: string | null
+          id_status?: never
+          spotify_user_id?: string | null
+          spotify_user_name?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_mutual_follow_cached: {
@@ -363,6 +401,7 @@ export type Database = {
           rank: number
         }[]
       }
+      is_valid_spotify_user_id: { Args: { user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       update_artist_listening_stats: { Args: never; Returns: undefined }
