@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useOptimistic, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { UserPlus, UserMinus, UserCheck, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type FriendshipStatus = "none" | "pending" | "accepted" | "blocked";
+
+interface FriendshipState {
+  isFriend: boolean;
+  isPending: boolean;
+  isIncoming: boolean;
+}
 
 interface FriendFollowButtonProps {
   friendUserId: string;
@@ -23,132 +29,144 @@ export function FriendFollowButton({
   initialStatus,
   onStatusChange 
 }: FriendFollowButtonProps) {
-  const [isFriend, setIsFriend] = useState(initialStatus.isFriend);
-  const [isPending, setIsPending] = useState(initialStatus.isPending);
-  const [isIncoming, setIsIncoming] = useState(initialStatus.isIncoming);
-  const [isLoading, setIsLoading] = useState(false);
+  const [state, setState] = useState<FriendshipState>({
+    isFriend: initialStatus.isFriend,
+    isPending: initialStatus.isPending,
+    isIncoming: initialStatus.isIncoming,
+  });
+  const [optimisticState, setOptimisticState] = useOptimistic(state);
+  const [isPending, startTransition] = useTransition();
 
   const handleSendRequest = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/friends/follow", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendUserId }),
-      });
+    // Optimistically update UI
+    setOptimisticState({ isFriend: false, isPending: true, isIncoming: false });
+    
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/friends/follow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendUserId }),
+        });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to send friend request");
-      }
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to send friend request");
+        }
 
-      if (data.status === "accepted") {
-        setIsFriend(true);
-        setIsPending(false);
-        onStatusChange?.("accepted", true);
-        toast.success("You are now friends!");
-      } else {
-        setIsPending(true);
-        setIsIncoming(false);
-        onStatusChange?.("pending", false);
-        toast.success("Friend request sent");
+        if (data.status === "accepted") {
+          setState({ isFriend: true, isPending: false, isIncoming: false });
+          onStatusChange?.("accepted", true);
+          toast.success("You are now friends!");
+        } else {
+          setState({ isFriend: false, isPending: true, isIncoming: false });
+          onStatusChange?.("pending", false);
+          toast.success("Friend request sent");
+        }
+      } catch (error) {
+        console.error("Error sending friend request:", error);
+        // Revert optimistic update on error
+        setState(state);
+        toast.error("Failed to send friend request. Please try again.");
       }
-    } catch (error) {
-      console.error("Error sending friend request:", error);
-      toast.error("Failed to send friend request. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   const handleAcceptRequest = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/friends/accept", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendUserId }),
-      });
+    // Optimistically update UI
+    setOptimisticState({ isFriend: true, isPending: false, isIncoming: false });
+    
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/friends/accept", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendUserId }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to accept friend request");
+        if (!response.ok) {
+          throw new Error("Failed to accept friend request");
+        }
+
+        setState({ isFriend: true, isPending: false, isIncoming: false });
+        onStatusChange?.("accepted", true);
+        toast.success("Friend request accepted!");
+      } catch (error) {
+        console.error("Error accepting friend request:", error);
+        // Revert optimistic update on error
+        setState(state);
+        toast.error("Failed to accept friend request. Please try again.");
       }
-
-      setIsFriend(true);
-      setIsPending(false);
-      setIsIncoming(false);
-      onStatusChange?.("accepted", true);
-      toast.success("Friend request accepted!");
-    } catch (error) {
-      console.error("Error accepting friend request:", error);
-      toast.error("Failed to accept friend request. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   const handleRemoveFriend = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/friends/unfollow", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendUserId }),
-      });
+    // Optimistically update UI
+    setOptimisticState({ isFriend: false, isPending: false, isIncoming: false });
+    
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/friends/unfollow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendUserId }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to remove friend");
+        if (!response.ok) {
+          throw new Error("Failed to remove friend");
+        }
+
+        setState({ isFriend: false, isPending: false, isIncoming: false });
+        onStatusChange?.("none", false);
+        toast.success("Friendship removed");
+      } catch (error) {
+        console.error("Error removing friend:", error);
+        // Revert optimistic update on error
+        setState(state);
+        toast.error("Failed to remove friend. Please try again.");
       }
-
-      setIsFriend(false);
-      setIsPending(false);
-      setIsIncoming(false);
-      onStatusChange?.("none", false);
-      toast.success("Friendship removed");
-    } catch (error) {
-      console.error("Error removing friend:", error);
-      toast.error("Failed to remove friend. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   const handleCancelRequest = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/friends/unfollow", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendUserId }),
-      });
+    // Optimistically update UI
+    setOptimisticState({ isFriend: false, isPending: false, isIncoming: false });
+    
+    startTransition(async () => {
+      try {
+        const response = await fetch("/api/friends/unfollow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ friendUserId }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to cancel friend request");
+        if (!response.ok) {
+          throw new Error("Failed to cancel friend request");
+        }
+
+        setState({ isFriend: false, isPending: false, isIncoming: false });
+        onStatusChange?.("none", false);
+        toast.success("Friend request cancelled");
+      } catch (error) {
+        console.error("Error cancelling friend request:", error);
+        // Revert optimistic update on error
+        setState(state);
+        toast.error("Failed to cancel friend request. Please try again.");
       }
-
-      setIsPending(false);
-      setIsIncoming(false);
-      onStatusChange?.("none", false);
-      toast.success("Friend request cancelled");
-    } catch (error) {
-      console.error("Error cancelling friend request:", error);
-      toast.error("Failed to cancel friend request. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   // Already friends - show remove button
-  if (isFriend) {
+  if (optimisticState.isFriend) {
     return (
       <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
           onClick={handleRemoveFriend}
-          disabled={isLoading}
+          disabled={isPending}
         >
-          {isLoading ? (
+          {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
             <UserMinus className="h-4 w-4 mr-2" />
@@ -164,14 +182,14 @@ export function FriendFollowButton({
   }
 
   // Incoming pending request - show accept button
-  if (isPending && isIncoming) {
+  if (optimisticState.isPending && optimisticState.isIncoming) {
     return (
       <div className="flex items-center gap-2">
         <Button 
           onClick={handleAcceptRequest}
-          disabled={isLoading}
+          disabled={isPending}
         >
-          {isLoading ? (
+          {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
             <UserCheck className="h-4 w-4 mr-2" />
@@ -181,7 +199,7 @@ export function FriendFollowButton({
         <Button 
           variant="outline"
           onClick={handleCancelRequest}
-          disabled={isLoading}
+          disabled={isPending}
         >
           Decline
         </Button>
@@ -190,15 +208,15 @@ export function FriendFollowButton({
   }
 
   // Outgoing pending request - show pending state with cancel option
-  if (isPending) {
+  if (optimisticState.isPending) {
     return (
       <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
           onClick={handleCancelRequest}
-          disabled={isLoading}
+          disabled={isPending}
         >
-          {isLoading ? (
+          {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
             <Clock className="h-4 w-4 mr-2" />
@@ -216,9 +234,9 @@ export function FriendFollowButton({
   return (
     <Button 
       onClick={handleSendRequest}
-      disabled={isLoading}
+      disabled={isPending}
     >
-      {isLoading ? (
+      {isPending ? (
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
       ) : (
         <UserPlus className="h-4 w-4 mr-2" />
