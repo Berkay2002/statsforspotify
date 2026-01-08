@@ -2,6 +2,8 @@
 
 Instructions for AI agents working on this codebase.
 
+> **Note**: For GitHub Copilot users, see also `.github/copilot-instructions.md` for additional guidance.
+
 ## Project Overview
 
 This is a Next.js 16 app using the App Router, Supabase for auth/database, and Recharts for visualizations. It tracks Spotify listening stats over time.
@@ -36,6 +38,7 @@ This is a Next.js 16 app using the App Router, Supabase for auth/database, and R
 - Run `bun run build` to check for TypeScript and build errors
 - Run `bun lint` to check ESLint rules
 - No test suite is currently configured; add Vitest if needed
+- **Note**: There are existing lint warnings/errors in the codebase that are not your responsibility to fix unless they're related to your changes
 
 ## Code Style
 
@@ -79,5 +82,15 @@ Spotify OAuth is configured in Supabase Dashboard, not in env vars.
 ## PR Instructions
 
 - Run `bun run build` and `bun lint` before committing
-- Ensure no TypeScript errors
+- Ensure no TypeScript errors introduced by your changes
 - Test auth flows manually if changing auth-related code
+- Review the scope of your changes before pushing
+- Only fix issues directly related to your task
+
+## Dependencies
+
+When adding new dependencies:
+- Prefer using existing libraries already in the project
+- Only add new packages if absolutely necessary
+- Check for security vulnerabilities before adding
+- Use `bun add <package>` to install (or `npm install` as fallback)
