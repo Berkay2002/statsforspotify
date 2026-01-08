@@ -73,6 +73,43 @@ This is a Next.js 16 app using the App Router, Supabase for auth/database, and R
 - Keep client components small and focused
 - Pass data from Server Components to Client Components via props
 
+### Database Types (IMPORTANT)
+- **ALWAYS use generated types from `lib/supabase/database.ts`** - DO NOT manually create database interfaces
+- Types are auto-generated from the live database schema using Supabase CLI
+- To regenerate types after schema changes: `supabase gen types typescript --project-id <project-id> > lib/supabase/database.ts`
+- Import and use like this:
+
+```typescript
+import type { Database } from '@/lib/supabase/database';
+
+// For table rows (select queries)
+type ArtistRanking = Database['public']['Tables']['artist_rankings']['Row'];
+type TrackRanking = Database['public']['Tables']['track_rankings']['Row'];
+type AlbumRanking = Database['public']['Tables']['album_rankings']['Row'];
+
+// For inserts
+type NewArtist = Database['public']['Tables']['artist_rankings']['Insert'];
+
+// For updates
+type ArtistUpdate = Database['public']['Tables']['artist_rankings']['Update'];
+```
+
+**Available tables:**
+- `artist_rankings` - User top artist rankings per snapshot
+- `track_rankings` - User top track rankings per snapshot
+- `album_rankings` - User album rankings derived from top tracks
+- `snapshots` - Tracks when Spotify stats were collected
+- `user_profiles` - Public user profiles with Discord-style usernames
+- `follow_cache` - Cached Spotify follow verification results
+- `artist_listening_stats` - Aggregated listening statistics per artist
+
+**Why use generated types:**
+- ✅ Always in sync with database schema
+- ✅ One command to regenerate after migrations
+- ✅ No manual type definitions needed
+- ✅ Prevents type drift and errors
+- ✅ Full TypeScript autocomplete support
+
 ## Database Changes
 
 - Add new migrations as numbered SQL files in `supabase/migrations/`
