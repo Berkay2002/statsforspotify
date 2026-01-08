@@ -17,7 +17,9 @@ import {
   TrendingUp,
   Music,
   CheckCircle2,
-  Eye
+  Eye,
+  Users,
+  UserPlus
 } from "lucide-react";
 import { DeleteDataDialog } from "./delete-data-dialog";
 import { DeleteAccountDialog } from "./delete-account-dialog";
@@ -91,6 +93,23 @@ export default async function ProfilePage() {
       .eq("user_id", user.id),
   ]);
 
+  // Get followers and following counts
+  const [
+    { count: followersCount },
+    { count: followingCount },
+  ] = await Promise.all([
+    supabase
+      .from("friendships")
+      .select("*", { count: "exact", head: true })
+      .eq("friend_id", user.id)
+      .eq("status", "accepted"),
+    supabase
+      .from("friendships")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "accepted"),
+  ]);
+
   // Calculate days since first snapshot
   const now = new Date();
   const daysSinceFirstSnapshot = firstSnapshot 
@@ -137,17 +156,26 @@ export default async function ProfilePage() {
                   Connected
                 </Badge>
               </div>
-              <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   <span>Joined {new Date(userInfo.createdAt).toLocaleDateString()}</span>
                 </div>
                 {daysSinceFirstSnapshot > 0 && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
                     <TrendingUp className="h-4 w-4" />
                     <span>{daysSinceFirstSnapshot} {daysSinceFirstSnapshot === 1 ? 'day' : 'days'} tracked</span>
                   </div>
                 )}
+                <Separator orientation="vertical" className="h-4" />
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Users className="h-4 w-4" />
+                  <span>{followersCount || 0} {followersCount === 1 ? 'Follower' : 'Followers'}</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <UserPlus className="h-4 w-4" />
+                  <span>{followingCount || 0} Following</span>
+                </div>
               </div>
             </div>
           </div>

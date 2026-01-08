@@ -6,12 +6,13 @@ import { BarChart3, Clock, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
-export default function HomePage({
+export default async function HomePage({
   searchParams,
 }: {
-  searchParams: { reauth?: string };
+  searchParams: Promise<{ reauth?: string }>;
 }) {
-  const needsReauth = searchParams.reauth === "spotify";
+  const params = await searchParams;
+  const needsReauth = params.reauth === "spotify";
 
   return (
     <div className="flex min-h-screen flex-col">
