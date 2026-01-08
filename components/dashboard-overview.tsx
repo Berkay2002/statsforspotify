@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SparklineLoader, InlineSparkline } from "@/components/charts/sparkline-loader";
+import { CombinedSparklineLoader } from "@/components/charts/combined-sparkline-loader";
+import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import { Users, Music, Music2, ChevronRight } from "lucide-react";
 import type { TimeRange } from "@/lib/spotify/types";
 
@@ -58,20 +59,14 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("medium_term");
   const data = dataByTimeRange[timeRange];
 
-  // We'll fetch sparklines for artists and tracks separately since they come from different API endpoints
+  // Optimized: Combine artist and track IDs for parallel sparkline fetching
   const artistIds = data.artists.map(artist => artist.id);
   const trackIds = data.tracks.map(track => track.id);
 
   return (
-    <SparklineLoader itemIds={artistIds} type="artist">
-      {(artistSparklines, artistLoading) => (
-        <SparklineLoader itemIds={trackIds} type="track">
-          {(trackSparklines, trackLoading) => {
-            const sparklines = { ...artistSparklines, ...trackSparklines };
-            const loading = artistLoading || trackLoading;
-
-            return (
-              <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)} className="w-full">
+    <CombinedSparklineLoader artistIds={artistIds} trackIds={trackIds}>
+      {(sparklines, loading) => (
+        <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)} className="w-full">
             <TabsList>
               <TabsTrigger value="short_term">
                 Last 4 Weeks
@@ -277,11 +272,8 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
               </div>
             </TabsContent>
           </Tabs>
-            );
-          }}
-        </SparklineLoader>
       )}
-    </SparklineLoader>
+    </CombinedSparklineLoader>
   );
 }
 
