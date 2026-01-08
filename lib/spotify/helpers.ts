@@ -1,5 +1,5 @@
 import { getTopArtists, getTopTracks, getTopAlbums } from "./api";
-import type { TimeRange } from "./types";
+import type { RankedArtist, RankedTrack, RankedAlbum } from "./types";
 
 /**
  * Common type for items that can be fetched across time ranges
@@ -14,7 +14,7 @@ export interface TimeRangeData<T> {
  * Fetches top artists for all three time ranges
  * Optimized: short_term is fetched first for faster initial render
  */
-export async function fetchArtistsByTimeRange(limit: number = 50): Promise<TimeRangeData<any>> {
+export async function fetchArtistsByTimeRange(limit: number = 50): Promise<TimeRangeData<RankedArtist>> {
   const shortTerm = await getTopArtists("short_term", limit);
   
   const [mediumTerm, longTerm] = await Promise.all([
@@ -33,7 +33,7 @@ export async function fetchArtistsByTimeRange(limit: number = 50): Promise<TimeR
  * Fetches top tracks for all three time ranges
  * Optimized: short_term is fetched first for faster initial render
  */
-export async function fetchTracksByTimeRange(limit: number = 50): Promise<TimeRangeData<any>> {
+export async function fetchTracksByTimeRange(limit: number = 50): Promise<TimeRangeData<RankedTrack>> {
   const shortTerm = await getTopTracks("short_term", limit);
   
   const [mediumTerm, longTerm] = await Promise.all([
@@ -52,7 +52,7 @@ export async function fetchTracksByTimeRange(limit: number = 50): Promise<TimeRa
  * Fetches top albums for all three time ranges
  * Optimized: Fetches tracks first to avoid redundant API calls
  */
-export async function fetchAlbumsByTimeRange(limit: number = 50): Promise<TimeRangeData<any>> {
+export async function fetchAlbumsByTimeRange(limit: number = 50): Promise<TimeRangeData<RankedAlbum>> {
   const [shortTermTracks, mediumTermTracks, longTermTracks] = await Promise.all([
     getTopTracks("short_term", limit),
     getTopTracks("medium_term", limit),
