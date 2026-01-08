@@ -1,16 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { validateAuth, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
+import { getAuthenticatedUser, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
 
 export async function POST() {
-  const user = await validateAuth();
-  if (!user) {
-    return unauthorizedResponse();
-  }
-
-  const supabase = await createClient();
-
   try {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return unauthorizedResponse();
+    }
+
+    const { user, supabase } = authResult;
+
     // Use the database function to delete all user data
     const { error } = await supabase.rpc("delete_user_data", {
       target_user_id: user.id,
