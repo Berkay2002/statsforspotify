@@ -1,21 +1,32 @@
-import Link from "next/link";
-import { getTopGenres } from "@/lib/spotify/api";
+"use client";
+
+import { useState } from "react";
 import type { TimeRange } from "@/lib/spotify/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { Music2 } from "lucide-react";
+import { getTopGenres, getTopArtists } from "@/lib/spotify/api";
 
-interface PageProps {
-  searchParams: Promise<{ time_range?: string }>;
+interface Genre {
+  rank: number;
+  name: string;
+  artistCount: number;
+  topArtists: string[];
 }
 
-export default async function GenresPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const timeRange = (params.time_range || "medium_term") as TimeRange;
+interface GenresPageProps {
+  genresByTimeRange: {
+    short_term: Genre[];
+    medium_term: Genre[];
+    long_term: Genre[];
+  };
+}
 
-  const genres = await getTopGenres(timeRange, 50);
+export function GenresPageClient({ genresByTimeRange }: GenresPageProps) {
+  const [timeRange, setTimeRange] = useState<TimeRange>("medium_term");
+  const genres = genresByTimeRange[timeRange];
 
   return (
     <div className="space-y-6">
@@ -29,17 +40,11 @@ export default async function GenresPage({ searchParams }: PageProps) {
         <SpotifyAttribution />
       </div>
 
-      <Tabs defaultValue={timeRange} className="w-full">
+      <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
         <TabsList>
-          <TabsTrigger value="short_term" asChild>
-            <Link href="?time_range=short_term">Last 4 Weeks</Link>
-          </TabsTrigger>
-          <TabsTrigger value="medium_term" asChild>
-            <Link href="?time_range=medium_term">Last 6 Months</Link>
-          </TabsTrigger>
-          <TabsTrigger value="long_term" asChild>
-            <Link href="?time_range=long_term">All Time</Link>
-          </TabsTrigger>
+          <TabsTrigger value="short_term">Last 4 Weeks</TabsTrigger>
+          <TabsTrigger value="medium_term">Last 6 Months</TabsTrigger>
+          <TabsTrigger value="long_term">All Time</TabsTrigger>
         </TabsList>
 
         <TabsContent value={timeRange} className="mt-6">
@@ -84,5 +89,32 @@ export default async function GenresPage({ searchParams }: PageProps) {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Server component that fetches all time ranges in parallel
+export default async function GenresPage() {
+  // Optimized: Fetch all artists once, then derive genres for all time ranges
+  const [shortTermArtists, mediumTermArtists, longTermArtists] = await Promise.all([
+    getTopArtists("short_term", 50),
+    getTopArtists("medium_term", 50),
+    getTopArtists("long_term", 50),
+  ]);
+
+  // Extract genres from already-fetched artists (no additional API calls)
+  const [shortTermGenres, mediumTermGenres, longTermGenres] = await Promise.all([
+    getTopGenres("short_term", 50, shortTermArtists),
+    getTopGenres("medium_term", 50, mediumTermArtists),
+    getTopGenres("long_term", 50, longTermArtists),
+  ]);
+
+  return (
+    <GenresPageClient
+      genresByTimeRange={{
+        short_term: shortTermGenres,
+        medium_term: mediumTermGenres,
+        long_term: longTermGenres,
+      }}
+    />
   );
 }

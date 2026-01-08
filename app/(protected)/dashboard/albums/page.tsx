@@ -1,14 +1,20 @@
-import { getTopAlbums } from "@/lib/spotify/api";
+import { getTopAlbums, getTopTracks } from "@/lib/spotify/api";
 import { AlbumsList } from "@/components/albums-list";
 
 export default async function AlbumsPage() {
-  // Priority: Fetch default tab (short_term) first for faster initial render
-  const shortTerm = await getTopAlbums("short_term", 50);
-  
-  // Background: Fetch other time ranges in parallel
-  const [mediumTerm, longTerm] = await Promise.all([
-    getTopAlbums("medium_term", 50),
-    getTopAlbums("long_term", 50),
+  // Optimized: Fetch tracks first, then derive albums from tracks
+  // This avoids redundant API calls since albums are extracted from tracks
+  const [shortTermTracks, mediumTermTracks, longTermTracks] = await Promise.all([
+    getTopTracks("short_term", 50),
+    getTopTracks("medium_term", 50),
+    getTopTracks("long_term", 50),
+  ]);
+
+  // Extract albums from already-fetched tracks (no additional API calls)
+  const [shortTerm, mediumTerm, longTerm] = await Promise.all([
+    getTopAlbums("short_term", 50, shortTermTracks),
+    getTopAlbums("medium_term", 50, mediumTermTracks),
+    getTopAlbums("long_term", 50, longTermTracks),
   ]);
 
   return (

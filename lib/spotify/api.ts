@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type {
   SpotifyArtist,
@@ -48,12 +49,19 @@ async function getAccessToken(): Promise<string> {
   return providerToken;
 }
 
-async function spotifyFetch<T>(endpoint: string): Promise<T> {
+// Cache Spotify API requests within the same React render
+// This prevents duplicate API calls when multiple components request the same data
+const spotifyFetch = cache(async <T,>(endpoint: string): Promise<T> => {
   const accessToken = await getAccessToken();
 
   const response = await fetch(`${SPOTIFY_API_BASE}${endpoint}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
+    },
+    // Add Next.js cache tags for better cache invalidation
+    next: { 
+      revalidate: 60, // Cache for 60 seconds
+      tags: ['spotify-api']
     },
   });
 
@@ -68,16 +76,17 @@ async function spotifyFetch<T>(endpoint: string): Promise<T> {
   }
 
   return response.json();
-}
+});
 
-export async function getCurrentUser(): Promise<SpotifyUser> {
+// Wrap in cache() to deduplicate requests within the same render
+export const getCurrentUser = cache(async (): Promise<SpotifyUser> => {
   return spotifyFetch<SpotifyUser>("/me");
-}
+});
 
-export async function getTopArtists(
+export const getTopArtists = cache(async (
   timeRange: TimeRange = "medium_term",
   limit: number = 50
-): Promise<RankedArtist[]> {
+): Promise<RankedArtist[]> => {
   const response = await spotifyFetch<SpotifyTopItemsResponse<SpotifyArtist>>(
     `/me/top/artists?time_range=${timeRange}&limit=${limit}`
   );
@@ -96,12 +105,12 @@ export async function getTopArtists(
       popularity: artist.popularity,
     };
   });
-}
+});
 
-export async function getTopTracks(
+export const getTopTracks = cache(async (
   timeRange: TimeRange = "medium_term",
   limit: number = 50
-): Promise<RankedTrack[]> {
+): Promise<RankedTrack[]> => {
   const response = await spotifyFetch<SpotifyTopItemsResponse<SpotifyTrack>>(
     `/me/top/tracks?time_range=${timeRange}&limit=${limit}`
   );
@@ -123,7 +132,7 @@ export async function getTopTracks(
       popularity: track.popularity,
     };
   });
-}
+});
 
 export function extractAlbumsFromTracks(tracks: RankedTrack[]): RankedAlbum[] {
   const albumMap = new Map<string, RankedAlbum>();
@@ -158,13 +167,15 @@ export function extractAlbumsFromTracks(tracks: RankedTrack[]): RankedAlbum[] {
   return sortedAlbums;
 }
 
-export async function getTopAlbums(
+// Optimized: Accept pre-fetched tracks to avoid redundant API calls
+export const getTopAlbums = cache(async (
   timeRange: TimeRange = "medium_term",
-  limit: number = 50
-): Promise<RankedAlbum[]> {
-  const tracks = await getTopTracks(timeRange, limit);
+  limit: number = 50,
+  prefetchedTracks?: RankedTrack[]
+): Promise<RankedAlbum[]> => {
+  const tracks = prefetchedTracks ?? await getTopTracks(timeRange, limit);
   return extractAlbumsFromTracks(tracks);
-}
+});
 
 export function extractGenresFromArtists(artists: RankedArtist[]): RankedGenre[] {
   const genreMap = new Map<string, { trackCount: number; artists: Set<string> }>();
@@ -197,29 +208,30 @@ export function extractGenresFromArtists(artists: RankedArtist[]): RankedGenre[]
   return sortedGenres;
 }
 
-export async function getTopGenres(
+export const getTopGenres = cache(async (
   timeRange: TimeRange = "medium_term",
-  limit: number = 50
-): Promise<RankedGenre[]> {
-  // Always fetch 50 artists for consistent genre rankings
-  const artists = await getTopArtists(timeRange, 50);
+  limit: number = 50,
+  prefetchedArtists?: RankedArtist[]
+): Promise<RankedGenre[]> => {
+  // Always fetch 50 artists for consistent genre rankings, or use pre-fetched
+  const artists = prefetchedArtists ?? await getTopArtists(timeRange, 50);
   const allGenres = extractGenresFromArtists(artists);
   
   // Return only the requested number of top genres
   return allGenres.slice(0, limit);
-}
+});
 
 // Get detailed artist information
-export async function getArtistDetails(artistId: string): Promise<SpotifyArtist> {
+export const getArtistDetails = cache(async (artistId: string): Promise<SpotifyArtist> => {
   return spotifyFetch<SpotifyArtist>(`/artists/${artistId}`);
-}
+});
 
 // Get user's top tracks from a specific artist
-export async function getArtistTopTracks(
+export const getArtistTopTracks = cache(async (
   artistId: string,
   timeRange: TimeRange = "medium_term",
   limit: number = 10
-): Promise<RankedTrack[]> {
+): Promise<RankedTrack[]> => {
   // Get all user's top tracks
   const allTopTracks = await getTopTracks(timeRange, 50);
   
@@ -228,7 +240,7 @@ export async function getArtistTopTracks(
   
   // Return limited number
   return artistTracks.slice(0, limit);
-}
+});
 
 // Utility to check if we need to re-authenticate
 export async function checkSpotifyConnection(): Promise<{
