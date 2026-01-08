@@ -3,8 +3,8 @@ import { Geist, Geist_Mono, Inter, Ultra } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
-import { Analytics } from "@vercel/analytics/next"
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { CookieConsent } from "@/components/ui/cookies"
+import { AnalyticsWrapper } from "@/components/analytics-wrapper"
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -47,9 +47,9 @@ export default function RootLayout({
           >
             <QueryProvider>
               {children}
+              <CookieConsent />
             </QueryProvider>
-            <Analytics />
-            <SpeedInsights />
+            <AnalyticsWrapper />
           </ThemeProvider>
       </body>
     </html>

@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { Music, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SpotifyLogo } from "@/components/spotify-stats-logo";
 
 export const metadata: Metadata = {
   title: "Privacy Policy - Stats for Spotify",
@@ -15,7 +16,7 @@ export default function PrivacyPage() {
       <header className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <Music className="h-6 w-6 text-primary" />
+            <SpotifyLogo className="h-6 w-6 text-[#1DB954]" showWordmark={false} />
             <span className="text-xl font-bold">Stats for Spotify</span>
           </Link>
           <Button variant="ghost" asChild>
@@ -39,12 +40,45 @@ export default function PrivacyPage() {
             <section className="mt-8">
               <h2 className="text-2xl font-semibold">1. Introduction</h2>
               <p className="mt-4 text-muted-foreground">
-                Stats for Spotify (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) respects your privacy and is committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our application.
+                Stats for Spotify (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) respects your privacy and is committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our application. We are committed to GDPR compliance and ensuring your data rights are protected.
               </p>
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">2. Data We Collect</h2>
+              <h2 className="text-2xl font-semibold">2. GDPR Compliance</h2>
+              <p className="mt-4 text-muted-foreground">
+                We are committed to complying with the General Data Protection Regulation (GDPR) and other applicable data protection laws. Under GDPR, you have the right to:
+              </p>
+              <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
+                <li>Access your personal data</li>
+                <li>Rectify inaccurate data</li>
+                <li>Request deletion of your data</li>
+                <li>Object to data processing</li>
+                <li>Data portability</li>
+                <li>Withdraw consent at any time</li>
+              </ul>
+              <p className="mt-4 text-muted-foreground">
+                To exercise any of these rights, please visit your profile settings or contact us directly.
+              </p>
+            </section>
+
+            <section className="mt-8">
+              <h2 className="text-2xl font-semibold">3. Cookies and Tracking Technologies</h2>
+              <p className="mt-4 text-muted-foreground">
+                We use cookies and similar tracking technologies to improve your experience and analyze how our service is used:
+              </p>
+              <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
+                <li><strong>Essential Cookies:</strong> Required for authentication and core functionality (Supabase Auth). These cannot be disabled.</li>
+                <li><strong>Analytics Cookies:</strong> Vercel Analytics and Speed Insights help us understand how users interact with our service. You can decline these via our cookie consent banner.</li>
+                <li><strong>Preference Cookies:</strong> Store your settings like theme preferences and cookie consent choices.</li>
+              </ul>
+              <p className="mt-4 text-muted-foreground">
+                You can manage your cookie preferences at any time through your browser settings or by clearing your browser data. Note that disabling certain cookies may limit functionality.
+              </p>
+            </section>
+
+            <section className="mt-8">
+              <h2 className="text-2xl font-semibold">4. Data We Collect</h2>
               <p className="mt-4 text-muted-foreground">
                 When you use Stats for Spotify, we collect and store the following information from your Spotify account:
               </p>
@@ -57,7 +91,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">3. How We Use Your Data</h2>
+              <h2 className="text-2xl font-semibold">5. How We Use Your Data</h2>
               <p className="mt-4 text-muted-foreground">
                 We use your data solely to:
               </p>
@@ -65,6 +99,7 @@ export default function PrivacyPage() {
                 <li>Display your current listening statistics</li>
                 <li>Track and visualize changes in your music preferences over time</li>
                 <li>Provide personalized insights about your listening habits</li>
+                <li>Enable social features to connect with friends who also use the service</li>
               </ul>
               <p className="mt-4 text-muted-foreground">
                 We do not sell, share, or transfer your personal data to third parties for marketing purposes.
@@ -72,7 +107,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">4. Data Storage and Security</h2>
+              <h2 className="text-2xl font-semibold">6. Data Storage and Security</h2>
               <p className="mt-4 text-muted-foreground">
                 Your data is stored securely using Supabase, which provides enterprise-grade security including:
               </p>
@@ -80,11 +115,12 @@ export default function PrivacyPage() {
                 <li>Encryption at rest and in transit</li>
                 <li>Row Level Security (RLS) ensuring you can only access your own data</li>
                 <li>Regular security audits and compliance certifications</li>
+                <li>GDPR-compliant data processing and storage</li>
               </ul>
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">5. Spotify API Usage</h2>
+              <h2 className="text-2xl font-semibold">7. Spotify API Usage</h2>
               <p className="mt-4 text-muted-foreground">
                 Stats for Spotify uses Spotify&apos;s Web API to access your listening data. We request only the minimum permissions necessary:
               </p>
@@ -100,7 +136,7 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">6. Social Features & Friend Connections</h2>
+              <h2 className="text-2xl font-semibold">8. Social Features & Friend Connections</h2>
               <p className="mt-4 text-muted-foreground">
                 Our friend features allow you to view listening stats of other users you mutually follow on Spotify:
               </p>
@@ -117,22 +153,26 @@ export default function PrivacyPage() {
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">7. Your Rights</h2>
+              <h2 className="text-2xl font-semibold">9. Your Rights</h2>
               <p className="mt-4 text-muted-foreground">
-                You have the right to:
+                Under GDPR and other data protection laws, you have the right to:
               </p>
               <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Access</strong>: Export all your data at any time from your profile page</li>
+                <li><strong>Access</strong>: Export all your data at any time from your profile page in JSON or CSV format</li>
+                <li><strong>Rectify</strong>: Update your display name and privacy settings from your profile page</li>
                 <li><strong>Delete</strong>: Permanently delete all your data from our systems via your profile page</li>
-                <li><strong>Revoke</strong>: Disconnect your Spotify account and revoke access at any time through your <a href="https://www.spotify.com/account/apps/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Spotify account settings</a>. When you revoke access, we can no longer access your Spotify data, and any subsequent login will require re-authorization.</li>
+                <li><strong>Restrict Processing</strong>: Control who can view your stats via privacy settings</li>
+                <li><strong>Data Portability</strong>: Download your data in machine-readable formats</li>
+                <li><strong>Object</strong>: Decline analytics cookies via our cookie consent banner</li>
+                <li><strong>Revoke</strong>: Disconnect your Spotify account and revoke access at any time through your <a href="https://www.spotify.com/account/apps/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Spotify account settings</a></li>
               </ul>
               <p className="mt-4 text-muted-foreground">
-                <strong>Important:</strong> Revoking access in Spotify settings does not automatically delete your stored data from our database. To completely remove all your data, please use the &quot;Delete All Data&quot; button on your profile page before or after revoking access.
+                <strong>Important:</strong> Revoking access in Spotify settings does not automatically delete your stored data. To completely remove all your data, use the &quot;Delete All Data&quot; button on your profile page.
               </p>
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">7. Data Retention</h2>
+              <h2 className="text-2xl font-semibold">10. Data Retention</h2>
               <p className="mt-4 text-muted-foreground">
                 We retain your data only for as long as necessary to provide our service:
               </p>
