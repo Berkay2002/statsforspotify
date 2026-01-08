@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { 
+  validateAuth, 
+  unauthorizedResponse, 
+  badRequestResponse,
+  notFoundResponse,
+  serverErrorResponse,
+  validateItemType,
+  validateTimeRange
+} from "@/lib/api/utils";
 
 interface RankingHistoryResponse {
   history: {
@@ -22,15 +31,12 @@ interface RankingHistoryResponse {
 export async function GET(request: NextRequest) {
   try {
     // Validate auth
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await validateAuth();
+    if (!user) {
+      return unauthorizedResponse();
     }
+
+    const supabase = await createClient();
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;
@@ -40,32 +46,17 @@ export async function GET(request: NextRequest) {
 
     // Validate required params
     if (!type || !id) {
-      return NextResponse.json(
-        { error: "Missing required parameters: type and id" },
-        { status: 400 }
-      );
+      return badRequestResponse("Missing required parameters: type and id");
     }
 
     // Validate type
-    if (!["artist", "track", "album"].includes(type)) {
-      return NextResponse.json(
-        { error: "Invalid type. Must be: artist, track, or album" },
-        { status: 400 }
-      );
+    if (!validateItemType(type)) {
+      return badRequestResponse("Invalid type. Must be: artist, track, or album");
     }
 
     // Validate time_range if provided
-    if (
-      timeRange &&
-      !["short_term", "medium_term", "long_term"].includes(timeRange)
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid time_range. Must be: short_term, medium_term, or long_term",
-        },
-        { status: 400 }
-      );
+    if (timeRange && !validateTimeRange(timeRange)) {
+      return badRequestResponse("Invalid time_range. Must be: short_term, medium_term, or long_term");
     }
 
     // Call the database function
@@ -78,17 +69,11 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Database error:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch ranking history" },
-        { status: 500 }
-      );
+      return serverErrorResponse("Failed to fetch ranking history");
     }
 
     if (!data || data.length === 0) {
-      return NextResponse.json(
-        { error: "No ranking history found" },
-        { status: 404 }
-      );
+      return notFoundResponse("No ranking history found");
     }
 
     // Transform snake_case to camelCase
@@ -132,9 +117,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }
