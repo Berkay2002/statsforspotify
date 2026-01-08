@@ -10,56 +10,15 @@ import { TracksList } from "@/components/tracks-list";
 import { AlbumsList } from "@/components/albums-list";
 import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database";
 
 interface Props {
   params: Promise<{ username: string; discriminator: string }>;
 }
 
-interface ArtistRanking {
-  id: string;
-  snapshot_id: string;
-  user_id: string;
-  artist_id: string;
-  artist_name: string;
-  artist_image_url: string | null;
-  genres: string[] | null;
-  popularity: number | null;
-  rank: number;
-  created_at: string;
-}
-
-interface TrackRanking {
-  id: string;
-  snapshot_id: string;
-  user_id: string;
-  track_id: string;
-  track_name: string;
-  track_image_url: string | null;
-  artist_id: string;
-  artist_name: string;
-  album_id: string;
-  album_name: string;
-  duration_ms: number | null;
-  popularity: number | null;
-  rank: number;
-  created_at: string;
-}
-
-interface AlbumRanking {
-  id: string;
-  snapshot_id: string;
-  user_id: string;
-  album_id: string;
-  album_name: string;
-  album_image_url: string | null;
-  artist_id: string;
-  artist_name: string;
-  release_date: string | null;
-  total_tracks: number | null;
-  track_count: number;
-  rank: number;
-  created_at: string;
-}
+type ArtistRanking = Database['public']['Tables']['artist_rankings']['Row'];
+type TrackRanking = Database['public']['Tables']['track_rankings']['Row'];
+type AlbumRanking = Database['public']['Tables']['album_rankings']['Row'];
 
 export default async function FriendProfilePage({ params }: Props) {
   const { username, discriminator } = await params;
