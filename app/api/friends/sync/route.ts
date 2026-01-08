@@ -46,7 +46,7 @@ export async function POST() {
     }
     
     // Check which follows are mutual
-    const appUserSpotifyIds = appUsers.map(u => u.spotify_user_id);
+    const appUserSpotifyIds = appUsers.map(appUser => appUser.spotify_user_id);
     const mutualResults = await checkMutualFollows(appUserSpotifyIds);
     
     // Update follow cache
