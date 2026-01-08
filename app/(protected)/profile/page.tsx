@@ -20,6 +20,7 @@ import {
   Eye
 } from "lucide-react";
 import { DeleteDataDialog } from "./delete-data-dialog";
+import { DeleteAccountDialog } from "./delete-account-dialog";
 import { ExportDataButton } from "./export-data-button";
 import { PrivacySettings } from "./privacy-settings";
 import { getCurrentUser } from "@/lib/spotify/api";
@@ -372,6 +373,18 @@ export default async function ProfilePage() {
               These actions are irreversible. Please proceed with caution.
             </AlertDescription>
           </Alert>
+
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex-1">
+              <h4 className="font-medium">Delete Account</h4>
+              <p className="text-sm text-muted-foreground">
+                Permanently delete your account and all associated data. This cannot be undone.
+              </p>
+            </div>
+            <DeleteAccountDialog />
+          </div>
+
+          <Separator />
 
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="flex-1">
