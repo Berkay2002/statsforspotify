@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser, serverErrorResponse } from "@/lib/api/utils";
 import { getAllFollowingUsers, checkMutualFollows } from "@/lib/spotify/api";
 
 export async function POST() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    
+    const { user, supabase } = authResult;
     
     // Get current user's Spotify ID
     const { data: profile } = await supabase
@@ -99,12 +99,8 @@ export async function POST() {
       mutualFriends,
       followBackSuggestions,
     });
-    
   } catch (error) {
     console.error("Error syncing friends:", error);
-    return NextResponse.json(
-      { error: "Failed to sync friends" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to sync friends");
   }
 }

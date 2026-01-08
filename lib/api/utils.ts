@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { User } from "@supabase/supabase-js";
 
 /**
  * Validates that the user is authenticated
@@ -17,6 +18,46 @@ export async function validateAuth() {
   }
 
   return user;
+}
+
+/**
+ * Higher-order function that wraps an API handler with authentication and error handling
+ * @param handler - The API handler function that receives the authenticated user
+ * @returns A wrapped handler with automatic auth checking and error handling
+ */
+export function withAuthHandler<T extends Record<string, unknown> = Record<string, unknown>>(
+  handler: (user: User, request: Request, context: T) => Promise<Response>
+) {
+  return async (request: Request, context: T) => {
+    try {
+      const user = await validateAuth();
+      if (!user) {
+        return unauthorizedResponse();
+      }
+      return await handler(user, request, context);
+    } catch (error) {
+      console.error("API Error:", error);
+      return serverErrorResponse("An error occurred processing your request");
+    }
+  };
+}
+
+/**
+ * Gets the authenticated user and Supabase client
+ * @returns Object with user and supabase client, or null if not authenticated
+ */
+export async function getAuthenticatedUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return null;
+  }
+
+  return { user, supabase };
 }
 
 /**
