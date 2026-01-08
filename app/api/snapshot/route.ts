@@ -1,7 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
 import { getTopArtists, getTopTracks, extractAlbumsFromTracks } from "@/lib/spotify/api";
 import { NextResponse } from "next/server";
-import { validateAuth, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
+import { getAuthenticatedUser, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
 import type { TimeRange } from "@/lib/spotify/types";
 
 // Allow one snapshot per 24 hours for auto-collection
@@ -9,12 +8,12 @@ const SNAPSHOT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function POST(request: Request) {
   try {
-    const user = await validateAuth();
-    if (!user) {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return unauthorizedResponse();
     }
 
-    const supabase = await createClient();
+    const { user, supabase } = authResult;
 
     // Check if snapshot is needed
     const { data: lastSnapshot } = await supabase

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { serverErrorResponse } from "@/lib/api/utils";
 
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
 
@@ -14,102 +15,69 @@ async function getAccessToken() {
   return session.provider_token;
 }
 
+async function handleSpotifyRequest(
+  method: "GET" | "PUT" | "DELETE",
+  url: string,
+  errorMessage: string
+): Promise<NextResponse> {
+  try {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(errorMessage);
+    }
+
+    if (method === "GET") {
+      const data = await response.json();
+      return NextResponse.json({ isFollowing: data[0] });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error(`Error: ${errorMessage}`, error);
+    return serverErrorResponse(errorMessage);
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const accessToken = await getAccessToken();
-
-    // Check if user follows the artist
-    const response = await fetch(
-      `${SPOTIFY_API_BASE}/me/following/contains?type=artist&ids=${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to check follow status");
-    }
-
-    const [isFollowing] = await response.json();
-
-    return NextResponse.json({ isFollowing });
-  } catch (error) {
-    console.error("Error checking follow status:", error);
-    return NextResponse.json(
-      { error: "Failed to check follow status" },
-      { status: 500 }
-    );
-  }
+  const { id } = await params;
+  return handleSpotifyRequest(
+    "GET",
+    `${SPOTIFY_API_BASE}/me/following/contains?type=artist&ids=${id}`,
+    "Failed to check follow status"
+  );
 }
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const accessToken = await getAccessToken();
-
-    // Follow the artist
-    const response = await fetch(
-      `${SPOTIFY_API_BASE}/me/following?type=artist&ids=${id}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to follow artist");
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error following artist:", error);
-    return NextResponse.json(
-      { error: "Failed to follow artist" },
-      { status: 500 }
-    );
-  }
+  const { id } = await params;
+  return handleSpotifyRequest(
+    "PUT",
+    `${SPOTIFY_API_BASE}/me/following?type=artist&ids=${id}`,
+    "Failed to follow artist"
+  );
 }
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await params;
-    const accessToken = await getAccessToken();
-
-    // Unfollow the artist
-    const response = await fetch(
-      `${SPOTIFY_API_BASE}/me/following?type=artist&ids=${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to unfollow artist");
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error unfollowing artist:", error);
-    return NextResponse.json(
-      { error: "Failed to unfollow artist" },
-      { status: 500 }
-    );
-  }
+  const { id } = await params;
+  return handleSpotifyRequest(
+    "DELETE",
+    `${SPOTIFY_API_BASE}/me/following?type=artist&ids=${id}`,
+    "Failed to unfollow artist"
+  );
 }

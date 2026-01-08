@@ -1,23 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
 import { followUser } from "@/lib/spotify/api";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
+    const { user, supabase } = authResult;
     const { spotifyUserId } = await request.json();
     
     if (!spotifyUserId) {
-      return NextResponse.json(
-        { error: "spotifyUserId is required" },
-        { status: 400 }
-      );
+      return badRequestResponse("spotifyUserId is required");
     }
     
     // Follow on Spotify
@@ -31,12 +27,8 @@ export async function POST(request: Request) {
       .eq("spotify_friend_id", spotifyUserId);
     
     return NextResponse.json({ success: true });
-    
   } catch (error) {
     console.error("Error following user:", error);
-    return NextResponse.json(
-      { error: "Failed to follow user" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to follow user");
   }
 }

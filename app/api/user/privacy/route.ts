@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
 
 export async function PATCH(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
+    const { user, supabase } = authResult;
     const { stats_visibility } = await request.json();
     
     if (!stats_visibility || !["public", "followers", "private"].includes(stats_visibility)) {
-      return NextResponse.json(
-        { error: "Invalid stats_visibility value" },
-        { status: 400 }
-      );
+      return badRequestResponse("Invalid stats_visibility value");
     }
     
     // Update user profile
@@ -28,12 +24,8 @@ export async function PATCH(request: Request) {
     if (error) throw error;
     
     return NextResponse.json({ success: true });
-    
   } catch (error) {
     console.error("Error updating privacy settings:", error);
-    return NextResponse.json(
-      { error: "Failed to update privacy settings" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to update privacy settings");
   }
 }

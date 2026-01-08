@@ -1,15 +1,9 @@
-import { getTopArtists } from "@/lib/spotify/api";
+import { fetchArtistsByTimeRange } from "@/lib/spotify/helpers";
 import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { ArtistsList } from "@/components/artists-list";
 
 export default async function ArtistsPage() {
-  // Fetch all time ranges in parallel for faster initial render
-  // This reduces total wait time from sequential to parallel
-  const [shortTerm, mediumTerm, longTerm] = await Promise.all([
-    getTopArtists("short_term", 50),
-    getTopArtists("medium_term", 50),
-    getTopArtists("long_term", 50),
-  ]);
+  const artistsByTimeRange = await fetchArtistsByTimeRange(50);
 
   return (
     <div className="space-y-6">
@@ -23,13 +17,7 @@ export default async function ArtistsPage() {
         <SpotifyAttribution />
       </div>
 
-      <ArtistsList 
-        artistsByTimeRange={{
-          short_term: shortTerm,
-          medium_term: mediumTerm,
-          long_term: longTerm,
-        }}
-      />
+      <ArtistsList artistsByTimeRange={artistsByTimeRange} />
     </div>
   );
 }
