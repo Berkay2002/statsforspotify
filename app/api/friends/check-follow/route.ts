@@ -16,6 +16,8 @@ export async function GET(request: Request) {
       return badRequestResponse("spotifyUserId parameter is required");
     }
     
+    console.log("[check-follow] Checking follow status for Spotify user ID:", spotifyUserId);
+    
     // Check follow status
     const results = await checkMutualFollows([spotifyUserId]);
     

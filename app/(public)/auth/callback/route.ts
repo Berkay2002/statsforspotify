@@ -51,7 +51,7 @@ export async function GET(request: Request) {
   // Handle OAuth callback with code
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       console.error("Auth exchange error:", error.message);
@@ -62,24 +62,59 @@ export async function GET(request: Request) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      if (user) {
+      if (user && session) {
         // Get Spotify identity data
         const { data: identities } = await supabase.auth.getUserIdentities();
         const spotifyIdentity = identities?.identities.find(i => i.provider === 'spotify');
 
         if (spotifyIdentity?.identity_data) {
+          // Extract username from OAuth token (the 'sub' claim)
+          const spotifyUsername = spotifyIdentity.identity_data.sub;
+          
+          // Fetch the REAL Spotify user ID from the Spotify API
+          // The identity_data.sub is the username, not the actual ID
+          let actualSpotifyUserId: string | null = null;
+          
+          try {
+            const spotifyResponse = await fetch('https://api.spotify.com/v1/me', {
+              headers: {
+                'Authorization': `Bearer ${session.provider_token}`
+              }
+            });
+            
+            if (spotifyResponse.ok) {
+              const spotifyProfile = await spotifyResponse.json();
+              actualSpotifyUserId = spotifyProfile.id; // This is the REAL Spotify user ID
+              console.log('[Auth Callback] Fetched real Spotify user ID:', actualSpotifyUserId, 'for username:', spotifyUsername);
+            } else {
+              console.error('[Auth Callback] Failed to fetch Spotify profile:', spotifyResponse.status, spotifyResponse.statusText);
+            }
+          } catch (err) {
+            console.error('[Auth Callback] Failed to fetch Spotify profile:', err);
+          }
+          
           const displayName = spotifyIdentity.identity_data.name || spotifyIdentity.identity_data.full_name || 'User';
           const avatarUrl = spotifyIdentity.identity_data.picture?.url || null;
 
           // Update user profile with latest Spotify data (keeps discriminator unchanged)
+          const updateData: Record<string, string | null> = {
+            spotify_user_name: spotifyUsername,
+            display_name: displayName,
+            avatar_url: avatarUrl,
+            updated_at: new Date().toISOString(),
+          };
+          
+          // Only update spotify_user_id if we successfully fetched it
+          if (actualSpotifyUserId) {
+            updateData.spotify_user_id = actualSpotifyUserId;
+          }
+          
           await supabase
             .from('user_profiles')
-            .update({
-              display_name: displayName,
-              avatar_url: avatarUrl,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('user_id', user.id);
+          
+          console.log('[Auth Callback] Updated user profile - username:', spotifyUsername, 'user_id:', actualSpotifyUserId || 'not fetched');
         }
       }
     } catch (syncError) {
