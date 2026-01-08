@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 
 interface SparklineLoaderProps {
   itemIds: string[];
@@ -8,11 +8,23 @@ interface SparklineLoaderProps {
   children: (sparklines: Record<string, { date: string; rank: number }[]>, loading: boolean) => React.ReactNode;
 }
 
+// Simple in-memory cache for sparkline data
+const sparklineCache = new Map<string, { data: Record<string, { date: string; rank: number }[]>; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProps) {
   const [sparklines, setSparklines] = useState<
     Record<string, { date: string; rank: number }[]>
   >({});
   const [loading, setLoading] = useState(true);
+
+  // Stable key to prevent unnecessary refetches when array reference changes
+  // Only refetch if the actual IDs or their order changes
+  const itemIdsKey = useMemo(() => itemIds.join(","), [itemIds]);
+  const cacheKey = `${type}:${itemIdsKey}`;
+  
+  // Track ongoing requests to prevent duplicate fetches
+  const fetchingRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,12 +35,28 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
         return;
       }
 
-      if (!cancelled) setLoading(true);
-      
-      const ids = itemIds.join(",");
+      // Check cache first
+      const cached = sparklineCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        if (!cancelled) {
+          setSparklines(cached.data);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Prevent duplicate requests for the same data
+      if (fetchingRef.current === cacheKey) {
+        return;
+      }
+
+      if (!cancelled) {
+        setLoading(true);
+        fetchingRef.current = cacheKey;
+      }
       
       try {
-        const res = await fetch(`/api/rankings/sparklines?type=${type}&ids=${ids}`);
+        const res = await fetch(`/api/rankings/sparklines?type=${type}&ids=${itemIdsKey}`);
         
         if (cancelled) return;
         
@@ -36,14 +64,21 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
         
         if (!cancelled) {
           if (data.sparklines) {
+            // Cache the result
+            sparklineCache.set(cacheKey, {
+              data: data.sparklines,
+              timestamp: Date.now(),
+            });
             setSparklines(data.sparklines);
           }
           setLoading(false);
+          fetchingRef.current = null;
         }
       } catch (err) {
         if (!cancelled) {
           console.error("Failed to fetch sparklines:", err);
           setLoading(false);
+          fetchingRef.current = null;
         }
       }
     };
@@ -53,7 +88,7 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
     return () => {
       cancelled = true;
     };
-  }, [itemIds, type]);
+  }, [itemIdsKey, type, cacheKey]); // Use stable key instead of itemIds array
 
   return <>{children(sparklines, loading)}</>;
 }
