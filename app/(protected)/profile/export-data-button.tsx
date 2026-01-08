@@ -22,13 +22,13 @@ export function ExportDataButton({ format }: ExportDataButtonProps) {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `spotify-stats-export.${format}`;
-      document.body.appendChild(a);
-      a.click();
+      const downloadLink = document.createElement("a");
+      downloadLink.href = url;
+      downloadLink.download = `spotify-stats-export.${format}`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      document.body.removeChild(downloadLink);
     } catch (error) {
       console.error("Export error:", error);
       alert("Failed to export data. Please try again.");
