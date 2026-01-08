@@ -33,10 +33,12 @@ export async function POST() {
     }
     
     // Find which followed users have accounts in our app
+    // Only match users with valid Spotify user IDs
     const { data: appUsers } = await supabase
       .from("user_profiles")
       .select("user_id, spotify_user_id, display_name, discriminator, avatar_url")
-      .in("spotify_user_id", followingUserIds);
+      .in("spotify_user_id", followingUserIds)
+      .not("spotify_user_id", "is", null);
     
     if (!appUsers || appUsers.length === 0) {
       return NextResponse.json({ 

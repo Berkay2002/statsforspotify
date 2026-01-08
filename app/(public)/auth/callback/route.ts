@@ -85,7 +85,10 @@ export async function GET(request: Request) {
             if (spotifyResponse.ok) {
               const spotifyProfile = await spotifyResponse.json();
               actualSpotifyUserId = spotifyProfile.id; // This is the REAL Spotify user ID
-              console.log('[Auth Callback] Fetched real Spotify user ID:', actualSpotifyUserId, 'for username:', spotifyUsername);
+              console.log('[Auth Callback] Full Spotify profile response:', JSON.stringify(spotifyProfile, null, 2));
+              console.log('[Auth Callback] Fetched Spotify user ID:', actualSpotifyUserId, '(length:', actualSpotifyUserId?.length, ')');
+              console.log('[Auth Callback] Spotify username from sub:', spotifyUsername);
+              console.log('[Auth Callback] Are they the same?', actualSpotifyUserId === spotifyUsername);
             } else {
               console.error('[Auth Callback] Failed to fetch Spotify profile:', spotifyResponse.status, spotifyResponse.statusText);
             }

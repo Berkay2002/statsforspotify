@@ -279,7 +279,7 @@ export type Database = {
           discriminator: string
           display_name: string
           id: string
-          spotify_user_id: string
+          spotify_user_id: string | null
           spotify_user_name: string | null
           stats_visibility: string
           updated_at: string
@@ -291,7 +291,7 @@ export type Database = {
           discriminator: string
           display_name: string
           id?: string
-          spotify_user_id: string
+          spotify_user_id?: string | null
           spotify_user_name?: string | null
           stats_visibility?: string
           updated_at?: string
@@ -303,7 +303,7 @@ export type Database = {
           discriminator?: string
           display_name?: string
           id?: string
-          spotify_user_id?: string
+          spotify_user_id?: string | null
           spotify_user_name?: string | null
           stats_visibility?: string
           updated_at?: string
