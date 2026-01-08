@@ -50,7 +50,7 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
                 <div key={track.id} className="bg-transparent transition-colors hover:bg-muted/30 rounded-md">
                   <div className="p-3 px-0">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 flex flex-col items-center justify-center flex-shrink-0">
+                      <div className="w-8 flex flex-col items-center justify-center shrink-0">
                         <InlineSparkline itemId={track.id} sparklines={sparklines} loading={loading} />
                         <span className="text-xl font-bold text-muted-foreground">
                           {track.rank}
@@ -63,23 +63,23 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
                             alt={track.name}
                             width={64}
                             height={64}
-                            className="rounded-[4px] object-cover flex-shrink-0"
+                            className="rounded-lg object-cover shrink-0"
                             loading={index < 10 ? "eager" : "lazy"}
                             priority={index < 5}
                             placeholder="blur"
                             blurDataURL={BLUR_DATA_URL.SMALL}
                           />
                         ) : (
-                          <div className="h-16 w-16 rounded-[4px] bg-muted flex-shrink-0" />
+                          <div className="h-16 w-16 rounded-lg bg-muted shrink-0" />
                         )}
                         <div className="flex-1 min-w-0 overflow-hidden">
                           <p className="truncate font-semibold text-base">{track.name}</p>
-                          <p className="truncate text-sm text-muted-foreground max-w-[300px] sm:max-w-[400px] md:max-w-[500px]">
+                          <p className="truncate text-sm text-muted-foreground max-w-75 sm:max-w-100 md:max-w-125">
                             {track.artistName} • {track.albumName}
                           </p>
                         </div>
                       </Link>
-                      <span className="text-sm text-muted-foreground flex-shrink-0 hidden sm:block">
+                      <span className="text-sm text-muted-foreground shrink-0 hidden sm:block">
                         {formatDuration(track.durationMs)}
                       </span>
                       <a

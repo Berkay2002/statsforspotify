@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Ultra } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/components/query-provider"
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
@@ -44,10 +45,12 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-          {children}
-          <Analytics />
-          <SpeedInsights />
-        </ThemeProvider>
+            <QueryProvider>
+              {children}
+            </QueryProvider>
+            <Analytics />
+            <SpeedInsights />
+          </ThemeProvider>
       </body>
     </html>
   );

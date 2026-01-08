@@ -262,3 +262,130 @@ export async function checkSpotifyConnection(): Promise<{
     return { connected: false, error: "Unknown error" };
   }
 }
+
+// ===== Spotify Follow API Functions =====
+
+// Get users that the current user follows (with pagination)
+export const getFollowingUsers = cache(async (
+  after?: string
+): Promise<{ users: string[]; nextCursor: string | null }> => {
+  const endpoint = after 
+    ? `/me/following?type=user&limit=50&after=${after}`
+    : `/me/following?type=user&limit=50`;
+  
+  const response = await spotifyFetch<{
+    artists: {
+      items: Array<{ id: string }>;
+      next: string | null;
+      cursors: { after: string | null };
+    };
+  }>(endpoint);
+
+  return {
+    users: response.artists.items.map(user => user.id),
+    nextCursor: response.artists.cursors.after,
+  };
+});
+
+// Get all users the current user follows (handles pagination automatically)
+export async function getAllFollowingUsers(): Promise<string[]> {
+  const allUsers: string[] = [];
+  let cursor: string | null = null;
+  
+  do {
+    const { users, nextCursor } = await getFollowingUsers(cursor || undefined);
+    allUsers.push(...users);
+    cursor = nextCursor;
+  } while (cursor);
+  
+  return allUsers;
+}
+
+// Check if current user follows specific users (max 50 IDs per call)
+export async function checkIfFollowsUsers(spotifyUserIds: string[]): Promise<boolean[]> {
+  if (spotifyUserIds.length === 0) return [];
+  if (spotifyUserIds.length > 50) {
+    throw new Error("Maximum 50 user IDs per request");
+  }
+  
+  const ids = spotifyUserIds.join(',');
+  return spotifyFetch<boolean[]>(`/me/following/contains?type=user&ids=${ids}`);
+}
+
+// Check mutual follows for multiple users (batches requests if needed)
+export async function checkMutualFollows(
+  spotifyUserIds: string[]
+): Promise<import("./types").FollowCheckResult[]> {
+  if (spotifyUserIds.length === 0) return [];
+  
+  // Get all users current user follows
+  const followingUsers = await getAllFollowingUsers();
+  const followingSet = new Set(followingUsers);
+  
+  const results: import("./types").FollowCheckResult[] = [];
+  
+  // Batch check if these users follow back (50 IDs at a time)
+  for (let i = 0; i < spotifyUserIds.length; i += 50) {
+    const batch = spotifyUserIds.slice(i, i + 50);
+    const followsBack = await checkIfFollowsUsers(batch);
+    
+    batch.forEach((spotifyUserId, index) => {
+      const isFollowing = followingSet.has(spotifyUserId);
+      const isFollowedBack = followsBack[index];
+      const isMutual = isFollowing && isFollowedBack;
+      
+      results.push({
+        spotifyUserId,
+        isFollowing,
+        isMutual,
+      });
+    });
+  }
+  
+  return results;
+}
+
+// Follow a user on Spotify
+export async function followUser(spotifyUserId: string): Promise<void> {
+  const accessToken = await getAccessToken();
+  
+  const response = await fetch(
+    `${SPOTIFY_API_BASE}/me/following?type=user&ids=${spotifyUserId}`,
+    {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  
+  if (!response.ok) {
+    throw new SpotifyAPIError(
+      `Failed to follow user: ${response.statusText}`,
+      response.status
+    );
+  }
+}
+
+// Unfollow a user on Spotify
+export async function unfollowUser(spotifyUserId: string): Promise<void> {
+  const accessToken = await getAccessToken();
+  
+  const response = await fetch(
+    `${SPOTIFY_API_BASE}/me/following?type=user&ids=${spotifyUserId}`,
+    {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+  
+  if (!response.ok) {
+    throw new SpotifyAPIError(
+      `Failed to unfollow user: ${response.statusText}`,
+      response.status
+    );
+  }
+}
+

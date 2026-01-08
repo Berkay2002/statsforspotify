@@ -40,7 +40,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {artists.map((artist, index) => (
                 <Card key={artist.id} className="group overflow-hidden transition-all hover:shadow-lg flex flex-col p-0">
-                  <Link href={`/dashboard/artists/${artist.id}`} className="relative h-64 w-full flex-shrink-0 block">
+                  <Link href={`/dashboard/artists/${artist.id}`} className="relative h-64 w-full shrink-0 block">
                     {artist.imageUrl ? (
                       <>
                         <Image
@@ -54,7 +54,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                           placeholder="blur"
                           blurDataURL={BLUR_DATA_URL.MEDIUM}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-b from-transparent from-30% via-card/40 via-60% to-card" />
+                        <div className="absolute inset-0 bg-linear-to-b from-transparent from-30% via-card/40 via-60% to-card" />
                       </>
                     ) : (
                       <div className="h-full w-full bg-muted" />

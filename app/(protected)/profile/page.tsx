@@ -2,13 +2,13 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
-  User, 
   Download, 
   LogOut, 
   AlertTriangle,
@@ -16,10 +16,12 @@ import {
   Calendar,
   TrendingUp,
   Music,
-  CheckCircle2
+  CheckCircle2,
+  Eye
 } from "lucide-react";
 import { DeleteDataDialog } from "./delete-data-dialog";
 import { ExportDataButton } from "./export-data-button";
+import { PrivacySettings } from "./privacy-settings";
 import { getCurrentUser } from "@/lib/spotify/api";
 
 export default async function ProfilePage() {
@@ -37,6 +39,13 @@ export default async function ProfilePage() {
   } catch (error) {
     console.error("Failed to fetch Spotify profile:", error);
   }
+
+  // Get user profile for username and privacy settings
+  const { data: userProfile } = await supabase
+    .from("user_profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
 
   // Get snapshot count
   const { count: snapshotCount } = await supabase
@@ -82,8 +91,9 @@ export default async function ProfilePage() {
   ]);
 
   // Calculate days since first snapshot
+  const now = new Date();
   const daysSinceFirstSnapshot = firstSnapshot 
-    ? Math.floor((Date.now() - new Date(firstSnapshot.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor((now.getTime() - new Date(firstSnapshot.created_at).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
   const userInfo = {
@@ -106,7 +116,7 @@ export default async function ProfilePage() {
 
       {/* Profile Card */}
       <Card className="overflow-hidden">
-        <div className="h-20 bg-gradient-to-r from-[#1DB954]/20 to-primary/20" />
+        <div className="h-20 bg-linear-to-r from-[#1DB954]/20 to-primary/20" />
         <CardContent className="-mt-10 pb-6">
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
@@ -217,12 +227,51 @@ export default async function ProfilePage() {
             <p className="text-xs text-muted-foreground mt-1">Last Snapshot</p>
             {lastSnapshot && (
               <p className="text-xs text-muted-foreground mt-2">
-                {Math.floor((Date.now() - new Date(lastSnapshot.created_at).getTime()) / (1000 * 60 * 60 * 24))} days ago
+                {Math.floor((now.getTime() - new Date(lastSnapshot.created_at).getTime()) / (1000 * 60 * 60 * 24))} days ago
               </p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Privacy & Username Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+            Privacy & Profile Settings
+          </CardTitle>
+          <CardDescription>
+            Control who can view your listening stats
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Username</label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={userProfile ? `${userProfile.display_name}#${userProfile.discriminator}` : "Loading..."}
+                disabled
+                className="flex-1"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your username is used to identify you to friends. The discriminator (#0000) helps with uniqueness.
+            </p>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Stats Visibility</label>
+            {userProfile ? (
+              <PrivacySettings currentVisibility={userProfile.stats_visibility} />
+            ) : (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Detailed Stats */}
       <Card>
