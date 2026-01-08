@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistTopTracks } from "@/lib/spotify/api";
+import { serverErrorResponse } from "@/lib/api/utils";
 
 export async function GET(
   request: NextRequest,
@@ -22,9 +23,6 @@ export async function GET(
     );
   } catch (error) {
     console.error("Error fetching artist tracks:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch artist tracks" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to fetch artist tracks");
   }
 }
