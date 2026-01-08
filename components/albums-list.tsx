@@ -31,9 +31,9 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
   const albums = albumsByTimeRange[timeRange];
 
   return (
-    <SparklineLoader itemIds={albums.map((a) => a.id)} type="album">
+    <SparklineLoader itemIds={albums.map((album) => album.id)} type="album">
       {(sparklines, loading) => (
-        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
+        <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)} className="w-full">
           <TabsList>
             <TabsTrigger value="short_term">
               Last 4 Weeks

@@ -59,8 +59,8 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
   const data = dataByTimeRange[timeRange];
 
   // We'll fetch sparklines for artists and tracks separately since they come from different API endpoints
-  const artistIds = data.artists.map(a => a.id);
-  const trackIds = data.tracks.map(t => t.id);
+  const artistIds = data.artists.map(artist => artist.id);
+  const trackIds = data.tracks.map(track => track.id);
 
   return (
     <SparklineLoader itemIds={artistIds} type="artist">
@@ -71,7 +71,7 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
             const loading = artistLoading || trackLoading;
 
             return (
-              <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
+              <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)} className="w-full">
             <TabsList>
               <TabsTrigger value="short_term">
                 Last 4 Weeks

@@ -21,14 +21,14 @@ export default async function AlbumDetailPage({ params }: PageProps) {
     getTopTracks("medium_term", 50),
   ]);
   
-  const album = albums.find((a) => a.id === id);
+  const album = albums.find((albumItem) => albumItem.id === id);
 
   if (!album) {
     notFound();
   }
 
   // Get tracks from this album that are in user's top tracks
-  const albumTracks = tracks.filter((t) => t.albumId === id);
+  const albumTracks = tracks.filter((track) => track.albumId === id);
 
   return (
     <div className="space-y-6">
