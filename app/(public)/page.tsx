@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
-import { Music, BarChart3, Clock, TrendingUp } from "lucide-react";
+import { SpotifyLogo, SpotifyAttribution } from "@/components/spotify-stats-logo";
+import { BarChart3, Clock, TrendingUp } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -10,11 +11,11 @@ export default function HomePage() {
       <header className="border-b">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <Music className="h-6 w-6 text-primary" />
+            <SpotifyLogo className="h-8 w-auto text-[#1DB954]" showWordmark={false} />
             <span className="text-xl font-bold">Stats for Spotify</span>
           </div>
           <LoginDialog>
-            <Button>Sign In</Button>
+            <Button className="bg-[#1DB954] text-black hover:bg-[#1ed760]">Sign In</Button>
           </LoginDialog>
         </div>
       </header>
@@ -29,13 +30,14 @@ export default function HomePage() {
             Discover insights about your listening habits. See your top artists,
             tracks, and albums over time with beautiful visualizations.
           </p>
-          <div className="mt-10">
+          <div className="mt-10 flex flex-col items-center gap-4">
             <LoginDialog>
-              <Button size="lg" className="gap-2">
-                <Music className="h-5 w-5" />
+              <Button size="lg" className="gap-2 bg-[#1DB954] text-black hover:bg-[#1ed760]">
+                <SpotifyLogo className="h-5 w-auto text-black" showWordmark={false} />
                 Connect with Spotify
               </Button>
             </LoginDialog>
+            <SpotifyAttribution />
           </div>
         </section>
 
