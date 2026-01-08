@@ -158,7 +158,7 @@ export function extractAlbumsFromTracks(tracks: RankedTrack[]): RankedAlbum[] {
 
   // Sort by track count (most tracks first) and assign ranks
   const sortedAlbums = Array.from(albumMap.values())
-    .sort((albumA, albumB) => albumB.trackCount - albumA.trackCount)
+    .sort((firstAlbum, secondAlbum) => secondAlbum.trackCount - firstAlbum.trackCount)
     .map((album, index) => ({
       ...album,
       rank: index + 1,
@@ -196,7 +196,7 @@ export function extractGenresFromArtists(artists: RankedArtist[]): RankedGenre[]
 
   // Sort by artist count (most artists first) and assign ranks
   const sortedGenres = Array.from(genreMap.entries())
-    .sort((genreEntryA, genreEntryB) => genreEntryB[1].artists.size - genreEntryA[1].artists.size)
+    .sort((firstGenreEntry, secondGenreEntry) => secondGenreEntry[1].artists.size - firstGenreEntry[1].artists.size)
     .map(([genreName, genreData], index) => ({
       rank: index + 1,
       name: genreName,
@@ -319,19 +319,19 @@ export async function checkMutualFollows(
   if (spotifyUserIds.length === 0) return [];
   
   // Get all users current user follows
-  const followingUsers = await getAllFollowingUsers();
-  const followingSet = new Set(followingUsers);
+  const usersCurrentlyFollowing = await getAllFollowingUsers();
+  const followingUsersSet = new Set(usersCurrentlyFollowing);
   
   const results: import("./types").FollowCheckResult[] = [];
   
   // Batch check if these users follow back (50 IDs at a time)
   for (let i = 0; i < spotifyUserIds.length; i += 50) {
-    const batch = spotifyUserIds.slice(i, i + 50);
-    const followsBack = await checkIfFollowsUsers(batch);
+    const batchOfUserIds = spotifyUserIds.slice(i, i + 50);
+    const followsBackResults = await checkIfFollowsUsers(batchOfUserIds);
     
-    batch.forEach((spotifyUserId, index) => {
-      const isFollowing = followingSet.has(spotifyUserId);
-      const isFollowedBack = followsBack[index];
+    batchOfUserIds.forEach((spotifyUserId, index) => {
+      const isFollowing = followingUsersSet.has(spotifyUserId);
+      const isFollowedBack = followsBackResults[index];
       const isMutual = isFollowing && isFollowedBack;
       
       results.push({

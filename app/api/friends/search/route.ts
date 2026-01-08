@@ -34,17 +34,17 @@ export async function GET(request: Request) {
     }
     
     // Get follow status for each profile
-    const spotifyIds = profiles.map(p => p.spotify_user_id);
+    const spotifyUserIds = profiles.map(profile => profile.spotify_user_id);
     
     const { data: followCache } = await supabase
       .from("follow_cache")
       .select("spotify_friend_id, is_mutual, cached_at")
       .eq("user_id", user.id)
-      .in("spotify_friend_id", spotifyIds)
+      .in("spotify_friend_id", spotifyUserIds)
       .gte("cached_at", new Date(Date.now() - 60 * 60 * 1000).toISOString()); // 1 hour
     
-    const followMap = new Map(
-      followCache?.map(fc => [fc.spotify_friend_id, fc.is_mutual]) || []
+    const mutualFollowStatusMap = new Map(
+      followCache?.map(cacheEntry => [cacheEntry.spotify_friend_id, cacheEntry.is_mutual]) || []
     );
     
     const results = profiles.map(profile => ({
@@ -55,10 +55,10 @@ export async function GET(request: Request) {
       username: `${profile.display_name}#${profile.discriminator}`,
       avatarUrl: profile.avatar_url,
       statsVisibility: profile.stats_visibility,
-      isMutualFollow: followMap.get(profile.spotify_user_id) || false,
+      isMutualFollow: mutualFollowStatusMap.get(profile.spotify_user_id) || false,
       canViewStats: 
         profile.stats_visibility === "public" ||
-        (profile.stats_visibility === "followers" && followMap.get(profile.spotify_user_id)),
+        (profile.stats_visibility === "followers" && mutualFollowStatusMap.get(profile.spotify_user_id)),
     }));
     
     return NextResponse.json({ results });
