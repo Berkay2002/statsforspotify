@@ -23,7 +23,7 @@ export default async function TrackDetailPage({ params }: PageProps) {
 
   // Get current track from Spotify
   const tracks = await getTopTracks("medium_term", 50);
-  const track = tracks.find((t) => t.id === id);
+  const track = tracks.find((trackItem) => trackItem.id === id);
 
   if (!track) {
     notFound();

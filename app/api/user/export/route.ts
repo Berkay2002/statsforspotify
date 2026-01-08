@@ -66,8 +66,8 @@ function convertToCSV(data: any): string {
   if (data.snapshots?.length > 0) {
     lines.push("## SNAPSHOTS");
     lines.push("id,user_id,time_range,created_at");
-    data.snapshots.forEach((s: any) => {
-      lines.push(`${s.id},${s.user_id},${s.time_range},${s.created_at}`);
+    data.snapshots.forEach((snapshot: any) => {
+      lines.push(`${snapshot.id},${snapshot.user_id},${snapshot.time_range},${snapshot.created_at}`);
     });
     lines.push("");
   }
@@ -76,10 +76,10 @@ function convertToCSV(data: any): string {
   if (data.artist_rankings?.length > 0) {
     lines.push("## ARTIST RANKINGS");
     lines.push("id,snapshot_id,artist_id,artist_name,rank,popularity,genres,created_at");
-    data.artist_rankings.forEach((a: any) => {
-      const genres = Array.isArray(a.genres) ? a.genres.join(";") : "";
+    data.artist_rankings.forEach((artistRanking: any) => {
+      const genres = Array.isArray(artistRanking.genres) ? artistRanking.genres.join(";") : "";
       lines.push(
-        `${a.id},${a.snapshot_id},${a.artist_id},"${escapeCSV(a.artist_name)}",${a.rank},${a.popularity},"${genres}",${a.created_at}`
+        `${artistRanking.id},${artistRanking.snapshot_id},${artistRanking.artist_id},"${escapeCSV(artistRanking.artist_name)}",${artistRanking.rank},${artistRanking.popularity},"${genres}",${artistRanking.created_at}`
       );
     });
     lines.push("");
@@ -89,9 +89,9 @@ function convertToCSV(data: any): string {
   if (data.track_rankings?.length > 0) {
     lines.push("## TRACK RANKINGS");
     lines.push("id,snapshot_id,track_id,track_name,artist_name,album_name,rank,popularity,duration_ms,created_at");
-    data.track_rankings.forEach((t: any) => {
+    data.track_rankings.forEach((trackRanking: any) => {
       lines.push(
-        `${t.id},${t.snapshot_id},${t.track_id},"${escapeCSV(t.track_name)}","${escapeCSV(t.artist_name)}","${escapeCSV(t.album_name)}",${t.rank},${t.popularity},${t.duration_ms},${t.created_at}`
+        `${trackRanking.id},${trackRanking.snapshot_id},${trackRanking.track_id},"${escapeCSV(trackRanking.track_name)}","${escapeCSV(trackRanking.artist_name)}","${escapeCSV(trackRanking.album_name)}",${trackRanking.rank},${trackRanking.popularity},${trackRanking.duration_ms},${trackRanking.created_at}`
       );
     });
     lines.push("");
@@ -101,9 +101,9 @@ function convertToCSV(data: any): string {
   if (data.album_rankings?.length > 0) {
     lines.push("## ALBUM RANKINGS");
     lines.push("id,snapshot_id,album_id,album_name,artist_name,rank,track_count,created_at");
-    data.album_rankings.forEach((a: any) => {
+    data.album_rankings.forEach((albumRanking: any) => {
       lines.push(
-        `${a.id},${a.snapshot_id},${a.album_id},"${escapeCSV(a.album_name)}","${escapeCSV(a.artist_name)}",${a.rank},${a.track_count},${a.created_at}`
+        `${albumRanking.id},${albumRanking.snapshot_id},${albumRanking.album_id},"${escapeCSV(albumRanking.album_name)}","${escapeCSV(albumRanking.artist_name)}",${albumRanking.rank},${albumRanking.track_count},${albumRanking.created_at}`
       );
     });
   }

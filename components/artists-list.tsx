@@ -30,9 +30,9 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
   const artists = artistsByTimeRange[timeRange];
 
   return (
-    <SparklineLoader itemIds={artists.map((a) => a.id)} type="artist">
+    <SparklineLoader itemIds={artists.map((artist) => artist.id)} type="artist">
       {(sparklines, loading) => (
-        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
+        <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)} className="w-full">
           <TabsList>
             <TabsTrigger value="short_term">
               Last 4 Weeks

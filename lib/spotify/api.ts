@@ -116,7 +116,7 @@ export async function getTopTracks(
       name: track.name,
       imageUrl,
       artistId: track.artists[0]?.id ?? "",
-      artistName: track.artists.map((a) => a.name).join(", "),
+      artistName: track.artists.map((artist) => artist.name).join(", "),
       albumId: track.album.id,
       albumName: track.album.name,
       durationMs: track.duration_ms,
@@ -149,7 +149,7 @@ export function extractAlbumsFromTracks(tracks: RankedTrack[]): RankedAlbum[] {
 
   // Sort by track count (most tracks first) and assign ranks
   const sortedAlbums = Array.from(albumMap.values())
-    .sort((a, b) => b.trackCount - a.trackCount)
+    .sort((albumA, albumB) => albumB.trackCount - albumA.trackCount)
     .map((album, index) => ({
       ...album,
       rank: index + 1,
@@ -185,13 +185,13 @@ export function extractGenresFromArtists(artists: RankedArtist[]): RankedGenre[]
 
   // Sort by artist count (most artists first) and assign ranks
   const sortedGenres = Array.from(genreMap.entries())
-    .sort((a, b) => b[1].artists.size - a[1].artists.size)
-    .map(([name, data], index) => ({
+    .sort((genreEntryA, genreEntryB) => genreEntryB[1].artists.size - genreEntryA[1].artists.size)
+    .map(([genreName, genreData], index) => ({
       rank: index + 1,
-      name,
+      name: genreName,
       trackCount: 0, // Not easily calculable without fetching all tracks per artist
-      artistCount: data.artists.size,
-      topArtists: Array.from(data.artists).slice(0, 3),
+      artistCount: genreData.artists.size,
+      topArtists: Array.from(genreData.artists).slice(0, 3),
     }));
 
   return sortedGenres;
