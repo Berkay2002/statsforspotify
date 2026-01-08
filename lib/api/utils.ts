@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
+import { SpotifyAPIError } from "@/lib/spotify/api";
 
 /**
  * Validates that the user is authenticated
@@ -36,8 +37,7 @@ export function withAuthHandler<T extends Record<string, unknown> = Record<strin
       }
       return await handler(user, request, context);
     } catch (error) {
-      console.error("API Error:", error);
-      return serverErrorResponse("An error occurred processing your request");
+      return handleAPIError(error);
     }
   };
 }
@@ -58,6 +58,43 @@ export async function getAuthenticatedUser() {
   }
 
   return { user, supabase };
+}
+
+/**
+ * Handles API errors and returns appropriate responses
+ * @param error - The error to handle
+ * @returns NextResponse with appropriate status and message
+ */
+export function handleAPIError(error: unknown): NextResponse {
+  console.error("API Error:", error);
+
+  // Handle Spotify API errors specifically
+  if (error instanceof SpotifyAPIError) {
+    if (error.shouldRefresh) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          requiresReauth: true,
+          spotifyError: true,
+        },
+        { status: error.status }
+      );
+    }
+    return NextResponse.json(
+      {
+        error: error.message,
+        spotifyError: true,
+      },
+      { status: error.status }
+    );
+  }
+
+  // Handle generic errors
+  if (error instanceof Error) {
+    return serverErrorResponse(error.message);
+  }
+
+  return serverErrorResponse("An unexpected error occurred");
 }
 
 /**

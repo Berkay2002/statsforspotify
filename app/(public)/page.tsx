@@ -3,8 +3,16 @@ import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
 import { SpotifyLogo, SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { BarChart3, Clock, TrendingUp } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
-export default function HomePage() {
+export default function HomePage({
+  searchParams,
+}: {
+  searchParams: { reauth?: string };
+}) {
+  const needsReauth = searchParams.reauth === "spotify";
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
@@ -23,6 +31,15 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="flex-1">
         <section className="container mx-auto px-4 py-24 text-center">
+          {needsReauth && (
+            <Alert variant="destructive" className="mx-auto mb-8 max-w-2xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Spotify Connection Required</AlertTitle>
+              <AlertDescription>
+                Your Spotify session has expired. Please reconnect your account to continue.
+              </AlertDescription>
+            </Alert>
+          )}
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
             Track Your Music Journey
           </h1>
