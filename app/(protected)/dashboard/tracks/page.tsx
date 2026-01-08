@@ -3,11 +3,9 @@ import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { TracksList } from "@/components/tracks-list";
 
 export default async function TracksPage() {
-  // Priority: Fetch default tab (short_term) first for faster initial render
-  const shortTerm = await getTopTracks("short_term", 50);
-  
-  // Background: Fetch other time ranges in parallel
-  const [mediumTerm, longTerm] = await Promise.all([
+  // Fetch all time ranges in parallel for faster initial render
+  const [shortTerm, mediumTerm, longTerm] = await Promise.all([
+    getTopTracks("short_term", 50),
     getTopTracks("medium_term", 50),
     getTopTracks("long_term", 50),
   ]);

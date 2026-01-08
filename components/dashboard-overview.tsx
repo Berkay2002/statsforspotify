@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,9 +59,10 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("medium_term");
   const data = dataByTimeRange[timeRange];
 
-  // Optimized: Combine artist and track IDs for parallel sparkline fetching
-  const artistIds = data.artists.map(artist => artist.id);
-  const trackIds = data.tracks.map(track => track.id);
+  // Memoize IDs to prevent unnecessary re-renders and refetches
+  // Only recalculate when the actual data changes, not on every render
+  const artistIds = useMemo(() => data.artists.map(artist => artist.id), [data.artists]);
+  const trackIds = useMemo(() => data.tracks.map(track => track.id), [data.tracks]);
 
   return (
     <CombinedSparklineLoader artistIds={artistIds} trackIds={trackIds}>

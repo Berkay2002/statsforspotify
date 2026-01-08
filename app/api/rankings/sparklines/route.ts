@@ -88,7 +88,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        "Cache-Control": "private, max-age=60",
+        // Increase cache time since sparkline data doesn't change frequently
+        // Allow browser to cache for 5 minutes, CDN can cache for 2 minutes
+        "Cache-Control": "private, max-age=300, s-maxage=120, stale-while-revalidate=600",
       },
     });
   } catch (error) {
