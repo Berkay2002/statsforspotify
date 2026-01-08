@@ -212,39 +212,39 @@ export default async function FriendProfilePage({ params }: Props) {
   
   // Transform database records to match component props
   const transformArtists = (data: ArtistRanking[] | null) =>
-    (data || []).map((a) => ({
-      id: a.artist_id,
-      name: a.artist_name,
-      rank: a.rank,
-      imageUrl: a.artist_image_url,
-      genres: a.genres || [],
+    (data || []).map((artistRanking) => ({
+      id: artistRanking.artist_id,
+      name: artistRanking.artist_name,
+      rank: artistRanking.rank,
+      imageUrl: artistRanking.artist_image_url,
+      genres: artistRanking.genres || [],
     }));
   
   const transformTracks = (data: TrackRanking[] | null) =>
-    (data || []).map((t) => ({
-      id: t.track_id,
-      name: t.track_name,
-      rank: t.rank,
-      imageUrl: t.track_image_url,
-      artistId: t.artist_id,
-      artistName: t.artist_name,
-      albumId: t.album_id,
-      albumName: t.album_name,
-      durationMs: t.duration_ms || 0,
-      popularity: t.popularity || 0,
+    (data || []).map((trackRanking) => ({
+      id: trackRanking.track_id,
+      name: trackRanking.track_name,
+      rank: trackRanking.rank,
+      imageUrl: trackRanking.track_image_url,
+      artistId: trackRanking.artist_id,
+      artistName: trackRanking.artist_name,
+      albumId: trackRanking.album_id,
+      albumName: trackRanking.album_name,
+      durationMs: trackRanking.duration_ms || 0,
+      popularity: trackRanking.popularity || 0,
     }));
   
   const transformAlbums = (data: AlbumRanking[] | null) =>
-    (data || []).map((a) => ({
-      id: a.album_id,
-      name: a.album_name,
-      rank: a.rank,
-      imageUrl: a.album_image_url,
-      artistId: a.artist_id,
-      artistName: a.artist_name,
-      releaseDate: a.release_date || "",
-      totalTracks: a.total_tracks || 0,
-      trackCount: a.track_count || 1,
+    (data || []).map((albumRanking) => ({
+      id: albumRanking.album_id,
+      name: albumRanking.album_name,
+      rank: albumRanking.rank,
+      imageUrl: albumRanking.album_image_url,
+      artistId: albumRanking.artist_id,
+      artistName: albumRanking.artist_name,
+      releaseDate: albumRanking.release_date || "",
+      totalTracks: albumRanking.total_tracks || 0,
+      trackCount: albumRanking.track_count || 1,
     }));
   
   return (
