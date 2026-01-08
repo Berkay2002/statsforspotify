@@ -162,32 +162,29 @@ export type Database = {
           },
         ]
       }
-      follow_cache: {
+      friendships: {
         Row: {
-          cached_at: string
-          created_at: string
+          created_at: string | null
+          friend_id: string
           id: string
-          is_mutual: boolean
-          spotify_friend_id: string
-          updated_at: string
+          status: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
-          cached_at?: string
-          created_at?: string
+          created_at?: string | null
+          friend_id: string
           id?: string
-          is_mutual?: boolean
-          spotify_friend_id: string
-          updated_at?: string
+          status: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
-          cached_at?: string
-          created_at?: string
+          created_at?: string | null
+          friend_id?: string
           id?: string
-          is_mutual?: boolean
-          spotify_friend_id?: string
-          updated_at?: string
+          status?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -351,8 +348,8 @@ export type Database = {
       }
     }
     Functions: {
-      check_mutual_follow_cached: {
-        Args: { p_requester_id: string; p_target_user_id: string }
+      check_friendship_status: {
+        Args: { p_user_id_1: string; p_user_id_2: string }
         Returns: boolean
       }
       delete_user_account: {

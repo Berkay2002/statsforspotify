@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
-import { checkMutualFollows } from "@/lib/spotify/api";
 
 export async function GET(request: Request) {
   try {
@@ -9,33 +8,49 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
+    const { user, supabase } = authResult;
     const { searchParams } = new URL(request.url);
-    const spotifyUserId = searchParams.get("spotifyUserId");
+    const friendUserId = searchParams.get("friendUserId");
     
-    if (!spotifyUserId) {
-      return badRequestResponse("spotifyUserId parameter is required");
+    if (!friendUserId) {
+      return badRequestResponse("friendUserId parameter is required");
     }
     
-    console.log("[check-follow] Checking follow status for Spotify user ID:", spotifyUserId, "(length:", spotifyUserId.length, ")");
+    // Check friendship status from our internal friendships table
+    const { data: friendship, error } = await supabase
+      .from("friendships")
+      .select("id, status, user_id, friend_id")
+      .or(`and(user_id.eq.${user.id},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${user.id})`)
+      .single();
     
-    // Check follow status (works with both username-style and long-form IDs)
-    const results = await checkMutualFollows([spotifyUserId]);
+    if (error && error.code !== "PGRST116") {
+      // PGRST116 = no rows found (not an error, just no friendship exists)
+      console.error("[check-follow] Error checking friendship:", error);
+      return serverErrorResponse("Failed to check friendship status");
+    }
     
-    if (results.length === 0) {
+    if (!friendship) {
       return NextResponse.json({
-        isFollowing: false,
-        isMutual: false,
+        status: "none",
+        isFriend: false,
+        isPending: false,
+        isIncoming: false,
       });
     }
     
-    console.log("[check-follow] Result:", results[0]);
+    const isIncoming = friendship.friend_id === user.id && friendship.status === "pending";
+    const isOutgoing = friendship.user_id === user.id && friendship.status === "pending";
     
     return NextResponse.json({
-      isFollowing: results[0].isFollowing,
-      isMutual: results[0].isMutual,
+      status: friendship.status,
+      isFriend: friendship.status === "accepted",
+      isPending: friendship.status === "pending",
+      isIncoming,
+      isOutgoing,
+      friendshipId: friendship.id,
     });
   } catch (error) {
-    console.error("Error checking follow status:", error);
-    return serverErrorResponse("Failed to check follow status");
+    console.error("Error checking friendship status:", error);
+    return serverErrorResponse("Failed to check friendship status");
   }
 }

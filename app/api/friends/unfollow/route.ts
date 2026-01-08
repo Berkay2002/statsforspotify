@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
-import { unfollowUser } from "@/lib/spotify/api";
 
+/**
+ * POST /api/friends/unfollow - Remove a friendship
+ * Deletes the friendship entry from the database (either party can remove)
+ */
 export async function POST(request: Request) {
   try {
     const authResult = await getAuthenticatedUser();
@@ -10,33 +13,29 @@ export async function POST(request: Request) {
     }
     
     const { user, supabase } = authResult;
-    const { spotifyUserId } = await request.json();
+    const { friendUserId } = await request.json();
     
-    if (!spotifyUserId) {
-      return badRequestResponse("spotifyUserId is required");
+    if (!friendUserId) {
+      return badRequestResponse("friendUserId is required");
     }
     
-    console.log("[unfollow] Attempting to unfollow Spotify user:", spotifyUserId, "(length:", spotifyUserId.length, ")");
+    // Delete friendship in either direction (RLS policy allows this for either party)
+    const { error: deleteError } = await supabase
+      .from("friendships")
+      .delete()
+      .or(`and(user_id.eq.${user.id},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${user.id})`);
     
-    // Unfollow on Spotify (works with both username-style and long-form IDs)
-    await unfollowUser(spotifyUserId);
+    if (deleteError) {
+      console.error("[unfollow] Error removing friendship:", deleteError);
+      return serverErrorResponse("Failed to remove friendship");
+    }
     
-    console.log("[unfollow] Successfully unfollowed user:", spotifyUserId);
-    
-    // Update cache to reflect unfollowed status
-    await supabase
-      .from("follow_cache")
-      .update({
-        is_mutual: false,
-        cached_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", user.id)
-      .eq("spotify_friend_id", spotifyUserId);
-    
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: "Friendship removed" 
+    });
   } catch (error) {
-    console.error("Error unfollowing user:", error);
-    return serverErrorResponse("Failed to unfollow user");
+    console.error("Error removing friendship:", error);
+    return serverErrorResponse("Failed to remove friendship");
   }
 }
