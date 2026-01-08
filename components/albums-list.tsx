@@ -5,8 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
+import { TimeRangeTabs } from "@/components/ui/time-range-tabs";
 import { SparklineLoader, InlineSparkline } from "@/components/charts/sparkline-loader";
+import { BLUR_DATA_URL } from "@/lib/constants";
 import type { TimeRange } from "@/lib/spotify/types";
 
 interface Album {
@@ -33,19 +35,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
   return (
     <SparklineLoader itemIds={albums.map((a) => a.id)} type="album">
       {(sparklines, loading) => (
-        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
-          <TabsList>
-            <TabsTrigger value="short_term">
-              Last 4 Weeks
-            </TabsTrigger>
-            <TabsTrigger value="medium_term">
-              Last 6 Months
-            </TabsTrigger>
-            <TabsTrigger value="long_term">
-              All Time
-            </TabsTrigger>
-          </TabsList>
-
+        <TimeRangeTabs value={timeRange} onValueChange={setTimeRange} className="w-full">
           <TabsContent value={timeRange} className="mt-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {albums.map((album, index) => (
@@ -70,7 +60,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
                             loading={index < 8 ? "eager" : "lazy"}
                             priority={index < 4}
                             placeholder="blur"
-                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iIzI3MjcyNyIvPjwvc3ZnPg=="
+                            blurDataURL={BLUR_DATA_URL.LARGE}
                           />
                         ) : (
                           <div className="h-[120px] w-[120px] rounded-lg bg-muted" />
@@ -91,7 +81,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
               ))}
             </div>
           </TabsContent>
-        </Tabs>
+        </TimeRangeTabs>
       )}
     </SparklineLoader>
   );

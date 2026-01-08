@@ -5,8 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TabsContent } from "@/components/ui/tabs";
+import { TimeRangeTabs } from "@/components/ui/time-range-tabs";
+import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { SparklineLoader, InlineSparkline } from "@/components/charts/sparkline-loader";
+import { BLUR_DATA_URL } from "@/lib/constants";
 import type { TimeRange } from "@/lib/spotify/types";
 
 interface Artist {
@@ -32,19 +35,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
   return (
     <SparklineLoader itemIds={artists.map((a) => a.id)} type="artist">
       {(sparklines, loading) => (
-        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
-          <TabsList>
-            <TabsTrigger value="short_term">
-              Last 4 Weeks
-            </TabsTrigger>
-            <TabsTrigger value="medium_term">
-              Last 6 Months
-            </TabsTrigger>
-            <TabsTrigger value="long_term">
-              All Time
-            </TabsTrigger>
-          </TabsList>
-
+        <TimeRangeTabs value={timeRange} onValueChange={setTimeRange} className="w-full">
           <TabsContent value={timeRange} className="mt-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {artists.map((artist, index) => (
@@ -61,7 +52,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                           loading={index < 8 ? "eager" : "lazy"}
                           priority={index < 4}
                           placeholder="blur"
-                          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzI3MjcyNyIvPjwvc3ZnPg=="
+                          blurDataURL={BLUR_DATA_URL.MEDIUM}
                         />
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent from-30% via-card/40 via-60% to-card" />
                       </>
@@ -96,9 +87,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full transition-colors text-sm font-medium mt-auto"
                     >
-                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                      </svg>
+                      <SpotifyIcon className="h-4 w-4" />
                       Open in Spotify
                     </a>
                   </CardContent>
@@ -106,7 +95,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
               ))}
             </div>
           </TabsContent>
-        </Tabs>
+        </TimeRangeTabs>
       )}
     </SparklineLoader>
   );
