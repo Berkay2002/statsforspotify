@@ -10,8 +10,22 @@ export async function GET(request: Request) {
   // If this is a login action, redirect to Spotify OAuth
   if (action === "login") {
     const supabase = await createClient();
-    const redirectTo = `${origin}/auth/callback`;
+    
+    // Build redirect URL - handle both localhost and production
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const protocol = request.headers.get("x-forwarded-proto") || "https";
+    
+    let redirectTo: string;
+    if (process.env.NODE_ENV === "development") {
+      redirectTo = `${origin}/auth/callback`;
+    } else if (forwardedHost) {
+      redirectTo = `${protocol}://${forwardedHost}/auth/callback`;
+    } else {
+      redirectTo = `${origin}/auth/callback`;
+    }
+    
     console.log("OAuth redirectTo:", redirectTo);
+    console.log("Request headers - Host:", request.headers.get("host"), "Forwarded:", forwardedHost);
     
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "spotify",
