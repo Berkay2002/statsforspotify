@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { validateAuth, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
 
 export async function POST() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
+  const user = await validateAuth();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorizedResponse();
   }
+
+  const supabase = await createClient();
 
   try {
     // Use the database function to delete all user data
@@ -17,18 +18,12 @@ export async function POST() {
 
     if (error) {
       console.error("Delete user data error:", error);
-      return NextResponse.json(
-        { error: "Failed to delete data" },
-        { status: 500 }
-      );
+      return serverErrorResponse("Failed to delete data");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete data" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to delete data");
   }
 }
