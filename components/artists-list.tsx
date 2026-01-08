@@ -32,10 +32,10 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
       itemType="artist"
       className="w-full"
       renderItems={(artists, sparklines, loading) => (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {artists.map((artist, index) => (
             <Card key={artist.id} className="group overflow-hidden transition-all hover:shadow-lg flex flex-col p-0">
-              <Link href={`/dashboard/artists/${artist.id}`} className="relative h-64 w-full shrink-0 block">
+              <Link href={`/dashboard/artists/${artist.id}`} className="relative h-32 sm:h-64 w-full shrink-0 block">
                 {artist.imageUrl ? (
                   <>
                     <Image
@@ -55,8 +55,8 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                   <div className="h-full w-full bg-muted" />
                 )}
               </Link>
-              <CardContent className="px-4 pt-3 pb-4 flex flex-col flex-1">
-                <div className="flex items-center gap-3 mb-3">
+              <CardContent className="px-4 pt-0 pb-1 flex flex-col flex-1">
+                <div className="flex items-center gap-3 mb-2">
                   <span className="text-2xl font-bold text-muted-foreground shrink-0">
                     {artist.rank}
                   </span>
@@ -68,7 +68,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                   <InlineSparkline itemId={artist.id} sparklines={sparklines} loading={loading} />
                 </div>
                 {artist.genres.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
+                  <div className="hidden sm:flex flex-wrap gap-1 mb-2">
                     {artist.genres.slice(0, 2).map((genre) => (
                       <Badge key={genre} variant="secondary" className="text-xs">
                         {genre}
@@ -80,7 +80,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                   href={`https://open.spotify.com/artist/${artist.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full transition-colors text-sm font-medium mt-auto"
+                  className="hidden sm:flex items-center justify-center gap-2 w-full py-2 px-3 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full transition-colors text-sm font-medium mt-auto"
                 >
                   <SpotifyIcon className="h-4 w-4" />
                   Open in Spotify
