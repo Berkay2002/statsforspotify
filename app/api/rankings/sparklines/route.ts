@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { 
+  validateAuth, 
+  unauthorizedResponse, 
+  badRequestResponse, 
+  serverErrorResponse,
+  validateItemType
+} from "@/lib/api/utils";
 
 interface SparklineResponse {
   sparklines: Record<string, { date: string; rank: number }[]>;
@@ -8,15 +15,12 @@ interface SparklineResponse {
 export async function GET(request: NextRequest) {
   try {
     // Validate auth
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await validateAuth();
+    if (!user) {
+      return unauthorizedResponse();
     }
+
+    const supabase = await createClient();
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;
@@ -26,43 +30,28 @@ export async function GET(request: NextRequest) {
 
     // Validate required params
     if (!type || !idsParam) {
-      return NextResponse.json(
-        { error: "Missing required parameters: type and ids" },
-        { status: 400 }
-      );
+      return badRequestResponse("Missing required parameters: type and ids");
     }
 
     // Validate type
-    if (!["artist", "track", "album"].includes(type)) {
-      return NextResponse.json(
-        { error: "Invalid type. Must be: artist, track, or album" },
-        { status: 400 }
-      );
+    if (!validateItemType(type)) {
+      return badRequestResponse("Invalid type. Must be: artist, track, or album");
     }
 
     // Parse and validate IDs
     const ids = idsParam.split(",").filter(Boolean);
     if (ids.length === 0) {
-      return NextResponse.json(
-        { error: "No valid IDs provided" },
-        { status: 400 }
-      );
+      return badRequestResponse("No valid IDs provided");
     }
 
     if (ids.length > 50) {
-      return NextResponse.json(
-        { error: "Maximum 50 IDs allowed per request" },
-        { status: 400 }
-      );
+      return badRequestResponse("Maximum 50 IDs allowed per request");
     }
 
     // Parse days parameter
     const days = daysParam ? parseInt(daysParam, 10) : 14;
     if (isNaN(days) || days < 1 || days > 365) {
-      return NextResponse.json(
-        { error: "Invalid days parameter. Must be between 1 and 365" },
-        { status: 400 }
-      );
+      return badRequestResponse("Invalid days parameter. Must be between 1 and 365");
     }
 
     // Call the database function
@@ -75,10 +64,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error("Database error:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch sparkline data" },
-        { status: 500 }
-      );
+      return serverErrorResponse("Failed to fetch sparkline data");
     }
 
     // Group results by item_id
@@ -107,9 +93,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Unexpected error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }
