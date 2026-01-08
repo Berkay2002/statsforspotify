@@ -16,8 +16,12 @@ export async function POST(request: Request) {
       return badRequestResponse("spotifyUserId is required");
     }
     
-    // Follow on Spotify
+    console.log("[follow] Attempting to follow Spotify user:", spotifyUserId, "(length:", spotifyUserId.length, ")");
+    
+    // Follow on Spotify (works with both username-style and long-form IDs)
     await followUser(spotifyUserId);
+    
+    console.log("[follow] Successfully followed user:", spotifyUserId);
     
     // Invalidate cache for this user
     await supabase

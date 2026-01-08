@@ -17,11 +17,13 @@ export async function GET(request: Request) {
     }
     
     // Search profiles by display name (fuzzy match)
+    // Only include users with valid Spotify user IDs (they've logged in at least once)
     const { data: profiles, error } = await supabase
       .from("user_profiles")
       .select("user_id, spotify_user_id, display_name, discriminator, avatar_url, stats_visibility")
       .ilike("display_name", `%${query}%`)
       .neq("user_id", user.id) // Exclude current user
+      .not("spotify_user_id", "is", null) // Only users with Spotify IDs
       .limit(20);
     
     if (error) {

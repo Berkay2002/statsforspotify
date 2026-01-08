@@ -16,8 +16,12 @@ export async function POST(request: Request) {
       return badRequestResponse("spotifyUserId is required");
     }
     
-    // Unfollow on Spotify
+    console.log("[unfollow] Attempting to unfollow Spotify user:", spotifyUserId, "(length:", spotifyUserId.length, ")");
+    
+    // Unfollow on Spotify (works with both username-style and long-form IDs)
     await unfollowUser(spotifyUserId);
+    
+    console.log("[unfollow] Successfully unfollowed user:", spotifyUserId);
     
     // Update cache to reflect unfollowed status
     await supabase

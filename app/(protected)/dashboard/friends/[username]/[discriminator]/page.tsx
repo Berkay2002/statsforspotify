@@ -61,7 +61,12 @@ export default async function FriendProfilePage({ params }: Props) {
   }
   
   // Check if user can view this profile
-  const followStatus = await checkFollowStatus(friendProfile.spotify_user_id);
+  // If friend hasn't re-authenticated yet (NULL spotify_user_id), they can't be followed
+  let followStatus = { isFollowing: false, isMutual: false };
+  if (friendProfile.spotify_user_id) {
+    followStatus = await checkFollowStatus(friendProfile.spotify_user_id);
+  }
+  
   const canView = friendProfile.stats_visibility === "public" ||
     (friendProfile.stats_visibility === "followers" && followStatus.isMutual);
   
@@ -82,17 +87,25 @@ export default async function FriendProfilePage({ params }: Props) {
             <Alert>
               <Lock className="h-4 w-4" />
               <AlertDescription>
-                This user&apos;s stats are private. 
-                {!followStatus.isFollowing && " Follow them on Spotify to view their stats."}
-                {followStatus.isFollowing && !followStatus.isMutual && " They need to follow you back to make it mutual."}
+                {!friendProfile.spotify_user_id ? (
+                  "This user needs to sign in again to enable following."
+                ) : (
+                  <>
+                    This user&apos;s stats are private. 
+                    {!followStatus.isFollowing && " Follow them on Spotify to view their stats."}
+                    {followStatus.isFollowing && !followStatus.isMutual && " They need to follow you back to make it mutual."}
+                  </>
+                )}
               </AlertDescription>
             </Alert>
-            <div className="flex justify-center">
-              <FriendFollowButton
-                spotifyUserId={friendProfile.spotify_user_id}
-                initialFollowStatus={followStatus}
-              />
-            </div>
+            {friendProfile.spotify_user_id && (
+              <div className="flex justify-center">
+                <FriendFollowButton
+                  spotifyUserId={friendProfile.spotify_user_id}
+                  initialFollowStatus={followStatus}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -281,6 +294,10 @@ export default async function FriendProfilePage({ params }: Props) {
                       {friendProfile.stats_visibility === "public" ? "Public Profile" : "Mutual Friend"}
                     </Badge>
                   </div>
+                  <FriendFollowButton
+                    spotifyUserId={friendProfile.spotify_user_id}
+                    initialFollowStatus={followStatus}
+                  />
                   <FriendFollowButton
                     spotifyUserId={friendProfile.spotify_user_id}
                     initialFollowStatus={followStatus}
