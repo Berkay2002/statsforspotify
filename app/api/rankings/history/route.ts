@@ -112,7 +112,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        "Cache-Control": "private, max-age=300",
+        // History data is relatively stable, increase cache time
+        "Cache-Control": "private, max-age=600, s-maxage=300, stale-while-revalidate=1800",
       },
     });
   } catch (error) {

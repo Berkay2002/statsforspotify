@@ -92,14 +92,6 @@ export async function POST(request: Request) {
       rank: artist.rank,
     }));
 
-    const { error: artistError } = await supabase
-      .from("artist_rankings")
-      .insert(artistRankings);
-
-    if (artistError) {
-      console.error("Failed to insert artist rankings:", artistError);
-    }
-
     // Insert track rankings
     const trackRankings = tracks.map((track) => ({
       snapshot_id: snapshot.id,
@@ -116,14 +108,6 @@ export async function POST(request: Request) {
       rank: track.rank,
     }));
 
-    const { error: trackError } = await supabase
-      .from("track_rankings")
-      .insert(trackRankings);
-
-    if (trackError) {
-      console.error("Failed to insert track rankings:", trackError);
-    }
-
     // Insert album rankings
     const albumRankings = albums.map((album) => ({
       snapshot_id: snapshot.id,
@@ -137,12 +121,22 @@ export async function POST(request: Request) {
       rank: album.rank,
     }));
 
-    const { error: albumError } = await supabase
-      .from("album_rankings")
-      .insert(albumRankings);
+    // Insert all rankings in parallel for better performance
+    const [artistResult, trackResult, albumResult] = await Promise.allSettled([
+      supabase.from("artist_rankings").insert(artistRankings),
+      supabase.from("track_rankings").insert(trackRankings),
+      supabase.from("album_rankings").insert(albumRankings),
+    ]);
 
-    if (albumError) {
-      console.error("Failed to insert album rankings:", albumError);
+    // Log any errors but don't fail the entire request
+    if (artistResult.status === "rejected" || artistResult.value.error) {
+      console.error("Failed to insert artist rankings:", artistResult.status === "rejected" ? artistResult.reason : artistResult.value.error);
+    }
+    if (trackResult.status === "rejected" || trackResult.value.error) {
+      console.error("Failed to insert track rankings:", trackResult.status === "rejected" ? trackResult.reason : trackResult.value.error);
+    }
+    if (albumResult.status === "rejected" || albumResult.value.error) {
+      console.error("Failed to insert album rankings:", albumResult.status === "rejected" ? albumResult.reason : albumResult.value.error);
     }
 
     // Update artist listening stats

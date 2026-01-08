@@ -3,11 +3,10 @@ import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { ArtistsList } from "@/components/artists-list";
 
 export default async function ArtistsPage() {
-  // Priority: Fetch default tab (short_term) first for faster initial render
-  const shortTerm = await getTopArtists("short_term", 50);
-  
-  // Background: Fetch other time ranges in parallel
-  const [mediumTerm, longTerm] = await Promise.all([
+  // Fetch all time ranges in parallel for faster initial render
+  // This reduces total wait time from sequential to parallel
+  const [shortTerm, mediumTerm, longTerm] = await Promise.all([
+    getTopArtists("short_term", 50),
     getTopArtists("medium_term", 50),
     getTopArtists("long_term", 50),
   ]);
