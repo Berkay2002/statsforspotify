@@ -317,6 +317,10 @@ export type Database = {
         Args: { p_requester_id: string; p_target_user_id: string }
         Returns: boolean
       }
+      delete_user_account: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       delete_user_data: { Args: { target_user_id: string }; Returns: undefined }
       export_user_data: { Args: { target_user_id: string }; Returns: Json }
       generate_discriminator: {
