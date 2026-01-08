@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import SparklineChart from "@/components/charts/sparkline-chart";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface SparklineLoaderProps {
   itemIds: string[];

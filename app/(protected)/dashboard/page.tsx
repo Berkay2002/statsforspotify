@@ -9,9 +9,11 @@ import { DashboardOverview } from "@/components/dashboard-overview";
 export default async function DashboardPage() {
   let error: string | null = null;
   let lastSnapshotDate: string | null = null;
+  let dataByTimeRange = null;
 
   try {
-    // Fetch all three time ranges in parallel for each category
+    // Optimized: Fetch artists and tracks first, then derive genres from artists
+    // This reduces API calls from 9 to 6 (33% reduction)
     const [
       shortTermArtists,
       mediumTermArtists,
@@ -19,20 +21,26 @@ export default async function DashboardPage() {
       shortTermTracks,
       mediumTermTracks,
       longTermTracks,
-      shortTermGenres,
-      mediumTermGenres,
-      longTermGenres,
     ] = await Promise.all([
-      getTopArtists("short_term", 5),
-      getTopArtists("medium_term", 5),
-      getTopArtists("long_term", 5),
+      getTopArtists("short_term", 50), // Fetch 50 for accurate genre extraction
+      getTopArtists("medium_term", 50),
+      getTopArtists("long_term", 50),
       getTopTracks("short_term", 5),
       getTopTracks("medium_term", 5),
       getTopTracks("long_term", 5),
-      getTopGenres("short_term", 5),
-      getTopGenres("medium_term", 5),
-      getTopGenres("long_term", 5),
     ]);
+
+    // Extract genres from already-fetched artists (no additional API calls)
+    const [shortTermGenres, mediumTermGenres, longTermGenres] = await Promise.all([
+      getTopGenres("short_term", 5, shortTermArtists),
+      getTopGenres("medium_term", 5, mediumTermArtists),
+      getTopGenres("long_term", 5, longTermArtists),
+    ]);
+
+    // Only show top 5 artists for the overview
+    const topShortTermArtists = shortTermArtists.slice(0, 5);
+    const topMediumTermArtists = mediumTermArtists.slice(0, 5);
+    const topLongTermArtists = longTermArtists.slice(0, 5);
 
     // Get last snapshot date
     const supabase = await createClient();
@@ -51,52 +59,30 @@ export default async function DashboardPage() {
       }
     }
 
-    return (
-      <>
-        <AutoSnapshotTrigger />
-        <div className="space-y-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
-              <p className="text-muted-foreground">
-                Your top music on Spotify
-              </p>
-              {lastSnapshotDate && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Last updated: {new Date(lastSnapshotDate).toLocaleDateString()}
-                </p>
-              )}
-            </div>
-            <SpotifyAttribution />
-          </div>
-
-          <DashboardOverview
-            dataByTimeRange={{
-              short_term: {
-                artists: shortTermArtists,
-                tracks: shortTermTracks,
-                genres: shortTermGenres,
-              },
-              medium_term: {
-                artists: mediumTermArtists,
-                tracks: mediumTermTracks,
-                genres: mediumTermGenres,
-              },
-              long_term: {
-                artists: longTermArtists,
-                tracks: longTermTracks,
-                genres: longTermGenres,
-              },
-            }}
-          />
-        </div>
-      </>
-    );
+    // Store data for rendering outside try/catch
+    dataByTimeRange = {
+      short_term: {
+        artists: topShortTermArtists,
+        tracks: shortTermTracks,
+        genres: shortTermGenres,
+      },
+      medium_term: {
+        artists: topMediumTermArtists,
+        tracks: mediumTermTracks,
+        genres: mediumTermGenres,
+      },
+      long_term: {
+        artists: topLongTermArtists,
+        tracks: longTermTracks,
+        genres: longTermGenres,
+      },
+    };
   } catch (e) {
     error = e instanceof Error ? e.message : "Failed to load data";
   }
 
-  if (error) {
+  // Render outside try/catch
+  if (error || !dataByTimeRange) {
     return (
       <div className="space-y-6">
         <div className="flex items-start justify-between">
@@ -117,4 +103,28 @@ export default async function DashboardPage() {
       </div>
     );
   }
+
+  return (
+    <>
+      <AutoSnapshotTrigger />
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+            <p className="text-muted-foreground">
+              Your top music on Spotify
+            </p>
+            {lastSnapshotDate && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Last updated: {new Date(lastSnapshotDate).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+          <SpotifyAttribution />
+        </div>
+
+        <DashboardOverview dataByTimeRange={dataByTimeRange} />
+      </div>
+    </>
+  );
 }
