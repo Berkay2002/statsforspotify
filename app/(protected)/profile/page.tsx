@@ -6,15 +6,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { 
   User, 
   Download, 
   LogOut, 
   AlertTriangle,
-  Database
+  Database,
+  Calendar,
+  TrendingUp,
+  Music,
+  CheckCircle2
 } from "lucide-react";
 import { DeleteDataDialog } from "./delete-data-dialog";
 import { ExportDataButton } from "./export-data-button";
+import { getCurrentUser } from "@/lib/spotify/api";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -22,6 +28,14 @@ export default async function ProfilePage() {
 
   if (!user) {
     redirect("/");
+  }
+
+  // Fetch Spotify profile with avatar
+  let spotifyProfile;
+  try {
+    spotifyProfile = await getCurrentUser();
+  } catch (error) {
+    console.error("Failed to fetch Spotify profile:", error);
   }
 
   // Get snapshot count
@@ -47,15 +61,42 @@ export default async function ProfilePage() {
     .limit(1)
     .single();
 
+  // Get total artist, track, and album rankings
+  const [
+    { count: artistRankingsCount },
+    { count: trackRankingsCount },
+    { count: albumRankingsCount },
+  ] = await Promise.all([
+    supabase
+      .from("artist_rankings")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id),
+    supabase
+      .from("track_rankings")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id),
+    supabase
+      .from("album_rankings")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id),
+  ]);
+
+  // Calculate days since first snapshot
+  const daysSinceFirstSnapshot = firstSnapshot 
+    ? Math.floor((Date.now() - new Date(firstSnapshot.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
+
   const userInfo = {
-    name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
+    name: spotifyProfile?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || "User",
     email: user.email || "",
-    avatarUrl: user.user_metadata?.avatar_url,
+    avatarUrl: spotifyProfile?.images?.[0]?.url,
     createdAt: user.created_at,
   };
 
+  const totalRankings = (artistRankingsCount || 0) + (trackRankingsCount || 0) + (albumRankingsCount || 0);
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 py-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Profile & Settings</h1>
         <p className="text-muted-foreground">
@@ -64,69 +105,168 @@ export default async function ProfilePage() {
       </div>
 
       {/* Profile Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Account
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+      <Card className="overflow-hidden">
+        <div className="h-20 bg-gradient-to-r from-[#1DB954]/20 to-primary/20" />
+        <CardContent className="-mt-10 pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+            <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
               <AvatarImage src={userInfo.avatarUrl} alt={userInfo.name} />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className="text-2xl">
                 {userInfo.name?.charAt(0)?.toUpperCase() ?? "U"}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <p className="text-xl font-semibold">{userInfo.name}</p>
-              <p className="text-sm text-muted-foreground">{userInfo.email}</p>
-              <Badge variant="secondary" className="mt-2">
-                Connected via Spotify
-              </Badge>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold">{userInfo.name}</h2>
+                  <p className="text-sm text-muted-foreground">{userInfo.email}</p>
+                </div>
+                <Badge variant="secondary" className="gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#1DB954]" />
+                  Connected
+                </Badge>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4" />
+                  <span>Joined {new Date(userInfo.createdAt).toLocaleDateString()}</span>
+                </div>
+                {daysSinceFirstSnapshot > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>{daysSinceFirstSnapshot} {daysSinceFirstSnapshot === 1 ? 'day' : 'days'} tracked</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          <Separator className="my-4" />
-          <div className="text-sm text-muted-foreground">
-            <p>Account created: {new Date(userInfo.createdAt).toLocaleDateString()}</p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Data Stats Card */}
+      {/* Data Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <Database className="h-5 w-5 text-muted-foreground" />
+              <Badge variant="outline" className="text-xs">Total</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{snapshotCount || 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">Snapshots</p>
+            {snapshotCount && snapshotCount > 0 && (
+              <div className="mt-3">
+                <Progress value={Math.min((snapshotCount / 100) * 100, 100)} className="h-1.5" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <Music className="h-5 w-5 text-muted-foreground" />
+              <Badge variant="outline" className="text-xs">Records</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{totalRankings.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-1">Total Rankings</p>
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              <p>{artistRankingsCount || 0} artists</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <Badge variant="outline" className="text-xs">First</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-base font-semibold">
+              {firstSnapshot 
+                ? new Date(firstSnapshot.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : "No data yet"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">First Snapshot</p>
+            {daysSinceFirstSnapshot > 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {daysSinceFirstSnapshot} days ago
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <Badge variant="outline" className="text-xs">Latest</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-base font-semibold">
+              {lastSnapshot 
+                ? new Date(lastSnapshot.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : "No data yet"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Last Snapshot</p>
+            {lastSnapshot && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {Math.floor((Date.now() - new Date(lastSnapshot.created_at).getTime()) / (1000 * 60 * 60 * 24))} days ago
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detailed Stats */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Your Data
+            <TrendingUp className="h-5 w-5" />
+            Ranking Breakdown
           </CardTitle>
           <CardDescription>
-            Statistics about your stored data
+            How your rankings are distributed across categories
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-2xl font-bold">{snapshotCount || 0}</p>
-              <p className="text-sm text-muted-foreground">Snapshots</p>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-[#1DB954]" />
+                <span className="text-sm font-medium">Artist Rankings</span>
+              </div>
+              <span className="text-sm font-bold">{(artistRankingsCount || 0).toLocaleString()}</span>
             </div>
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-sm font-medium">
-                {firstSnapshot 
-                  ? new Date(firstSnapshot.created_at).toLocaleDateString()
-                  : "—"}
-              </p>
-              <p className="text-sm text-muted-foreground">First Snapshot</p>
+            <Progress value={totalRankings ? (artistRankingsCount || 0) / totalRankings * 100 : 0} className="h-2" />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-primary" />
+                <span className="text-sm font-medium">Track Rankings</span>
+              </div>
+              <span className="text-sm font-bold">{(trackRankingsCount || 0).toLocaleString()}</span>
             </div>
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-sm font-medium">
-                {lastSnapshot 
-                  ? new Date(lastSnapshot.created_at).toLocaleDateString()
-                  : "—"}
-              </p>
-              <p className="text-sm text-muted-foreground">Last Snapshot</p>
+            <Progress value={totalRankings ? (trackRankingsCount || 0) / totalRankings * 100 : 0} className="h-2" />
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                <span className="text-sm font-medium">Album Rankings</span>
+              </div>
+              <span className="text-sm font-bold">{(albumRankingsCount || 0).toLocaleString()}</span>
             </div>
+            <Progress value={totalRankings ? (albumRankingsCount || 0) / totalRankings * 100 : 0} className="h-2" />
           </div>
         </CardContent>
       </Card>
@@ -136,15 +276,34 @@ export default async function ProfilePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            Export Data
+            Export Your Data
           </CardTitle>
           <CardDescription>
-            Download all your data in JSON or CSV format
+            Download all your listening history and rankings
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex gap-2">
-          <ExportDataButton format="json" />
-          <ExportDataButton format="csv" />
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border p-4 space-y-2">
+                <div>
+                  <p className="font-medium text-sm">JSON Format</p>
+                  <p className="text-xs text-muted-foreground">Machine-readable</p>
+                </div>
+                <ExportDataButton format="json" />
+              </div>
+              <div className="rounded-lg border p-4 space-y-2">
+                <div>
+                  <p className="font-medium text-sm">CSV Format</p>
+                  <p className="text-xs text-muted-foreground">Spreadsheet-ready</p>
+                </div>
+                <ExportDataButton format="csv" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Exports include all snapshots, rankings, and metadata
+            </p>
+          </div>
         </CardContent>
       </Card>
 
