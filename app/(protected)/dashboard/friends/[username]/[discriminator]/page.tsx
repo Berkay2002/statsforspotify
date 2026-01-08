@@ -9,6 +9,8 @@ import { ArtistsList } from "@/components/artists-list";
 import { TracksList } from "@/components/tracks-list";
 import { AlbumsList } from "@/components/albums-list";
 import { SpotifyAttribution } from "@/components/spotify-stats-logo";
+import { FriendFollowButton } from "@/components/friend-follow-button";
+import { checkMutualFollows } from "@/lib/spotify/api";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database";
 
@@ -59,9 +61,9 @@ export default async function FriendProfilePage({ params }: Props) {
   }
   
   // Check if user can view this profile
+  const followStatus = await checkFollowStatus(friendProfile.spotify_user_id);
   const canView = friendProfile.stats_visibility === "public" ||
-    (friendProfile.stats_visibility === "followers" && 
-     await checkMutualFollow(supabase, user.id, friendProfile.user_id));
+    (friendProfile.stats_visibility === "followers" && followStatus.isMutual);
   
   if (!canView) {
     return (
@@ -76,13 +78,21 @@ export default async function FriendProfilePage({ params }: Props) {
             </Avatar>
             <CardTitle>{friendProfile.display_name}#{friendProfile.discriminator}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Alert>
               <Lock className="h-4 w-4" />
               <AlertDescription>
-                This user&apos;s stats are private. You need to be mutual follows on Spotify to view their stats.
+                This user&apos;s stats are private. 
+                {!followStatus.isFollowing && " Follow them on Spotify to view their stats."}
+                {followStatus.isFollowing && !followStatus.isMutual && " They need to follow you back to make it mutual."}
               </AlertDescription>
             </Alert>
+            <div className="flex justify-center">
+              <FriendFollowButton
+                spotifyUserId={friendProfile.spotify_user_id}
+                initialFollowStatus={followStatus}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -265,10 +275,16 @@ export default async function FriendProfilePage({ params }: Props) {
                   {friendProfile.display_name}
                   <span className="text-muted-foreground">#{friendProfile.discriminator}</span>
                 </CardTitle>
-                <CardDescription className="mt-1">
-                  <Badge variant="secondary">
-                    {friendProfile.stats_visibility === "public" ? "Public Profile" : "Mutual Friend"}
-                  </Badge>
+                <CardDescription className="mt-2 space-y-2">
+                  <div>
+                    <Badge variant="secondary">
+                      {friendProfile.stats_visibility === "public" ? "Public Profile" : "Mutual Friend"}
+                    </Badge>
+                  </div>
+                  <FriendFollowButton
+                    spotifyUserId={friendProfile.spotify_user_id}
+                    initialFollowStatus={followStatus}
+                  />
                 </CardDescription>
               </div>
             </div>
@@ -331,22 +347,18 @@ export default async function FriendProfilePage({ params }: Props) {
   );
 }
 
-async function checkMutualFollow(supabase: SupabaseClient, requesterId: string, targetId: string): Promise<boolean> {
-  const { data: targetProfile } = await supabase
-    .from("user_profiles")
-    .select("spotify_user_id")
-    .eq("user_id", targetId)
-    .single();
-  
-  if (!targetProfile) return false;
-  
-  const { data: cache } = await supabase
-    .from("follow_cache")
-    .select("is_mutual")
-    .eq("user_id", requesterId)
-    .eq("spotify_friend_id", targetProfile.spotify_user_id)
-    .gte("cached_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
-    .single();
-  
-  return cache?.is_mutual || false;
+async function checkFollowStatus(spotifyUserId: string): Promise<{ isFollowing: boolean; isMutual: boolean }> {
+  try {
+    const results = await checkMutualFollows([spotifyUserId]);
+    if (results.length === 0) {
+      return { isFollowing: false, isMutual: false };
+    }
+    return {
+      isFollowing: results[0].isFollowing,
+      isMutual: results[0].isMutual,
+    };
+  } catch (error) {
+    console.error("Error checking follow status:", error);
+    return { isFollowing: false, isMutual: false };
+  }
 }
