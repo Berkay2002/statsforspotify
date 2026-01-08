@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+
+// Server Action for sign out (React 19 pattern)
+async function signOutAction() {
+  "use server";
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/");
+}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -433,7 +441,7 @@ export default async function ProfilePage() {
                 Sign out and revoke access. You can reconnect at any time.
               </p>
             </div>
-            <form action="/auth/signout" method="POST">
+            <form action={signOutAction}>
               <Button type="submit" variant="outline">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
