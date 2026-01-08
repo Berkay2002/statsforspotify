@@ -14,7 +14,7 @@ import type {
 
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
 
-class SpotifyAPIError extends Error {
+export class SpotifyAPIError extends Error {
   constructor(
     message: string,
     public status: number,
@@ -29,18 +29,39 @@ async function getAccessToken(): Promise<string> {
   const supabase = await createClient();
   const { data: { session }, error } = await supabase.auth.getSession();
 
-  if (error || !session) {
-    throw new SpotifyAPIError("No active session", 401, false);
+  if (error) {
+    console.error("[Spotify API] Failed to get session:", error.message);
+    throw new SpotifyAPIError("Unable to retrieve session. Please sign in again.", 401, true);
+  }
+
+  if (!session) {
+    console.error("[Spotify API] No active session found");
+    throw new SpotifyAPIError("No active session. Please sign in.", 401, true);
   }
 
   const providerToken = session.provider_token;
   
   if (!providerToken) {
-    // Try to refresh the session
+    // Try to refresh the session to get a new provider token
+    console.log("[Spotify API] No provider token found, attempting session refresh");
     const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
     
-    if (refreshError || !refreshedSession.session?.provider_token) {
-      throw new SpotifyAPIError("Unable to get Spotify access token. Please re-authenticate.", 401, true);
+    if (refreshError) {
+      console.error("[Spotify API] Session refresh failed:", refreshError.message);
+      throw new SpotifyAPIError(
+        "Session refresh failed. Please reconnect your Spotify account.",
+        401,
+        true
+      );
+    }
+    
+    if (!refreshedSession.session?.provider_token) {
+      console.error("[Spotify API] No provider token after refresh");
+      throw new SpotifyAPIError(
+        "Unable to obtain Spotify access token. Please reconnect your Spotify account.",
+        401,
+        true
+      );
     }
     
     return refreshedSession.session.provider_token;
