@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import { sparklineCache } from "@/lib/sparkline-cache";
 
 interface CombinedSparklineLoaderProps {
   artistIds: string[];
   trackIds: string[];
   children: (sparklines: Record<string, { date: string; rank: number }[]>, loading: boolean) => React.ReactNode;
 }
-
-// Shared cache with SparklineLoader
-const sparklineCache = new Map<string, { data: Record<string, { date: string; rank: number }[]>; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function CombinedSparklineLoader({ artistIds, trackIds, children }: CombinedSparklineLoaderProps) {
   const [sparklines, setSparklines] = useState<
@@ -37,7 +34,7 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
 
       // Check cache first
       const cached = sparklineCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      if (cached) {
         if (!cancelled) {
           setSparklines(cached.data);
           setLoading(false);
@@ -86,10 +83,7 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
 
         if (!cancelled) {
           // Cache the result
-          sparklineCache.set(cacheKey, {
-            data: mergedSparklines,
-            timestamp: Date.now(),
-          });
+          sparklineCache.set(cacheKey, mergedSparklines);
           setSparklines(mergedSparklines);
           setLoading(false);
           fetchingRef.current = null;
@@ -108,7 +102,7 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
     return () => {
       cancelled = true;
     };
-  }, [artistIdsKey, trackIdsKey, artistIds.length, trackIds.length, cacheKey]); // Use stable keys
+  }, [artistIdsKey, trackIdsKey, cacheKey]); // Removed redundant length dependencies
 
   return <>{children(sparklines, loading)}</>;
 }

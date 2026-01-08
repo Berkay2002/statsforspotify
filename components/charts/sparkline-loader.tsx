@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import { sparklineCache } from "@/lib/sparkline-cache";
 
 interface SparklineLoaderProps {
   itemIds: string[];
   type: "artist" | "track" | "album";
   children: (sparklines: Record<string, { date: string; rank: number }[]>, loading: boolean) => React.ReactNode;
 }
-
-// Simple in-memory cache for sparkline data
-const sparklineCache = new Map<string, { data: Record<string, { date: string; rank: number }[]>; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProps) {
   const [sparklines, setSparklines] = useState<
@@ -37,7 +34,7 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
 
       // Check cache first
       const cached = sparklineCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      if (cached) {
         if (!cancelled) {
           setSparklines(cached.data);
           setLoading(false);
@@ -65,10 +62,7 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
         if (!cancelled) {
           if (data.sparklines) {
             // Cache the result
-            sparklineCache.set(cacheKey, {
-              data: data.sparklines,
-              timestamp: Date.now(),
-            });
+            sparklineCache.set(cacheKey, data.sparklines);
             setSparklines(data.sparklines);
           }
           setLoading(false);

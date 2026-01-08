@@ -129,14 +129,22 @@ export async function POST(request: Request) {
     ]);
 
     // Log any errors but don't fail the entire request
-    if (artistResult.status === "rejected" || artistResult.value.error) {
-      console.error("Failed to insert artist rankings:", artistResult.status === "rejected" ? artistResult.reason : artistResult.value.error);
+    if (artistResult.status === "rejected") {
+      console.error("Failed to insert artist rankings:", artistResult.reason);
+    } else if (artistResult.value.error) {
+      console.error("Failed to insert artist rankings:", artistResult.value.error);
     }
-    if (trackResult.status === "rejected" || trackResult.value.error) {
-      console.error("Failed to insert track rankings:", trackResult.status === "rejected" ? trackResult.reason : trackResult.value.error);
+    
+    if (trackResult.status === "rejected") {
+      console.error("Failed to insert track rankings:", trackResult.reason);
+    } else if (trackResult.value.error) {
+      console.error("Failed to insert track rankings:", trackResult.value.error);
     }
-    if (albumResult.status === "rejected" || albumResult.value.error) {
-      console.error("Failed to insert album rankings:", albumResult.status === "rejected" ? albumResult.reason : albumResult.value.error);
+    
+    if (albumResult.status === "rejected") {
+      console.error("Failed to insert album rankings:", albumResult.reason);
+    } else if (albumResult.value.error) {
+      console.error("Failed to insert album rankings:", albumResult.value.error);
     }
 
     // Update artist listening stats
