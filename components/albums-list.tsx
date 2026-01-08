@@ -63,7 +63,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
                             blurDataURL={BLUR_DATA_URL.LARGE}
                           />
                         ) : (
-                          <div className="h-[120px] w-[120px] rounded-lg bg-muted" />
+                          <div className="h-30 w-30 rounded-lg bg-muted" />
                         )}
                         <div className="mt-3 w-full">
                           <p className="truncate font-semibold">{album.name}</p>

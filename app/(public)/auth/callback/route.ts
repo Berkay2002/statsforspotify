@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       provider: "spotify",
       options: {
         redirectTo,
-        scopes: "user-read-email user-top-read",
+        scopes: "user-read-email user-top-read user-follow-read user-follow-modify",
       },
     });
 
@@ -42,6 +42,35 @@ export async function GET(request: Request) {
     if (error) {
       console.error("Auth exchange error:", error.message);
       return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
+    }
+
+    // Sync display name and avatar from Spotify on login
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Get Spotify identity data
+        const { data: identities } = await supabase.auth.getUserIdentities();
+        const spotifyIdentity = identities?.identities.find(i => i.provider === 'spotify');
+
+        if (spotifyIdentity?.identity_data) {
+          const displayName = spotifyIdentity.identity_data.name || spotifyIdentity.identity_data.full_name || 'User';
+          const avatarUrl = spotifyIdentity.identity_data.picture?.url || null;
+
+          // Update user profile with latest Spotify data (keeps discriminator unchanged)
+          await supabase
+            .from('user_profiles')
+            .update({
+              display_name: displayName,
+              avatar_url: avatarUrl,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user.id);
+        }
+      }
+    } catch (syncError) {
+      // Don't fail the login if sync fails
+      console.error('Failed to sync profile from Spotify:', syncError);
     }
 
     const forwardedHost = request.headers.get("x-forwarded-host");

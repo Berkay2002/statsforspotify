@@ -91,14 +91,33 @@ export default function PrivacyPage() {
               <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
                 <li><code className="bg-muted px-1 rounded">user-read-email</code>: To identify your account</li>
                 <li><code className="bg-muted px-1 rounded">user-top-read</code>: To access your top artists and tracks</li>
+                <li><code className="bg-muted px-1 rounded">user-follow-read</code>: To see who you follow on Spotify (for friend features)</li>
+                <li><code className="bg-muted px-1 rounded">user-follow-modify</code>: To enable following friends from within the app</li>
               </ul>
               <p className="mt-4 text-muted-foreground">
-                We do not access your playlists, playback controls, or any other Spotify features.
+                We do not access your playlists, playback controls, or any other Spotify features beyond what&apos;s listed above.
               </p>
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">6. Your Rights</h2>
+              <h2 className="text-2xl font-semibold">6. Social Features & Friend Connections</h2>
+              <p className="mt-4 text-muted-foreground">
+                Our friend features allow you to view listening stats of other users you mutually follow on Spotify:
+              </p>
+              <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
+                <li>Friendships are based on mutual Spotify follows (you both follow each other)</li>
+                <li>Stats visibility is controlled by your privacy settings (default: followers only)</li>
+                <li>You can search for other users by display name</li>
+                <li>Follow/unfollow actions sync with your Spotify account</li>
+                <li>We cache mutual follow status for up to 1 hour for performance</li>
+              </ul>
+              <p className="mt-4 text-muted-foreground">
+                You can control who sees your stats in your profile settings: Public (anyone), Followers Only (mutual Spotify follows), or Private (nobody).
+              </p>
+            </section>
+
+            <section className="mt-8">
+              <h2 className="text-2xl font-semibold">7. Your Rights</h2>
               <p className="mt-4 text-muted-foreground">
                 You have the right to:
               </p>

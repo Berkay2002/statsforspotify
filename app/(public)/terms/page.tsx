@@ -68,7 +68,21 @@ export default function TermsPage() {
             </section>
 
             <section className="mt-8">
-              <h2 className="text-2xl font-semibold">4. User Responsibilities</h2>
+              <h2 className="text-2xl font-semibold">4. Social Features</h2>
+              <p className="mt-4 text-muted-foreground">
+                The Service offers social features that allow users to view friends&apos; listening statistics:
+              </p>
+              <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
+                <li>Friendships are based on mutual Spotify follows (you both follow each other)</li>
+                <li>Stats visibility is controlled by your privacy settings (default: followers only)</li>
+                <li>You can search for other users by display name</li>
+                <li>Follow/unfollow actions sync with your Spotify account</li>
+                <li>You are responsible for managing your privacy settings appropriately</li>
+              </ul>
+            </section>
+
+            <section className="mt-8">
+              <h2 className="text-2xl font-semibold">5. User Responsibilities</h2>
               <p className="mt-4 text-muted-foreground">
                 You agree to:
               </p>

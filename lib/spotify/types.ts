@@ -162,3 +162,53 @@ export interface TrackWithHistory extends RankedTrack {
 export interface AlbumWithHistory extends RankedAlbum {
   history: RankingHistory[];
 }
+
+// Spotify Follow API types
+export interface SpotifyUserSimple {
+  id: string;
+  display_name: string;
+  external_urls: {
+    spotify: string;
+  };
+  followers?: {
+    total: number;
+  };
+  href: string;
+  images: SpotifyImage[];
+  type: "user";
+  uri: string;
+}
+
+export interface SpotifyFollowedUsersResponse {
+  artists: {
+    items: SpotifyUserSimple[];
+    next: string | null;
+    total: number;
+    cursors: {
+      after: string | null;
+    };
+    limit: number;
+    href: string;
+  };
+}
+
+export interface FollowCheckResult {
+  spotifyUserId: string;
+  isFollowing: boolean;
+  isMutual: boolean;
+}
+
+export interface MutualFriendsResult {
+  mutualFriends: Array<{
+    spotifyUserId: string;
+    displayName: string;
+    avatarUrl: string | null;
+    username: string;
+    discriminator: string;
+  }>;
+  followBackSuggestions: Array<{
+    spotifyUserId: string;
+    displayName: string;
+    avatarUrl: string | null;
+  }>;
+}

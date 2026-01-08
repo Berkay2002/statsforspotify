@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Users, Music, Music2, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, Users, Music, Music2, Moon, Sun, UserPlus } from "lucide-react";
 import { useTheme } from "next-themes";
 import { SpotifyBrand } from "@/components/spotify-stats-logo";
 import { SidebarNavigation, type NavRoute } from "@/components/sidebar-navigation";
@@ -43,6 +43,12 @@ const navRoutes: NavRoute[] = [
     title: "Genres",
     icon: <Music2 className="size-4" />,
     href: "/dashboard/genres",
+  },
+  {
+    id: "friends",
+    title: "Friends",
+    icon: <UserPlus className="size-4" />,
+    href: "/dashboard/friends",
   },
 ];
 
