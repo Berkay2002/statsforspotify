@@ -22,6 +22,9 @@ This repository uses AI-friendly documentation to help Copilot and other AI agen
 4. **Security first** - All API routes must verify authentication
 5. **RLS enabled** - All database tables use Row Level Security
 6. **Error handling** - Wrap all API routes in try/catch blocks
+7. **NO code duplication** - Check `lib/api/utils.ts` and `lib/spotify/helpers.ts` before writing similar code
+8. **Descriptive names only** - No abbreviations: use `user` not `usr`, `response` not `res`, `error` not `err`
+9. **Optimize performance** - Use `React.memo()`, `useCallback()`, and `useMemo()` for expensive operations
 
 ### Before Making Changes
 - Read the relevant sections in `AGENTS.md`
@@ -44,12 +47,12 @@ type TrackRanking = Database['public']['Tables']['track_rankings']['Row'];
 
 ### Common Patterns
 ```typescript
-// API Route Pattern
+// API Route Pattern - Use shared utilities!
+import { authenticateUser, requireUser } from '@/lib/api/utils';
+
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const user = await requireUser(); // Use helper instead of manual auth
     // ... your logic
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
@@ -58,10 +61,14 @@ export async function POST(request: Request) {
   }
 }
 
-// Spotify API Usage
-import { getTopArtists, getTopTracks } from "@/lib/spotify/api";
-const artists = await getTopArtists("medium_term", 50);
-const tracks = await getTopTracks("short_term", 20);
+// Data Fetching - Use helpers from lib/spotify/helpers.ts
+import { fetchArtistsByTimeRange, fetchTracksByTimeRange } from "@/lib/spotify/helpers";
+const artists = await fetchArtistsByTimeRange("medium_term");
+const tracks = await fetchTracksByTimeRange("short_term");
+
+// List Components - Use TimeRangeList wrapper
+import TimeRangeList from '@/components/time-range-list';
+// Wrap your list component with TimeRangeList instead of duplicating time range logic
 ```
 
 ### File Locations

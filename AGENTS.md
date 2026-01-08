@@ -56,12 +56,42 @@ This is a Next.js 16 app using the App Router, Supabase for auth/database, and R
 - Supabase server client: `await createClient()` from `@/lib/supabase/server`
 - Supabase browser client: `createClient()` from `@/lib/supabase/client`
 
+### Code Duplication & Refactoring (CRITICAL)
+**Before writing new code, always check for existing patterns and utilities:**
+
+- **Shared utilities exist** - Check `lib/api/utils.ts` and `lib/spotify/helpers.ts` before duplicating logic
+- **Authentication helpers** - Use `authenticateUser()` and `requireUser()` from `lib/api/utils.ts` in all API routes
+- **Data fetching patterns** - Use `fetchArtistsByTimeRange()`, `fetchTracksByTimeRange()`, `fetchAlbumsByTimeRange()` from `lib/spotify/helpers.ts`
+- **Generic components** - Use `TimeRangeList` component wrapper for list pages instead of duplicating time range logic
+- **Error handling** - Reuse standard error handling patterns from `lib/api/utils.ts`
+
+**Red flags indicating duplication:**
+- Copying similar try/catch blocks across API routes
+- Repeating auth checks: `await supabase.auth.getUser()`
+- Duplicating time range fetching logic across pages
+- Similar data transformation logic in multiple components
+- Copy-pasting entire API route structures
+
+**When you see duplication:**
+1. Extract shared logic into utility functions (`lib/api/utils.ts` or `lib/spotify/helpers.ts`)
+2. Create generic wrapper components for repeated UI patterns
+3. Use composition over copy-paste
+4. Document the new utilities for future reference
+
 ### Naming Conventions
 - Components: PascalCase (e.g., `ArtistsList.tsx`)
 - Files: kebab-case for multi-word files (e.g., `artist-rankings.tsx`)
 - API routes: RESTful naming (e.g., `/api/artists/[id]/route.ts`)
 - Database tables: snake_case (e.g., `artist_rankings`)
 - TypeScript types: PascalCase with descriptive names (e.g., `RankedArtist`)
+
+**Use descriptive variable names - NO abbreviations:**
+- ❌ Bad: `usr`, `res`, `err`, `idx`, `arr`, `obj`, `fn`
+- ✅ Good: `user`, `response`, `error`, `index`, `artists`, `profile`, `fetchUser`
+- ❌ Bad: `a`, `b`, `x`, `y`, `temp`, `data` (without context)
+- ✅ Good: `artist`, `track`, `currentRank`, `previousRank`, `spotifyProfile`
+
+**Exception:** Standard loop counters (`i`, `j`, `k`) are acceptable in simple loops only
 
 ### Component Patterns
 - Use Server Components by default
@@ -246,6 +276,25 @@ export async function POST(request: Request) {
 - Always add pagination for large result sets
 - Use indexes on frequently queried columns (already configured)
 - Prefer database functions for complex operations (e.g., `update_artist_listening_stats`)
+
+### React Performance (CRITICAL)
+**Prevent unnecessary re-renders:**
+- Use `React.memo()` for expensive list item components
+- Wrap callbacks with `useCallback()` when passing to memoized children
+- Wrap computed values with `useMemo()` for expensive calculations
+- Keep client components small - split into smaller memoized components
+
+**Client-side caching:**
+- Use `@tanstack/react-query` for data fetching and caching (already configured)
+- Cache expensive computations with `useMemo()`
+- Implement proper cache invalidation strategies
+- Set appropriate `staleTime` and `cacheTime` for queries
+
+**API route optimization:**
+- Return only necessary fields from API routes
+- Use database projections to limit data transfer
+- Batch related queries using `Promise.all()`
+- See [PERFORMANCE_OPTIMIZATIONS.md](PERFORMANCE_OPTIMIZATIONS.md) for detailed guidelines
 
 ## Dependency Management
 
