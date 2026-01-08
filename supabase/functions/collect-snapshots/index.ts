@@ -30,6 +30,35 @@ interface SpotifyTokenResponse {
   scope: string;
 }
 
+interface SpotifyImage {
+  url: string;
+  height: number;
+  width: number;
+}
+
+interface SpotifyArtist {
+  id: string;
+  name: string;
+  images?: SpotifyImage[];
+  genres?: string[];
+  popularity?: number;
+}
+
+interface SpotifyAlbum {
+  id: string;
+  name: string;
+  images?: SpotifyImage[];
+}
+
+interface SpotifyTrack {
+  id: string;
+  name: string;
+  album: SpotifyAlbum;
+  artists: SpotifyArtist[];
+  duration_ms: number;
+  popularity: number;
+}
+
 async function refreshSpotifyToken(refreshToken: string): Promise<string> {
   const response = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
@@ -142,7 +171,7 @@ Deno.serve(async (req) => {
         }
 
         // Insert artist rankings
-        const artistRankings = artistsResponse.items.map((artist: any, index: number) => ({
+        const artistRankings = artistsResponse.items.map((artist: SpotifyArtist, index: number) => ({
           snapshot_id: snapshot.id,
           user_id: user.id,
           artist_id: artist.id,
@@ -156,8 +185,15 @@ Deno.serve(async (req) => {
         await supabase.from("artist_rankings").insert(artistRankings);
 
         // Insert track rankings and extract albums
-        const albumMap = new Map<string, any>();
-        const trackRankings = tracksResponse.items.map((track: any, index: number) => {
+        const albumMap = new Map<string, {
+          id: string;
+          name: string;
+          imageUrl: string | null;
+          artistId: string;
+          artistName: string;
+          trackCount: number;
+        }>();
+        const trackRankings = tracksResponse.items.map((track: SpotifyTrack, index: number) => {
           // Track album for album rankings
           const albumId = track.album.id;
           if (albumMap.has(albumId)) {
@@ -168,7 +204,7 @@ Deno.serve(async (req) => {
               name: track.album.name,
               imageUrl: track.album.images?.[0]?.url ?? null,
               artistId: track.artists[0]?.id ?? "",
-              artistName: track.artists.map((a: any) => a.name).join(", "),
+              artistName: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
               trackCount: 1,
             });
           }
@@ -180,7 +216,7 @@ Deno.serve(async (req) => {
             track_name: track.name,
             track_image_url: track.album.images?.[0]?.url ?? null,
             artist_id: track.artists[0]?.id ?? "",
-            artist_name: track.artists.map((a: any) => a.name).join(", "),
+            artist_name: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
             album_id: albumId,
             album_name: track.album.name,
             duration_ms: track.duration_ms,

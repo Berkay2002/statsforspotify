@@ -17,16 +17,30 @@ This repository uses AI-friendly documentation to help Copilot and other AI agen
 
 ### Critical Rules
 1. **Always use TypeScript** - No plain JavaScript files
-2. **Server Components by default** - Only add `"use client"` when necessary
-3. **Security first** - All API routes must verify authentication
-4. **RLS enabled** - All database tables use Row Level Security
-5. **Error handling** - Wrap all API routes in try/catch blocks
+2. **Use generated database types** - Import from `lib/supabase/database.ts`, never create manual DB interfaces
+3. **Server Components by default** - Only add `"use client"` when necessary
+4. **Security first** - All API routes must verify authentication
+5. **RLS enabled** - All database tables use Row Level Security
+6. **Error handling** - Wrap all API routes in try/catch blocks
 
 ### Before Making Changes
 - Read the relevant sections in `AGENTS.md`
 - Understand existing patterns in similar files
 - Run `npm run build` and `npm run lint` to verify changes
 - Test authentication flows if touching auth code
+
+### Database Types - ALWAYS USE GENERATED TYPES
+```typescript
+// Import generated database types (DO NOT manually create interfaces)
+import type { Database } from '@/lib/supabase/database';
+
+// Use database types for all Supabase queries
+type ArtistRanking = Database['public']['Tables']['artist_rankings']['Row'];
+type TrackRanking = Database['public']['Tables']['track_rankings']['Row'];
+
+// Regenerate types after schema changes:
+// supabase gen types typescript --project-id <id> > lib/supabase/database.ts
+```
 
 ### Common Patterns
 ```typescript
@@ -58,6 +72,7 @@ const tracks = await getTopTracks("short_term", 20);
 - UI components: `components/ui/*.tsx`
 - Spotify logic: `lib/spotify/*.ts`
 - Supabase clients: `lib/supabase/*.ts`
+- **Database types**: `lib/supabase/database.ts` (auto-generated, use this!)
 
 ### Testing
 ```bash
