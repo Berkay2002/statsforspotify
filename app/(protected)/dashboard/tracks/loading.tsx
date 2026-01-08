@@ -1,23 +1,14 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeaderLoading, TimeRangeTabsLoading } from "@/components/ui/loading-skeletons";
 
 export default function TracksLoading() {
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <Skeleton className="h-8 w-48 mb-2" />
-          <Skeleton className="h-5 w-64" />
-        </div>
-        <Skeleton className="h-8 w-32" />
-      </div>
+      <PageHeaderLoading />
 
       {/* Tabs skeleton */}
       <div className="space-y-6">
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-32" />
-        </div>
+        <TimeRangeTabsLoading />
 
         {/* List of tracks */}
         <div className="space-y-2">
