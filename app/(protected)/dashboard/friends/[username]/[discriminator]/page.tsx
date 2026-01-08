@@ -10,8 +10,6 @@ import { TracksList } from "@/components/tracks-list";
 import { AlbumsList } from "@/components/albums-list";
 import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { FriendFollowButton } from "@/components/friend-follow-button";
-import { checkMutualFollows } from "@/lib/spotify/api";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database";
 
 interface Props {
@@ -40,35 +38,27 @@ export default async function FriendProfilePage({ params }: Props) {
     .eq("discriminator", discriminator)
     .single();
   
-  // Fallback: Try to find by old username via spotify_user_id lookup
-  // This handles cases where display name changed but discriminator stayed the same
+  // Fallback: Try to find by old username via discriminator lookup
   if (error || !friendProfile) {
-    // Try searching by discriminator alone and match on previous display names
     const { data: profiles } = await supabase
       .from("user_profiles")
       .select("*")
       .eq("discriminator", discriminator)
       .limit(10);
     
-    // If we find exactly one profile with this discriminator, redirect to new URL
     if (profiles && profiles.length === 1) {
       const newUsername = profiles[0].display_name;
       redirect(`/dashboard/friends/${encodeURIComponent(newUsername)}/${discriminator}`);
     }
     
-    // Otherwise, not found
     notFound();
   }
   
-  // Check if user can view this profile
-  // If friend hasn't re-authenticated yet (NULL spotify_user_id), they can't be followed
-  let followStatus = { isFollowing: false, isMutual: false };
-  if (friendProfile.spotify_user_id) {
-    followStatus = await checkFollowStatus(friendProfile.spotify_user_id);
-  }
+  // Check friendship status using our internal friendships table
+  const friendshipStatus = await checkFriendshipStatus(supabase, user.id, friendProfile.user_id);
   
   const canView = friendProfile.stats_visibility === "public" ||
-    (friendProfile.stats_visibility === "followers" && followStatus.isMutual);
+    (friendProfile.stats_visibility === "followers" && friendshipStatus.isFriend);
   
   if (!canView) {
     return (
@@ -87,25 +77,23 @@ export default async function FriendProfilePage({ params }: Props) {
             <Alert>
               <Lock className="h-4 w-4" />
               <AlertDescription>
-                {!friendProfile.spotify_user_id ? (
-                  "This user needs to sign in again to enable following."
-                ) : (
-                  <>
-                    This user&apos;s stats are private. 
-                    {!followStatus.isFollowing && " Follow them on Spotify to view their stats."}
-                    {followStatus.isFollowing && !followStatus.isMutual && " They need to follow you back to make it mutual."}
-                  </>
+                {friendshipStatus.status === "none" && (
+                  "This user's stats are private. Send them a friend request to view their stats."
+                )}
+                {friendshipStatus.status === "pending" && friendshipStatus.isIncoming && (
+                  "This user has sent you a friend request. Accept it to view their stats."
+                )}
+                {friendshipStatus.status === "pending" && !friendshipStatus.isIncoming && (
+                  "Friend request pending. They need to accept your request to view their stats."
                 )}
               </AlertDescription>
             </Alert>
-            {friendProfile.spotify_user_id && (
-              <div className="flex justify-center">
-                <FriendFollowButton
-                  spotifyUserId={friendProfile.spotify_user_id}
-                  initialFollowStatus={followStatus}
-                />
-              </div>
-            )}
+            <div className="flex justify-center">
+              <FriendFollowButton
+                friendUserId={friendProfile.user_id}
+                initialStatus={friendshipStatus}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -291,16 +279,12 @@ export default async function FriendProfilePage({ params }: Props) {
                 <CardDescription className="mt-2 space-y-2">
                   <div>
                     <Badge variant="secondary">
-                      {friendProfile.stats_visibility === "public" ? "Public Profile" : "Mutual Friend"}
+                      {friendProfile.stats_visibility === "public" ? "Public Profile" : "Friend"}
                     </Badge>
                   </div>
                   <FriendFollowButton
-                    spotifyUserId={friendProfile.spotify_user_id}
-                    initialFollowStatus={followStatus}
-                  />
-                  <FriendFollowButton
-                    spotifyUserId={friendProfile.spotify_user_id}
-                    initialFollowStatus={followStatus}
+                    friendUserId={friendProfile.user_id}
+                    initialStatus={friendshipStatus}
                   />
                 </CardDescription>
               </div>
@@ -364,18 +348,32 @@ export default async function FriendProfilePage({ params }: Props) {
   );
 }
 
-async function checkFollowStatus(spotifyUserId: string): Promise<{ isFollowing: boolean; isMutual: boolean }> {
+async function checkFriendshipStatus(
+  supabase: ReturnType<typeof createClient> extends Promise<infer T> ? T : never,
+  currentUserId: string,
+  friendUserId: string
+): Promise<{ status: "none" | "pending" | "accepted" | "blocked"; isFriend: boolean; isPending: boolean; isIncoming: boolean }> {
   try {
-    const results = await checkMutualFollows([spotifyUserId]);
-    if (results.length === 0) {
-      return { isFollowing: false, isMutual: false };
+    const { data: friendship, error } = await supabase
+      .from("friendships")
+      .select("id, status, user_id, friend_id")
+      .or(`and(user_id.eq.${currentUserId},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${currentUserId})`)
+      .single();
+    
+    if (error || !friendship) {
+      return { status: "none", isFriend: false, isPending: false, isIncoming: false };
     }
+    
+    const isIncoming = friendship.friend_id === currentUserId && friendship.status === "pending";
+    
     return {
-      isFollowing: results[0].isFollowing,
-      isMutual: results[0].isMutual,
+      status: friendship.status as "none" | "pending" | "accepted" | "blocked",
+      isFriend: friendship.status === "accepted",
+      isPending: friendship.status === "pending",
+      isIncoming,
     };
   } catch (error) {
-    console.error("Error checking follow status:", error);
-    return { isFollowing: false, isMutual: false };
+    console.error("Error checking friendship status:", error);
+    return { status: "none", isFriend: false, isPending: false, isIncoming: false };
   }
 }

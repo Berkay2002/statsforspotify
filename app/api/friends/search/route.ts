@@ -17,13 +17,11 @@ export async function GET(request: Request) {
     }
     
     // Search profiles by display name (fuzzy match)
-    // Only include users with valid Spotify user IDs (they've logged in at least once)
     const { data: profiles, error } = await supabase
       .from("user_profiles")
-      .select("user_id, spotify_user_id, display_name, discriminator, avatar_url, stats_visibility")
+      .select("user_id, display_name, discriminator, avatar_url, stats_visibility")
       .ilike("display_name", `%${query}%`)
       .neq("user_id", user.id) // Exclude current user
-      .not("spotify_user_id", "is", null) // Only users with Spotify IDs
       .limit(20);
     
     if (error) {
@@ -34,33 +32,48 @@ export async function GET(request: Request) {
       return NextResponse.json({ results: [] });
     }
     
-    // Get follow status for each profile
-    const spotifyUserIds = profiles.map(profile => profile.spotify_user_id);
+    // Get friendship status for each profile
+    const profileUserIds = profiles.map(profile => profile.user_id);
     
-    const { data: followCache } = await supabase
-      .from("follow_cache")
-      .select("spotify_friend_id, is_mutual, cached_at")
-      .eq("user_id", user.id)
-      .in("spotify_friend_id", spotifyUserIds)
-      .gte("cached_at", new Date(Date.now() - 60 * 60 * 1000).toISOString()); // 1 hour
+    const { data: friendships } = await supabase
+      .from("friendships")
+      .select("user_id, friend_id, status")
+      .or(
+        profileUserIds.map(profileId => 
+          `and(user_id.eq.${user.id},friend_id.eq.${profileId}),and(user_id.eq.${profileId},friend_id.eq.${user.id})`
+        ).join(",")
+      );
     
-    const mutualFollowStatusMap = new Map(
-      followCache?.map(cacheEntry => [cacheEntry.spotify_friend_id, cacheEntry.is_mutual]) || []
-    );
+    // Build a map of friendship status by user ID
+    const friendshipStatusMap = new Map<string, { status: string; isIncoming: boolean }>();
+    (friendships || []).forEach(friendship => {
+      const otherUserId = friendship.user_id === user.id ? friendship.friend_id : friendship.user_id;
+      const isIncoming = friendship.friend_id === user.id;
+      friendshipStatusMap.set(otherUserId, { 
+        status: friendship.status, 
+        isIncoming: isIncoming && friendship.status === "pending"
+      });
+    });
     
-    const results = profiles.map(profile => ({
-      userId: profile.user_id,
-      spotifyUserId: profile.spotify_user_id,
-      displayName: profile.display_name,
-      discriminator: profile.discriminator,
-      username: `${profile.display_name}#${profile.discriminator}`,
-      avatarUrl: profile.avatar_url,
-      statsVisibility: profile.stats_visibility,
-      isMutualFollow: mutualFollowStatusMap.get(profile.spotify_user_id) || false,
-      canViewStats: 
-        profile.stats_visibility === "public" ||
-        (profile.stats_visibility === "followers" && mutualFollowStatusMap.get(profile.spotify_user_id)),
-    }));
+    const results = profiles.map(profile => {
+      const friendshipInfo = friendshipStatusMap.get(profile.user_id);
+      const isFriend = friendshipInfo?.status === "accepted";
+      
+      return {
+        userId: profile.user_id,
+        displayName: profile.display_name,
+        discriminator: profile.discriminator,
+        username: `${profile.display_name}#${profile.discriminator}`,
+        avatarUrl: profile.avatar_url,
+        statsVisibility: profile.stats_visibility,
+        friendshipStatus: friendshipInfo?.status || "none",
+        isFriend,
+        isPendingIncoming: friendshipInfo?.isIncoming || false,
+        canViewStats: 
+          profile.stats_visibility === "public" ||
+          (profile.stats_visibility === "followers" && isFriend),
+      };
+    });
     
     return NextResponse.json({ results });
   } catch (error) {
