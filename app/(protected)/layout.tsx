@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getCurrentUser, SpotifyAPIError } from "@/lib/spotify/api";
@@ -47,12 +47,12 @@ export default async function ProtectedLayout({
       <TooltipProvider>
         <SidebarProvider>
           <AppSidebar user={userInfo} />
-          <SidebarInset>
-            {/* Mobile navigation with expandable tabs - visible only on mobile */}
-            <div className="md:hidden">
-              <MobileNavigation />
-            </div>
-            <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+          <SidebarInset className="h-screen overflow-hidden">
+            <main className="h-full overflow-y-auto">
+              {/* Mobile navigation with expandable tabs - visible only on mobile */}
+              <MobileNavigation className="md:hidden" />
+              <div className="p-4 md:p-6">{children}</div>
+            </main>
           </SidebarInset>
         </SidebarProvider>
       </TooltipProvider>

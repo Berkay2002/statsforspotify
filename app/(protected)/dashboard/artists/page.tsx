@@ -14,7 +14,7 @@ export default async function ArtistsPage() {
             Your most played artists on Spotify
           </p>
         </div>
-        <SpotifyAttribution />
+        <SpotifyAttribution className="hidden md:flex" />
       </div>
 
       <ArtistsList artistsByTimeRange={artistsByTimeRange} />

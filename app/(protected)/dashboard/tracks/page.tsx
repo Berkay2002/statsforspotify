@@ -14,7 +14,7 @@ export default async function TracksPage() {
             Your most played songs on Spotify
           </p>
         </div>
-        <SpotifyAttribution />
+        <SpotifyAttribution className="hidden md:flex" />
       </div>
 
       <TracksList tracksByTimeRange={tracksByTimeRange} />
