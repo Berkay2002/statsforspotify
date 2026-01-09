@@ -121,7 +121,8 @@ export async function GET(request: Request) {
 
           // Store refresh token in spotify_connections table
           // This is critical for cron jobs to work when users are offline
-          const refreshToken = spotifyIdentity.identity_data.provider_refresh_token;
+          // NOTE: provider_refresh_token is in the session object, not identity_data
+          const refreshToken = session.provider_refresh_token;
           if (refreshToken) {
             const { error: spotifyConnectionError } = await supabase
               .from('spotify_connections')
@@ -146,10 +147,10 @@ export async function GET(request: Request) {
                 spotifyConnectionError,
               );
             } else {
-              console.log('[Auth Callback] Stored refresh token in spotify_connections');
+              console.log('[Auth Callback] Stored refresh token in spotify_connections for user:', user.id);
             }
           } else {
-            console.error('[Auth Callback] No refresh token found in identity data');
+            console.error('[Auth Callback] No refresh token found in session. Session data:', JSON.stringify(session, null, 2));
           }
         }
       }
