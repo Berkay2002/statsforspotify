@@ -13,10 +13,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RankingHistory } from "@/lib/spotify/types";
 
-// Define colors for rank changes
+// Define theme-aware colors for rank changes
 const RANK_CHANGE_COLORS = {
-  improved: "#22c55e", // green-600
-  declined: "#ef4444", // red-600
+  improved: "hsl(var(--chart-2))", // green chart color
+  declined: "hsl(var(--chart-1))", // red/destructive chart color
   neutral: "hsl(var(--primary))", // default primary color
 } as const;
 
@@ -149,7 +149,7 @@ export function RankingChart({
                         {data.date}
                       </div>
                       {isPeak && (
-                        <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                        <div className="text-xs text-chart-4">
                           Peak Position
                         </div>
                       )}
@@ -192,7 +192,7 @@ export function RankingChart({
                       cy={cy} 
                       r={5} 
                       fill={dotColor} 
-                      stroke="#fff" 
+                      stroke="hsl(var(--background))" 
                       strokeWidth={2}
                     />
                   );
@@ -205,6 +205,7 @@ export function RankingChart({
                     cy={cy} 
                     r={4} 
                     fill={color} 
+                    stroke="hsl(var(--background))" 
                     strokeWidth={2}
                   />
                 );
