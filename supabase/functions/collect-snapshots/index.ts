@@ -103,6 +103,9 @@ enum ErrorType {
 async function refreshSpotifyToken(
   refreshToken: string
 ): Promise<{ accessToken: string; errorType?: ErrorType }> {
+  console.log("[Token Refresh] Starting refresh with token:", refreshToken.substring(0, 20) + "...");
+  console.log("[Token Refresh] Client ID:", Deno.env.get("SPOTIFY_CLIENT_ID")?.substring(0, 10) + "...");
+  
   const response = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
@@ -119,6 +122,8 @@ async function refreshSpotifyToken(
     }),
   });
 
+  console.log("[Token Refresh] Response status:", response.status);
+
   // Handle rate limiting with Retry-After
   if (response.status === 429) {
     const retryAfter = response.headers.get("Retry-After");
@@ -132,16 +137,24 @@ async function refreshSpotifyToken(
   // Handle revoked tokens - user revoked access
   if (response.status === 400) {
     const errorData = await response.json();
+    console.log("[Token Refresh] 400 Error response:", JSON.stringify(errorData));
     if (errorData.error === "invalid_grant") {
       throw {
         errorType: ErrorType.REVOKED,
         message: "Refresh token revoked by user",
       };
     }
+    // If not invalid_grant, log and throw with more detail
+    throw {
+      errorType: ErrorType.TRANSIENT,
+      message: `Bad Request: ${errorData.error} - ${errorData.error_description || "No description"}`,
+    };
   }
 
   // Handle client authentication errors (our credentials are wrong)
   if (response.status === 401) {
+    const errorData = await response.json();
+    console.log("[Token Refresh] 401 Error response:", JSON.stringify(errorData));
     throw {
       errorType: ErrorType.FATAL,
       message: "Client authentication failed - check SPOTIFY_CLIENT_ID/SECRET",
@@ -149,13 +162,16 @@ async function refreshSpotifyToken(
   }
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.log("[Token Refresh] Error response:", errorText);
     throw {
       errorType: ErrorType.TRANSIENT,
-      message: `Failed to refresh token: ${response.statusText}`,
+      message: `Failed to refresh token: ${response.statusText} - ${errorText}`,
     };
   }
 
   const data: SpotifyTokenResponse = await response.json();
+  console.log("[Token Refresh] Success! Got access token");
   return { accessToken: data.access_token };
 }
 
