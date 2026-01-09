@@ -13,6 +13,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RankingHistory } from "@/lib/spotify/types";
 
+// Define colors for rank changes
+const RANK_CHANGE_COLORS = {
+  improved: "#22c55e", // green-600
+  declined: "#ef4444", // red-600
+  neutral: "hsl(var(--primary))", // default primary color
+} as const;
+
 interface RankingChartProps {
   title: string;
   data: RankingHistory[];
@@ -47,16 +54,25 @@ export function RankingChart({
   }
 
   // Format data for the chart - reverse rank so higher = better
-  const chartData = data.map((item) => ({
-    date: new Date(item.date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }),
-    rank: item.rank,
-    // Inverted for visual - lower rank is better
-    displayRank: 51 - item.rank,
-    isPeak: peakPosition ? item.rank === peakPosition : false,
-  }));
+  const chartData = data.map((item) => {
+    const previousRank = (item as any).previous_rank;
+    const rankChange = previousRank ? previousRank - item.rank : 0;
+    const isSignificant = Math.abs(rankChange) >= 5;
+    
+    return {
+      date: new Date(item.date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
+      rank: item.rank,
+      previous_rank: previousRank,
+      rankChange,
+      isSignificant,
+      // Inverted for visual - lower rank is better
+      displayRank: 51 - item.rank,
+      isPeak: peakPosition ? item.rank === peakPosition : false,
+    };
+  });
 
   const timeRangeLabels: Record<string, string> = {
     short_term: "Last 4 Weeks",
@@ -106,15 +122,31 @@ export function RankingChart({
             <Tooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
-                  const isPeak = payload[0].payload.isPeak;
+                  const data = payload[0].payload;
+                  const isPeak = data.isPeak;
+                  const previousRank = data.previous_rank;
+                  const rankChange = data.rankChange;
+                  
+                  // Format change text
+                  let changeText = '';
+                  if (previousRank) {
+                    if (rankChange > 0) {
+                      changeText = ` (was ${previousRank}, ↑${rankChange})`;
+                    } else if (rankChange < 0) {
+                      changeText = ` (was ${previousRank}, ↓${Math.abs(rankChange)})`;
+                    } else {
+                      changeText = ` (unchanged)`;
+                    }
+                  }
+                  
                   return (
                     <div className="rounded-lg border bg-background p-2 shadow-sm">
                       <div className="text-sm font-medium flex items-center gap-1">
-                        Rank #{payload[0].payload.rank}
+                        Rank #{data.rank}{changeText}
                         {isPeak && <span>🏆</span>}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {payload[0].payload.date}
+                        {data.date}
                       </div>
                       {isPeak && (
                         <div className="text-xs text-yellow-600 dark:text-yellow-400">
@@ -145,7 +177,38 @@ export function RankingChart({
               dataKey="rank"
               stroke={color}
               strokeWidth={2}
-              dot={{ fill: color, strokeWidth: 2, r: 4 }}
+              dot={(props: any) => {
+                const { cx, cy, payload } = props;
+                if (!payload) return null;
+                
+                // Show colored dots for significant rank changes (±5)
+                if (payload.isSignificant && payload.previous_rank) {
+                  const change = payload.rankChange;
+                  const dotColor = change > 0 ? RANK_CHANGE_COLORS.improved : RANK_CHANGE_COLORS.declined;
+                  
+                  return (
+                    <circle 
+                      cx={cx} 
+                      cy={cy} 
+                      r={5} 
+                      fill={dotColor} 
+                      stroke="#fff" 
+                      strokeWidth={2}
+                    />
+                  );
+                }
+                
+                // Default dot
+                return (
+                  <circle 
+                    cx={cx} 
+                    cy={cy} 
+                    r={4} 
+                    fill={color} 
+                    strokeWidth={2}
+                  />
+                );
+              }}
               activeDot={{ r: 6, fill: color }}
             />
           </LineChart>

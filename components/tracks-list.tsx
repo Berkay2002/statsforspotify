@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
+import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
 
@@ -15,6 +16,7 @@ interface Track {
   artistName: string;
   albumName: string;
   durationMs: number;
+  previous_rank?: number | null;
 }
 
 interface TracksListProps {
@@ -66,7 +68,10 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
                       <div className="h-16 w-16 rounded-lg bg-muted shrink-0" />
                     )}
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <p className="truncate font-semibold text-base">{track.name}</p>
+                      <p className="truncate font-semibold text-base">
+                        {track.name}
+                        <RankBadgeInline currentRank={track.rank} previousRank={track.previous_rank ?? null} />
+                      </p>
                       <p className="truncate text-sm text-muted-foreground max-w-75 sm:max-w-100 md:max-w-125">
                         {track.artistName} • {track.albumName}
                       </p>

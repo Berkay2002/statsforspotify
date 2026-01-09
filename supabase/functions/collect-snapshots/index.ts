@@ -210,6 +210,148 @@ async function fetchSpotifyData(
 // Snapshot Processing with Rollback
 // ============================================================================
 
+// Helper: Calculate previous ranks for all ranking types
+async function calculatePreviousRanks(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  timeRange: (typeof TIME_RANGES)[number],
+  snapshotId: string,
+  artistsResponse: { items: SpotifyArtist[] },
+  tracksResponse: { items: SpotifyTrack[] },
+  albumMap: Map<string, { id: string; name: string; imageUrl: string | null; artistId: string; artistName: string; trackCount: number }>
+): Promise<{
+  artists: any[];
+  tracks: any[];
+  albums: any[];
+}> {
+  const startTime = Date.now();
+  
+  // Fetch previous snapshot for this time range (excluding current one)
+  const { data: previousSnapshot } = await supabase
+    .from("snapshots")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("time_range", timeRange)
+    .neq("id", snapshotId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+  
+  if (!previousSnapshot) {
+    console.log(`[Previous Rank] No previous snapshot for ${timeRange} - first snapshot`);
+    // Return rankings without previous_rank
+    return {
+      artists: artistsResponse.items.map((artist: SpotifyArtist, index: number) => ({
+        snapshot_id: snapshotId,
+        user_id: userId,
+        artist_id: artist.id,
+        artist_name: artist.name,
+        artist_image_url: artist.images?.[0]?.url ?? null,
+        genres: artist.genres ?? [],
+        popularity: artist.popularity ?? null,
+        rank: index + 1,
+        previous_rank: null,
+      })),
+      tracks: tracksResponse.items.map((track: SpotifyTrack, index: number) => ({
+        snapshot_id: snapshotId,
+        user_id: userId,
+        track_id: track.id,
+        track_name: track.name,
+        track_image_url: track.album.images?.[0]?.url ?? null,
+        artist_id: track.artists[0]?.id ?? "",
+        artist_name: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
+        album_id: track.album.id,
+        album_name: track.album.name,
+        duration_ms: track.duration_ms,
+        popularity: track.popularity,
+        rank: index + 1,
+        previous_rank: null,
+      })),
+      albums: Array.from(albumMap.values())
+        .sort((a, b) => b.trackCount - a.trackCount)
+        .map((album, index) => ({
+          snapshot_id: snapshotId,
+          user_id: userId,
+          album_id: album.id,
+          album_name: album.name,
+          album_image_url: album.imageUrl,
+          artist_id: album.artistId,
+          artist_name: album.artistName,
+          track_count: album.trackCount,
+          rank: index + 1,
+          previous_rank: null,
+        })),
+    };
+  }
+  
+  // Fetch previous rankings in parallel
+  const [prevArtists, prevTracks, prevAlbums] = await Promise.all([
+    supabase
+      .from("artist_rankings")
+      .select("artist_id, rank")
+      .eq("snapshot_id", previousSnapshot.id),
+    supabase
+      .from("track_rankings")
+      .select("track_id, rank")
+      .eq("snapshot_id", previousSnapshot.id),
+    supabase
+      .from("album_rankings")
+      .select("album_id, rank")
+      .eq("snapshot_id", previousSnapshot.id),
+  ]);
+  
+  // Create lookup maps
+  const artistRankMap = new Map(prevArtists.data?.map(r => [r.artist_id, r.rank]));
+  const trackRankMap = new Map(prevTracks.data?.map(r => [r.track_id, r.rank]));
+  const albumRankMap = new Map(prevAlbums.data?.map(r => [r.album_id, r.rank]));
+  
+  console.log(`[Previous Rank] Calculated in ${Date.now() - startTime}ms for ${timeRange}`);
+  
+  // Return rankings with previous_rank populated
+  return {
+    artists: artistsResponse.items.map((artist: SpotifyArtist, index: number) => ({
+      snapshot_id: snapshotId,
+      user_id: userId,
+      artist_id: artist.id,
+      artist_name: artist.name,
+      artist_image_url: artist.images?.[0]?.url ?? null,
+      genres: artist.genres ?? [],
+      popularity: artist.popularity ?? null,
+      rank: index + 1,
+      previous_rank: artistRankMap.get(artist.id) ?? null,
+    })),
+    tracks: tracksResponse.items.map((track: SpotifyTrack, index: number) => ({
+      snapshot_id: snapshotId,
+      user_id: userId,
+      track_id: track.id,
+      track_name: track.name,
+      track_image_url: track.album.images?.[0]?.url ?? null,
+      artist_id: track.artists[0]?.id ?? "",
+      artist_name: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
+      album_id: track.album.id,
+      album_name: track.album.name,
+      duration_ms: track.duration_ms,
+      popularity: track.popularity,
+      rank: index + 1,
+      previous_rank: trackRankMap.get(track.id) ?? null,
+    })),
+    albums: Array.from(albumMap.values())
+      .sort((a, b) => b.trackCount - a.trackCount)
+      .map((album, index) => ({
+        snapshot_id: snapshotId,
+        user_id: userId,
+        album_id: album.id,
+        album_name: album.name,
+        album_image_url: album.imageUrl,
+        artist_id: album.artistId,
+        artist_name: album.artistName,
+        track_count: album.trackCount,
+        rank: index + 1,
+        previous_rank: albumRankMap.get(album.id) ?? null,
+      })),
+  };
+}
+
 async function processUserSnapshot(
   supabase: ReturnType<typeof createClient>,
   userId: string,
@@ -263,31 +405,7 @@ async function processUserSnapshot(
   const snapshotId = snapshot.id;
 
   try {
-    // Insert artist rankings
-    if (artistsResponse.items.length > 0) {
-      const artistRankings = artistsResponse.items.map(
-        (artist: SpotifyArtist, index: number) => ({
-          snapshot_id: snapshotId,
-          user_id: userId,
-          artist_id: artist.id,
-          artist_name: artist.name,
-          artist_image_url: artist.images?.[0]?.url ?? null,
-          genres: artist.genres ?? [],
-          popularity: artist.popularity ?? null,
-          rank: index + 1,
-        })
-      );
-
-      const { error: artistError } = await supabase
-        .from("artist_rankings")
-        .insert(artistRankings);
-
-      if (artistError) {
-        throw new Error(`Failed to insert artist rankings: ${artistError.message}`);
-      }
-    }
-
-    // Process tracks and extract albums
+    // Process tracks and extract albums FIRST to build albumMap
     const albumMap = new Map<
       string,
       {
@@ -300,72 +418,60 @@ async function processUserSnapshot(
       }
     >();
 
-    const trackRankings = tracksResponse.items.map(
-      (track: SpotifyTrack, index: number) => {
-        // Track album for album rankings
-        const albumId = track.album.id;
-        if (albumMap.has(albumId)) {
-          albumMap.get(albumId)!.trackCount++;
-        } else {
-          albumMap.set(albumId, {
-            id: albumId,
-            name: track.album.name,
-            imageUrl: track.album.images?.[0]?.url ?? null,
-            artistId: track.artists[0]?.id ?? "",
-            artistName: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
-            trackCount: 1,
-          });
-        }
-
-        return {
-          snapshot_id: snapshotId,
-          user_id: userId,
-          track_id: track.id,
-          track_name: track.name,
-          track_image_url: track.album.images?.[0]?.url ?? null,
-          artist_id: track.artists[0]?.id ?? "",
-          artist_name: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
-          album_id: albumId,
-          album_name: track.album.name,
-          duration_ms: track.duration_ms,
-          popularity: track.popularity,
-          rank: index + 1,
-        };
+    tracksResponse.items.forEach((track: SpotifyTrack) => {
+      const albumId = track.album.id;
+      if (albumMap.has(albumId)) {
+        albumMap.get(albumId)!.trackCount++;
+      } else {
+        albumMap.set(albumId, {
+          id: albumId,
+          name: track.album.name,
+          imageUrl: track.album.images?.[0]?.url ?? null,
+          artistId: track.artists[0]?.id ?? "",
+          artistName: track.artists.map((a: SpotifyArtist) => a.name).join(", "),
+          trackCount: 1,
+        });
       }
+    });
+
+    // Calculate previous ranks for all ranking types
+    const rankingsWithPrevious = await calculatePreviousRanks(
+      supabase,
+      userId,
+      timeRange,
+      snapshotId,
+      artistsResponse,
+      tracksResponse,
+      albumMap
     );
 
-    // Insert track rankings
-    if (trackRankings.length > 0) {
+    // Insert artist rankings with previous_rank
+    if (rankingsWithPrevious.artists.length > 0) {
+      const { error: artistError } = await supabase
+        .from("artist_rankings")
+        .insert(rankingsWithPrevious.artists);
+
+      if (artistError) {
+        throw new Error(`Failed to insert artist rankings: ${artistError.message}`);
+      }
+    }
+
+    // Insert track rankings with previous_rank
+    if (rankingsWithPrevious.tracks.length > 0) {
       const { error: trackError } = await supabase
         .from("track_rankings")
-        .insert(trackRankings);
+        .insert(rankingsWithPrevious.tracks);
 
       if (trackError) {
         throw new Error(`Failed to insert track rankings: ${trackError.message}`);
       }
     }
 
-    // Insert album rankings
-    const sortedAlbums = Array.from(albumMap.values()).sort(
-      (a, b) => b.trackCount - a.trackCount
-    );
-
-    if (sortedAlbums.length > 0) {
-      const albumRankings = sortedAlbums.map((album, index) => ({
-        snapshot_id: snapshotId,
-        user_id: userId,
-        album_id: album.id,
-        album_name: album.name,
-        album_image_url: album.imageUrl,
-        artist_id: album.artistId,
-        artist_name: album.artistName,
-        track_count: album.trackCount,
-        rank: index + 1,
-      }));
-
+    // Insert album rankings with previous_rank
+    if (rankingsWithPrevious.albums.length > 0) {
       const { error: albumError } = await supabase
         .from("album_rankings")
-        .insert(albumRankings);
+        .insert(rankingsWithPrevious.albums);
 
       if (albumError) {
         throw new Error(`Failed to insert album rankings: ${albumError.message}`);

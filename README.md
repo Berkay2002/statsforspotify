@@ -10,6 +10,11 @@ A web app to track your Spotify listening history and visualize how your music t
 - **Historical Tracking** — Automatic snapshots save your rankings to track changes over time
 - **Trend Visualization** — Recharts-powered line graphs and sparklines showing ranking history
 - **Auto-Snapshot Collection** — Rankings are automatically collected when you visit the dashboard (respects 24-hour interval)
+- **Rank Change Visualization** — Color-coded badges showing position changes (↑5, ↓3, NEW, —)
+  - Inline badges in artist/track/album lists
+  - Enhanced charts with colored dots at significant rank changes (±5 positions)
+  - Tooltips show previous rank: "Rank 3 (was 8, ↑5)"
+  - Progressive enhancement: works with or without historical data
 
 ### Social Features
 - **Friends System** — Connect with friends who mutually follow you on Spotify
