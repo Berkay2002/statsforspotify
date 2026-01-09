@@ -4,8 +4,6 @@ import { getAuthenticatedUser, unauthorizedResponse, serverErrorResponse } from 
 import type { TimeRange, RankedArtist, RankedTrack, RankedAlbum } from "@/lib/spotify/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Allow one snapshot per 24 hours for auto-collection
-const SNAPSHOT_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const TIME_RANGES: TimeRange[] = ["short_term", "medium_term", "long_term"];
 const TIME_RANGE_DELAY_MS = 500; // 500ms delay between time ranges
 
@@ -266,38 +264,48 @@ export async function POST() {
 
     const { user, supabase } = authResult;
 
-    // Check if snapshot is needed (across all time ranges)
-    const { data: lastSnapshot } = await supabase
+    // ============================================================================
+    // Check which time ranges already have snapshots TODAY
+    // ============================================================================
+    // Uses UTC calendar day to match database constraint and edge function logic
+    // Allows partial collection (e.g., if only short_term exists, collect others)
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format (UTC)
+    const { data: todaySnapshots } = await supabase
       .from("snapshots")
-      .select("created_at")
+      .select("time_range, created_at")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .gte("created_at", `${today}T00:00:00Z`)
+      .lte("created_at", `${today}T23:59:59Z`);
 
-    if (lastSnapshot) {
-      const lastSnapshotTime = new Date(lastSnapshot.created_at).getTime();
-      const now = Date.now();
-      const timeSinceLastSnapshot = now - lastSnapshotTime;
-      
-      // If snapshot is less than 24 hours old, skip collection
-      if (timeSinceLastSnapshot < SNAPSHOT_INTERVAL_MS) {
-        return NextResponse.json(
-          { 
-            success: true, 
-            skipped: true, 
-            message: "Snapshot is up to date",
-            lastSnapshot: lastSnapshot.created_at
-          },
-          { status: 200 }
-        );
-      }
+    console.log(`[Snapshot] Today is ${today}, found ${todaySnapshots?.length || 0} existing snapshots`);
+
+    // If all time ranges already collected today, skip entirely
+    if (todaySnapshots && todaySnapshots.length === TIME_RANGES.length) {
+      console.log(`[Snapshot] All ${TIME_RANGES.length} time ranges already collected today - skipping`);
+      return NextResponse.json(
+        {
+          success: true,
+          skipped: true,
+          message: "All snapshots already collected today",
+          date: today,
+          timeRanges: todaySnapshots.map(s => s.time_range),
+          timestamps: todaySnapshots.map(s => s.created_at)
+        },
+        { status: 200 }
+      );
     }
 
-    // Fetch current top items from Spotify for ALL time ranges
+    // Determine which time ranges still need collection
+    const existingTimeRanges = new Set(todaySnapshots?.map(s => s.time_range) || []);
+    const timeRangesToProcess = TIME_RANGES.filter(tr => !existingTimeRanges.has(tr));
+
+    console.log(`[Snapshot] Need to process: ${timeRangesToProcess.join(", ")}`);
+    console.log(`[Snapshot] Already have: ${Array.from(existingTimeRanges).join(", ") || "none"}`);
+
+    // Fetch current top items from Spotify for NEEDED time ranges only
     const fetchStartTime = Date.now();
     const spotifyData = await Promise.all(
-      TIME_RANGES.map(async (timeRange) => {
+      timeRangesToProcess.map(async (timeRange) => {
         const [artists, tracks] = await Promise.all([
           getTopArtists(timeRange, 50),
           getTopTracks(timeRange, 50),
@@ -306,7 +314,7 @@ export async function POST() {
         return { timeRange, artists, tracks, albums };
       })
     );
-    console.log(`[Snapshot] Fetched Spotify data for all time ranges in ${Date.now() - fetchStartTime}ms`);
+    console.log(`[Snapshot] Fetched Spotify data for ${timeRangesToProcess.length} time ranges in ${Date.now() - fetchStartTime}ms`);
 
     // Process all time ranges sequentially with delays
     let successCount = 0;
@@ -348,10 +356,14 @@ export async function POST() {
     return NextResponse.json(
       { 
         success: successCount > 0,
-        message: successCount === TIME_RANGES.length 
-          ? "All snapshots collected successfully" 
-          : `Collected ${successCount}/${TIME_RANGES.length} snapshots`,
-        processed: TIME_RANGES.length,
+        message: successCount === timeRangesToProcess.length
+          ? `Collected ${successCount} new snapshot(s) successfully`
+          : `Collected ${successCount}/${timeRangesToProcess.length} snapshots (${existingTimeRanges.size} already existed)`,
+        date: today,
+        newSnapshots: timeRangesToProcess.length,
+        existingSnapshots: existingTimeRanges.size,
+        totalTimeRanges: TIME_RANGES.length,
+        processed: timeRangesToProcess.length,
         succeeded: successCount,
         results
       },

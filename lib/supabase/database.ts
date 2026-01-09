@@ -407,6 +407,7 @@ export type Database = {
         Args: { p_display_name: string }
         Returns: string
       }
+      get_date_only: { Args: { timestamp_val: string }; Returns: string }
       get_latest_snapshot: {
         Args: { target_time_range?: string; target_user_id: string }
         Returns: {
