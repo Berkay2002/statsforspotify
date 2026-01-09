@@ -2,6 +2,13 @@
 // 
 // Deploy to: supabase/functions/collect-snapshots/index.ts
 // 
+// Rate Limiting Strategy:
+// - Processes 2 users concurrently (2 users × 2 endpoints = ~4 req/sec)
+// - 500ms delay between time ranges per user
+// - 2 second delay between batches
+// - Total: ~2-3 requests/second average (well below Spotify's 3 req/sec limit)
+// - Handles 100 users in ~100 seconds (safe for daily cron)
+//
 // To set up pg_cron job, run this SQL in Supabase:
 // 
 // SELECT cron.schedule(
@@ -22,7 +29,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
-const MAX_CONCURRENT_USERS = 5; // Limit concurrent Spotify API calls
+const MAX_CONCURRENT_USERS = 2; // Limit concurrent Spotify API calls (2 users = ~4 req/sec)
+const BATCH_DELAY_MS = 2000; // 2 second delay between batches
+const TIME_RANGE_DELAY_MS = 500; // 500ms delay between time ranges per user
 const TIME_RANGES = ["short_term", "medium_term", "long_term"] as const;
 
 // ============================================================================
@@ -383,7 +392,7 @@ async function processUser(
     // Refresh access token
     const { accessToken } = await refreshSpotifyToken(connection.refresh_token);
 
-    // Process all time ranges
+    // Process all time ranges with delay between them
     for (const timeRange of TIME_RANGES) {
       try {
         await processUserSnapshot(
@@ -392,6 +401,12 @@ async function processUser(
           accessToken,
           timeRange
         );
+        
+        // Add delay between time ranges to respect rate limits
+        // Skip delay after last time range
+        if (timeRange !== TIME_RANGES[TIME_RANGES.length - 1]) {
+          await new Promise((resolve) => setTimeout(resolve, TIME_RANGE_DELAY_MS));
+        }
       } catch (error) {
         // If one time range fails, log but continue with others
         console.error(
@@ -491,7 +506,8 @@ async function processUsersInBatches(
 
     // Add delay between batches to avoid rate limiting
     if (i + MAX_CONCURRENT_USERS < connections.length) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log(`Processed batch ${Math.floor(i / MAX_CONCURRENT_USERS) + 1}, waiting ${BATCH_DELAY_MS}ms before next batch...`);
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
     }
   }
 
