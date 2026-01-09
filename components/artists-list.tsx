@@ -72,15 +72,6 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                   </div>
                   <InlineSparkline itemId={artist.id} sparklines={sparklines} loading={loading} />
                 </div>
-                {artist.genres.length > 0 && (
-                  <div className="hidden sm:flex flex-wrap gap-1 mb-2">
-                    {artist.genres.slice(0, 2).map((genre) => (
-                      <Badge key={genre} variant="secondary" className="text-xs">
-                        {genre}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
                 <a
                   href={`https://open.spotify.com/artist/${artist.id}`}
                   target="_blank"

@@ -18,6 +18,7 @@ interface Artist {
   rank: number;
   imageUrl: string | null;
   genres: string[];
+  previous_rank: number | null;
 }
 
 interface Track {
@@ -26,6 +27,7 @@ interface Track {
   rank: number;
   imageUrl: string | null;
   artistName: string;
+  previous_rank: number | null;
 }
 
 interface Genre {

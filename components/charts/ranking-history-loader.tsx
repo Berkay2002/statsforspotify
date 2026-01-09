@@ -14,7 +14,7 @@ interface RankingHistoryLoaderProps {
 }
 
 export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderProps) {
-  const [timeRange, setTimeRange] = useState<"all" | "short_term" | "medium_term" | "long_term">("all");
+  const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("long_term");
   const [data, setData] = useState<RankingHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,11 +30,8 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
       const params = new URLSearchParams({
         type: itemType,
         id: itemId,
+        time_range: timeRange, // Always send time_range (long_term = All Time)
       });
-
-      if (timeRange !== "all") {
-        params.append("time_range", timeRange);
-      }
 
       try {
         const res = await fetch(`/api/rankings/history?${params}`);
@@ -121,16 +118,15 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
         </div>
         <Select 
           value={timeRange} 
-          onValueChange={(value: string) => setTimeRange(value as "all" | "short_term" | "medium_term" | "long_term")}
+          onValueChange={(value: string) => setTimeRange(value as "short_term" | "medium_term" | "long_term")}
         >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Time range" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="long_term">All Time</SelectItem>
             <SelectItem value="short_term">Last 4 Weeks</SelectItem>
             <SelectItem value="medium_term">Last 6 Months</SelectItem>
-            <SelectItem value="long_term">Long Term</SelectItem>
           </SelectContent>
         </Select>
       </CardHeader>
