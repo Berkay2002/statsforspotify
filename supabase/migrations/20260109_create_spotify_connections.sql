@@ -40,7 +40,6 @@ CREATE POLICY "Users can read own spotify connection"
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_spotify_connections_updated_at()
 RETURNS TRIGGER AS $$
-RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
