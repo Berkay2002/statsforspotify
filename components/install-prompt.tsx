@@ -7,11 +7,13 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export function InstallPrompt() {
   const [isIOS] = useState(() => {
-    // Check if running on iOS
+    // Check if running on iOS (client-side only)
+    if (typeof window === 'undefined') return false
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
   })
   const [isStandalone] = useState(() => {
-    // Check if already installed
+    // Check if already installed (client-side only)
+    if (typeof window === 'undefined') return false
     return window.matchMedia('(display-mode: standalone)').matches
   })
   const [showPrompt, setShowPrompt] = useState(false)

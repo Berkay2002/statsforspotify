@@ -1,4 +1,5 @@
-import { getTopArtists, getTopTracks, getTopGenres } from "@/lib/spotify/api";
+import { getTopGenres } from "@/lib/spotify/api";
+import { fetchArtistsByTimeRange, fetchTracksByTimeRange } from "@/lib/spotify/helpers";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
@@ -12,35 +13,18 @@ export default async function DashboardPage() {
   let dataByTimeRange = null;
 
   try {
-    // Optimized: Fetch artists and tracks first, then derive genres from artists
-    // This reduces API calls from 9 to 6 (33% reduction)
-    const [
-      shortTermArtists,
-      mediumTermArtists,
-      longTermArtists,
-      shortTermTracks,
-      mediumTermTracks,
-      longTermTracks,
-    ] = await Promise.all([
-      getTopArtists("short_term", 50), // Fetch 50 for accurate genre extraction
-      getTopArtists("medium_term", 50),
-      getTopArtists("long_term", 50),
-      getTopTracks("short_term", 5),
-      getTopTracks("medium_term", 5),
-      getTopTracks("long_term", 5),
+    // Use helper functions that include previous_rank for rank change tracking
+    const [artistsByTimeRange, tracksByTimeRange] = await Promise.all([
+      fetchArtistsByTimeRange(50), // Fetch 50 for accurate genre extraction
+      fetchTracksByTimeRange(50), // Fetch more tracks to show top 5 properly
     ]);
 
     // Extract genres from already-fetched artists (no additional API calls)
     const [shortTermGenres, mediumTermGenres, longTermGenres] = await Promise.all([
-      getTopGenres("short_term", 5, shortTermArtists),
-      getTopGenres("medium_term", 5, mediumTermArtists),
-      getTopGenres("long_term", 5, longTermArtists),
+      getTopGenres("short_term", 5, artistsByTimeRange.short_term),
+      getTopGenres("medium_term", 5, artistsByTimeRange.medium_term),
+      getTopGenres("long_term", 5, artistsByTimeRange.long_term),
     ]);
-
-    // Only show top 5 artists for the overview
-    const topShortTermArtists = shortTermArtists.slice(0, 5);
-    const topMediumTermArtists = mediumTermArtists.slice(0, 5);
-    const topLongTermArtists = longTermArtists.slice(0, 5);
 
     // Get last snapshot date
     const supabase = await createClient();
@@ -59,21 +43,21 @@ export default async function DashboardPage() {
       }
     }
 
-    // Store data for rendering outside try/catch
+    // Store data for rendering outside try/catch (top 5 for overview display)
     dataByTimeRange = {
       short_term: {
-        artists: topShortTermArtists,
-        tracks: shortTermTracks,
+        artists: artistsByTimeRange.short_term.slice(0, 5),
+        tracks: tracksByTimeRange.short_term.slice(0, 5),
         genres: shortTermGenres,
       },
       medium_term: {
-        artists: topMediumTermArtists,
-        tracks: mediumTermTracks,
+        artists: artistsByTimeRange.medium_term.slice(0, 5),
+        tracks: tracksByTimeRange.medium_term.slice(0, 5),
         genres: mediumTermGenres,
       },
       long_term: {
-        artists: topLongTermArtists,
-        tracks: longTermTracks,
+        artists: artistsByTimeRange.long_term.slice(0, 5),
+        tracks: tracksByTimeRange.long_term.slice(0, 5),
         genres: longTermGenres,
       },
     };
