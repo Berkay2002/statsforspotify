@@ -26,6 +26,19 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
   // Track ongoing requests to prevent duplicate fetches
   const fetchingRef = useRef<string | null>(null);
 
+  // Listen for cache invalidation events
+  useEffect(() => {
+    const handleInvalidate = () => {
+      console.log("[Cache] Invalidating sparkline cache");
+      sparklineCache.clear();
+      setLoading(true);
+      // Re-fetch will happen automatically via the other useEffect
+    };
+    
+    window.addEventListener('invalidate-sparklines', handleInvalidate);
+    return () => window.removeEventListener('invalidate-sparklines', handleInvalidate);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 

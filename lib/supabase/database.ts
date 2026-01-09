@@ -23,6 +23,7 @@ export type Database = {
           artist_name: string
           created_at: string
           id: string
+          previous_rank: number | null
           rank: number
           release_date: string | null
           snapshot_id: string
@@ -38,6 +39,7 @@ export type Database = {
           artist_name: string
           created_at?: string
           id?: string
+          previous_rank?: number | null
           rank: number
           release_date?: string | null
           snapshot_id: string
@@ -53,6 +55,7 @@ export type Database = {
           artist_name?: string
           created_at?: string
           id?: string
+          previous_rank?: number | null
           rank?: number
           release_date?: string | null
           snapshot_id?: string
@@ -124,6 +127,7 @@ export type Database = {
           genres: string[] | null
           id: string
           popularity: number | null
+          previous_rank: number | null
           rank: number
           snapshot_id: string
           user_id: string
@@ -136,6 +140,7 @@ export type Database = {
           genres?: string[] | null
           id?: string
           popularity?: number | null
+          previous_rank?: number | null
           rank: number
           snapshot_id: string
           user_id: string
@@ -148,6 +153,7 @@ export type Database = {
           genres?: string[] | null
           id?: string
           popularity?: number | null
+          previous_rank?: number | null
           rank?: number
           snapshot_id?: string
           user_id?: string
@@ -256,6 +262,7 @@ export type Database = {
           duration_ms: number | null
           id: string
           popularity: number | null
+          previous_rank: number | null
           rank: number
           snapshot_id: string
           track_id: string
@@ -272,6 +279,7 @@ export type Database = {
           duration_ms?: number | null
           id?: string
           popularity?: number | null
+          previous_rank?: number | null
           rank: number
           snapshot_id: string
           track_id: string
@@ -288,6 +296,7 @@ export type Database = {
           duration_ms?: number | null
           id?: string
           popularity?: number | null
+          previous_rank?: number | null
           rank?: number
           snapshot_id?: string
           track_id?: string

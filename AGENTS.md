@@ -130,13 +130,33 @@ type ArtistUpdate = Database['public']['Tables']['artist_rankings']['Update'];
 ```
 
 **Available tables:**
-- `artist_rankings` - User top artist rankings per snapshot
-- `track_rankings` - User top track rankings per snapshot
-- `album_rankings` - User album rankings derived from top tracks
+- `artist_rankings` - User top artist rankings per snapshot (includes `previous_rank`)
+- `track_rankings` - User top track rankings per snapshot (includes `previous_rank`)
+- `album_rankings` - User album rankings derived from top tracks (includes `previous_rank`)
 - `snapshots` - Tracks when Spotify stats were collected
 - `user_profiles` - Public user profiles with Discord-style usernames
 - `follow_cache` - Cached Spotify follow verification results
 - `artist_listening_stats` - Aggregated listening statistics per artist
+
+**Previous Rank Field:**
+- `previous_rank` - Rank from previous snapshot in same time range (NULL if new entry)
+- Available on `artist_rankings`, `track_rankings`, and `album_rankings` tables
+- Used to calculate rank changes for visualization (e.g., ↑5, ↓3, NEW badges)
+- Automatically populated during snapshot creation by both API route and edge function
+
+**Usage example:**
+```typescript
+import type { Database } from '@/lib/supabase/database';
+
+type ArtistRanking = Database['public']['Tables']['artist_rankings']['Row'];
+// Now includes: previous_rank: number | null
+
+// Display rank change
+if (artist.previous_rank) {
+  const change = artist.previous_rank - artist.rank;
+  console.log(`Rank change: ${change > 0 ? '↑' : '↓'}${Math.abs(change)}`);
+}
+```
 
 **Why use generated types:**
 - ✅ Always in sync with database schema

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
+import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
 
@@ -15,6 +16,7 @@ interface Artist {
   rank: number;
   imageUrl: string | null;
   genres: string[];
+  previous_rank?: number | null;
 }
 
 interface ArtistsListProps {
@@ -62,7 +64,10 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                   </span>
                   <div className="flex-1 min-w-0">
                     <Link href={`/dashboard/artists/${artist.id}`}>
-                      <p className="truncate font-semibold text-lg">{artist.name}</p>
+                      <p className="truncate font-semibold text-lg">
+                        {artist.name}
+                        <RankBadgeInline currentRank={artist.rank} previousRank={artist.previous_rank ?? null} />
+                      </p>
                     </Link>
                   </div>
                   <InlineSparkline itemId={artist.id} sparklines={sparklines} loading={loading} />

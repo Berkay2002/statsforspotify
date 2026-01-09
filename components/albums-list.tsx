@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
+import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
 
@@ -15,6 +16,7 @@ interface Album {
   imageUrl: string | null;
   artistName: string;
   trackCount: number;
+  previous_rank?: number | null;
 }
 
 interface AlbumsListProps {
@@ -61,7 +63,10 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
                       <div className="h-30 w-30 rounded-lg bg-muted" />
                     )}
                     <div className="mt-3 w-full">
-                      <p className="truncate font-semibold">{album.name}</p>
+                      <p className="truncate font-semibold">
+                        {album.name}
+                        <RankBadgeInline currentRank={album.rank} previousRank={album.previous_rank ?? null} />
+                      </p>
                       <p className="truncate text-sm text-muted-foreground">
                         {album.artistName}
                       </p>
