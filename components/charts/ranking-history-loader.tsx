@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { RankingChart } from "@/components/charts/ranking-chart";
 import { RankingBadge } from "@/components/charts/ranking-badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { RankingHistoryResponse } from "@/lib/spotify/types";
@@ -95,7 +95,7 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Ranking History</h3>
+            <CardTitle>Ranking History</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -110,17 +110,20 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
   const mostRecentEntry = data.history[data.history.length - 1];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">Ranking History</h3>
+    <Card className="w-full">
+      <CardHeader className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 pb-4">
+        <div className="flex items-center gap-3">
+          <CardTitle>Ranking History</CardTitle>
           <RankingBadge
             isNewEntry={data.metadata.totalSnapshots === 1}
             isReentry={mostRecentEntry?.isReentry}
           />
         </div>
-        <Select value={timeRange} onValueChange={(value: string) => setTimeRange(value as "all" | "short_term" | "medium_term" | "long_term")}>
-          <SelectTrigger className="w-[180px]">
+        <Select 
+          value={timeRange} 
+          onValueChange={(value: string) => setTimeRange(value as "all" | "short_term" | "medium_term" | "long_term")}
+        >
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Time range" />
           </SelectTrigger>
           <SelectContent>
@@ -130,48 +133,51 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
             <SelectItem value="long_term">Long Term</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="h-[350px] w-full pt-2 pb-4">
+          <RankingChart
+            data={data.history}
+            peakPosition={data.metadata.peakRank}
+          />
+        </div>
 
-      <RankingChart
-        title="Position Over Time"
-        data={data.history}
-        peakPosition={data.metadata.peakRank}
-        timeRange={timeRange}
-      />
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">#{data.metadata.peakRank}</div>
-            <div className="text-sm text-muted-foreground">Peak Position</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{data.metadata.totalSnapshots}</div>
-            <div className="text-sm text-muted-foreground">Times Charted</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">
-              #{data.metadata.currentRank ?? "—"}
+        <div className="grid grid-cols-2 gap-4 pt-6 border-t md:grid-cols-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">Peak Position</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold">#{data.metadata.peakRank}</span>
+              {data.metadata.currentRank === data.metadata.peakRank && (
+                <span className="text-xs font-medium text-amber-500">Current</span>
+              )}
             </div>
-            <div className="text-sm text-muted-foreground">Current Rank</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
+          </div>
+          
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">Current Rank</p>
             <div className="text-2xl font-bold">
+              {data.metadata.currentRank ? `#${data.metadata.currentRank}` : "—"}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">Times Charted</p>
+            <div className="text-2xl font-bold">{data.metadata.totalSnapshots}</div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">First Seen</p>
+            <div className="text-2xl font-bold truncate">
               {new Date(data.metadata.firstSeen).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
+                year: "numeric"
               })}
             </div>
-            <div className="text-sm text-muted-foreground">First Seen</div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
