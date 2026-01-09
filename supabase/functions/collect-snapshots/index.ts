@@ -356,7 +356,17 @@ async function processUserSnapshot(
       `Error processing snapshot ${snapshotId}, rolling back...`,
       error
     );
-    await supabase.from("snapshots").delete().eq("id", snapshotId);
+    const { error: rollbackError } = await supabase
+      .from("snapshots")
+      .delete()
+      .eq("id", snapshotId);
+
+    if (rollbackError) {
+      console.warn(
+        `Failed to roll back snapshot ${snapshotId}. Snapshot may remain in the database.`,
+        rollbackError
+      );
+    }
     throw error;
   }
 }
