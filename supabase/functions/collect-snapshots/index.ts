@@ -513,6 +513,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate Bearer token against expected secret (service role key or dedicated function secret)
+    const expectedToken =
+      Deno.env.get("FUNCTION_COLLECT_SNAPSHOTS_SECRET") ??
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
