@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_spotify_connections_last_sync ON spotify_connecti
 -- Add unique constraint to snapshots table for idempotency
 -- Prevents duplicate snapshots for same user/date/time_range
 ALTER TABLE snapshots 
-  ADD CONSTRAINT IF NOT EXISTS unique_user_date_time_range 
+  ADD CONSTRAINT IF NOT EXISTS snapshots_unique_user_date_time_range 
   UNIQUE (user_id, DATE(created_at), time_range);
 
 -- Enable RLS for spotify_connections
