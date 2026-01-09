@@ -81,7 +81,7 @@ export function MobileNavigation({ className }: MobileNavigationProps = {}) {
   ];
 
   return (
-    <div className={cn("sticky top-0 z-20 bg-gradient-to-b from-background via-background/95 to-background/0 backdrop-blur supports-backdrop-filter:bg-background/60", className)}>
+    <div className={cn("sticky top-0 z-20 bg-linear-to-b from-background via-background/95 to-background/0 backdrop-blur supports-backdrop-filter:bg-background/60", className)}>
       <div className="container px-4 py-3">
         <ExpandableTabs 
           tabs={tabs} 
