@@ -10,46 +10,33 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RankingHistory } from "@/lib/spotify/types";
 
 // Define theme-aware colors for rank changes
 const RANK_CHANGE_COLORS = {
-  improved: "hsl(var(--chart-2))", // green chart color
-  declined: "hsl(var(--chart-1))", // red/destructive chart color
-  neutral: "hsl(var(--primary))", // default primary color
+  improved: "var(--chart-1)", // Green
+  declined: "var(--destructive)", // Red
+  neutral: "var(--primary)", // Primary
 } as const;
 
 interface RankingChartProps {
-  title: string;
   data: RankingHistory[];
   color?: string;
   peakPosition?: number;
-  timeRange?: "short_term" | "medium_term" | "long_term" | "all";
   showPeakLabel?: boolean;
 }
 
 export function RankingChart({
-  title,
   data,
-  color = "hsl(var(--primary))",
+  color = "var(--primary)",
   peakPosition,
-  timeRange,
   showPeakLabel = true,
 }: RankingChartProps) {
   if (data.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            No historical data available yet. Check back after your next
-            snapshot.
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+        No historical data available yet. Check back after your next snapshot.
+      </div>
     );
   }
 
@@ -74,147 +61,123 @@ export function RankingChart({
     };
   });
 
-  const timeRangeLabels: Record<string, string> = {
-    short_term: "Last 4 Weeks",
-    medium_term: "Last 6 Months",
-    long_term: "All Time",
-    all: "All Time",
-  };
-
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{title}</CardTitle>
-          {timeRange && (
-            <span className="text-sm text-muted-foreground">
-              {timeRangeLabels[timeRange] || "All Time"}
-            </span>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart
-            data={chartData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 12 }}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              domain={[1, 50]}
-              reversed
-              tick={{ fontSize: 12 }}
-              tickLine={false}
-              axisLine={false}
-              label={{
-                value: "Rank",
-                angle: -90,
-                position: "insideLeft",
-                style: { fontSize: 12 },
-              }}
-            />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (active && payload && payload.length) {
-                  const data = payload[0].payload;
-                  const isPeak = data.isPeak;
-                  const previousRank = data.previous_rank;
-                  const rankChange = data.rankChange;
-                  
-                  // Format change text
-                  let changeText = '';
-                  if (previousRank) {
-                    if (rankChange > 0) {
-                      changeText = ` (was ${previousRank}, ↑${rankChange})`;
-                    } else if (rankChange < 0) {
-                      changeText = ` (was ${previousRank}, ↓${Math.abs(rankChange)})`;
-                    } else {
-                      changeText = ` (unchanged)`;
-                    }
-                  }
-                  
-                  return (
-                    <div className="rounded-lg border bg-background p-2 shadow-sm">
-                      <div className="text-sm font-medium flex items-center gap-1">
-                        Rank #{data.rank}{changeText}
-                        {isPeak && <span>🏆</span>}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {data.date}
-                      </div>
-                      {isPeak && (
-                        <div className="text-xs text-chart-4">
-                          Peak Position
-                        </div>
-                      )}
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart
+        data={chartData}
+        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis
+          dataKey="date"
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+          tickLine={false}
+          axisLine={false}
+          minTickGap={30}
+          dy={10}
+        />
+        <YAxis
+          domain={[1, 50]}
+          reversed
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+          tickLine={false}
+          axisLine={false}
+          width={30}
+          dx={-10}
+        />
+        <Tooltip
+          cursor={{ stroke: "var(--muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4", opacity: 0.5 }}
+          content={({ active, payload }) => {
+            if (active && payload && payload.length) {
+              const data = payload[0].payload;
+              const isPeak = data.isPeak;
+              const previousRank = data.previous_rank;
+              const rankChange = data.rankChange;
+              
+              return (
+                <div className="rounded-lg border bg-popover p-3 shadow-md text-popover-foreground">
+                  <div className="text-sm font-semibold flex items-center gap-2 mb-1">
+                    <span className="text-foreground">Rank #{data.rank}</span>
+                    {rankChange !== 0 && (
+                      <span className={rankChange > 0 ? "text-chart-1" : "text-destructive"}>
+                         {rankChange > 0 ? "↑" : "↓"}{Math.abs(rankChange)}
+                      </span>
+                    )}
+                    {isPeak && <span>🏆</span>}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {data.date}
+                  </div>
+                  {isPeak && (
+                    <div className="text-xs font-medium text-amber-500 mt-1">
+                      Peak Position
                     </div>
-                  );
-                }
-                return null;
-              }}
-            />
-            {peakPosition && showPeakLabel && (
-              <ReferenceLine
-                y={peakPosition}
-                stroke="hsl(var(--chart-4))"
-                strokeDasharray="4 4"
-                label={{
-                  value: `Peak: #${peakPosition}`,
-                  position: "right",
-                  fill: "hsl(var(--chart-4))",
-                  fontSize: 12,
-                }}
-              />
-            )}
-            <Line
-              type="monotone"
-              dataKey="rank"
-              stroke={color}
-              strokeWidth={2}
-              dot={(props: any) => {
-                const { cx, cy, payload } = props;
-                if (!payload) return null;
-                
-                // Show colored dots for significant rank changes (±5)
-                if (payload.isSignificant && payload.previous_rank) {
-                  const change = payload.rankChange;
-                  const dotColor = change > 0 ? RANK_CHANGE_COLORS.improved : RANK_CHANGE_COLORS.declined;
-                  
-                  return (
-                    <circle 
-                      cx={cx} 
-                      cy={cy} 
-                      r={5} 
-                      fill={dotColor} 
-                      stroke="hsl(var(--background))" 
-                      strokeWidth={2}
-                    />
-                  );
-                }
-                
-                // Default dot
-                return (
+                  )}
+                </div>
+              );
+            }
+            return null;
+          }}
+        />
+        {peakPosition && showPeakLabel && (
+          <ReferenceLine
+            y={peakPosition}
+            stroke="#f59e0b"
+            strokeDasharray="4 4"
+            label={{
+              value: `Peak: #${peakPosition}`,
+              position: "insideRight",
+              fill: "#f59e0b",
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          />
+        )}
+        <Line
+          type="monotone"
+          dataKey="rank"
+          stroke={color}
+          strokeWidth={3}
+          activeDot={{ r: 6, fill: color, strokeWidth: 0 }}
+          dot={(props: any) => {
+            const { cx, cy, payload } = props;
+            if (!payload) return null;
+            
+            // Show colored dots for significant rank changes (±5)
+            if (payload.isSignificant && payload.previous_rank) {
+              const change = payload.rankChange;
+              const dotColor = change > 0 ? RANK_CHANGE_COLORS.improved : RANK_CHANGE_COLORS.declined;
+              
+              return (
+                <circle 
+                  cx={cx} 
+                  cy={cy} 
+                  r={5} 
+                  fill={dotColor} 
+                  stroke="var(--background)" 
+                  strokeWidth={2}
+                />
+              );
+            }
+            
+            // Peak dot
+            if (payload.isPeak) {
+               return (
                   <circle 
                     cx={cx} 
                     cy={cy} 
-                    r={4} 
-                    fill={color} 
-                    stroke="hsl(var(--background))" 
+                    r={5} 
+                    fill="#f59e0b" 
+                    stroke="var(--background)" 
                     strokeWidth={2}
                   />
                 );
-              }}
-              activeDot={{ r: 6, fill: color }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+            }
+
+            return null; // Hide normal dots to reduce clutter
+          }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
   );
 }
