@@ -32,14 +32,14 @@ CREATE POLICY "Users can read own spotify connection"
   FOR SELECT
   USING (auth.uid() = user_id);
 
--- Policy: Service role can manage all connections
-CREATE POLICY "Service role can manage spotify connections"
-  ON spotify_connections
-  FOR ALL
-  USING (auth.role() = 'service_role');
+-- Service role: Supabase `service_role` key bypasses RLS and can manage all connections.
+-- We intentionally do not define a separate RLS policy for service role here, since it
+-- would be redundant and `auth.role() = 'service_role'` is not evaluated when using
+-- the service role key. Backend jobs should use the service role key to manage this table.
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_spotify_connections_updated_at()
+RETURNS TRIGGER AS $$
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
