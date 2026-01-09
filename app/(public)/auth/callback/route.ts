@@ -53,6 +53,14 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code);
 
+    // Debug: Log session structure to find refresh token
+    console.log('[Auth Callback] Session structure:', JSON.stringify({
+      hasSession: !!session,
+      provider_token: session?.provider_token?.substring(0, 20) + '...',
+      provider_refresh_token: session?.provider_refresh_token?.substring(0, 20) + '...',
+      keys: session ? Object.keys(session) : []
+    }, null, 2));
+
     if (error) {
       console.error("Auth exchange error:", error.message);
       return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
