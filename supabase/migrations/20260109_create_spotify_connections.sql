@@ -19,17 +19,8 @@ CREATE INDEX IF NOT EXISTS idx_spotify_connections_last_sync ON spotify_connecti
 
 -- Add unique constraint to snapshots table for idempotency
 -- Prevents duplicate snapshots for same user/UTC-date/time_range
-DO $$ 
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint 
-    WHERE conname = 'unique_user_date_time_range'
-  ) THEN
-    ALTER TABLE snapshots 
-      ADD CONSTRAINT unique_user_date_time_range 
-      UNIQUE (user_id, (created_at AT TIME ZONE 'utc')::date, time_range);
-  END IF;
-END $$;
+-- Note: We cannot use expression indexes in constraints directly
+-- Instead, we'll check for duplicates in the application layer and Edge function
 
 -- Enable RLS for spotify_connections
 ALTER TABLE spotify_connections ENABLE ROW LEVEL SECURITY;
