@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getCurrentUser, SpotifyAPIError } from "@/lib/spotify/api";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { MobileNavigation } from "@/components/mobile-navigation";
 
 export default async function ProtectedLayout({
   children,
@@ -47,10 +48,10 @@ export default async function ProtectedLayout({
         <SidebarProvider>
           <AppSidebar user={userInfo} />
           <SidebarInset>
-            <header className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-4 py-3 md:hidden">
-              <SidebarTrigger />
-              <h1 className="text-lg font-semibold">Menu</h1>
-            </header>
+            {/* Mobile navigation with expandable tabs - visible only on mobile */}
+            <div className="md:hidden">
+              <MobileNavigation />
+            </div>
             <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
           </SidebarInset>
         </SidebarProvider>
