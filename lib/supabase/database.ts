@@ -210,6 +210,42 @@ export type Database = {
         }
         Relationships: []
       }
+      spotify_connections: {
+        Row: {
+          user_id: string
+          refresh_token: string
+          scope_version: number
+          status: string
+          connected_at: string
+          last_sync_at: string | null
+          last_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          refresh_token: string
+          scope_version?: number
+          status?: string
+          connected_at?: string
+          last_sync_at?: string | null
+          last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          refresh_token?: string
+          scope_version?: number
+          status?: string
+          connected_at?: string
+          last_sync_at?: string | null
+          last_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       track_rankings: {
         Row: {
           album_id: string
