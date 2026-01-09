@@ -212,37 +212,37 @@ export type Database = {
       }
       spotify_connections: {
         Row: {
-          user_id: string
+          connected_at: string
+          created_at: string
+          last_error: string | null
+          last_sync_at: string | null
           refresh_token: string
           scope_version: number
           status: string
-          connected_at: string
-          last_sync_at: string | null
-          last_error: string | null
-          created_at: string
           updated_at: string
+          user_id: string
         }
         Insert: {
-          user_id: string
+          connected_at?: string
+          created_at?: string
+          last_error?: string | null
+          last_sync_at?: string | null
           refresh_token: string
           scope_version?: number
           status?: string
-          connected_at?: string
-          last_sync_at?: string | null
-          last_error?: string | null
-          created_at?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
-          user_id?: string
+          connected_at?: string
+          created_at?: string
+          last_error?: string | null
+          last_sync_at?: string | null
           refresh_token?: string
           scope_version?: number
           status?: string
-          connected_at?: string
-          last_sync_at?: string | null
-          last_error?: string | null
-          created_at?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
