@@ -2,14 +2,20 @@
 
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, Music, Music2, UserPlus } from "lucide-react";
+import { LayoutDashboard, Mic2, Music, Waves, UserPlus, Settings, Moon, Sun } from "lucide-react";
 import { ExpandableTabs } from "@/components/ui/expandable-tabs";
 import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 interface NavigationTab {
   title: string;
   icon: LucideIcon;
   href: string;
+}
+
+interface MobileNavigationProps {
+  className?: string;
 }
 
 const navigationTabs: NavigationTab[] = [
@@ -20,7 +26,7 @@ const navigationTabs: NavigationTab[] = [
   },
   {
     title: "Artists",
-    icon: Users,
+    icon: Mic2,
     href: "/dashboard/artists",
   },
   {
@@ -30,7 +36,7 @@ const navigationTabs: NavigationTab[] = [
   },
   {
     title: "Genres",
-    icon: Music2,
+    icon: Waves,
     href: "/dashboard/genres",
   },
   {
@@ -38,27 +44,44 @@ const navigationTabs: NavigationTab[] = [
     icon: UserPlus,
     href: "/dashboard/friends",
   },
+  {
+    title: "Profile",
+    icon: Settings,
+    href: "/profile",
+  },
 ];
 
-export function MobileNavigation() {
-  const pathname = usePathname();
+export function MobileNavigation({ className }: MobileNavigationProps = {}) {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
 
   const handleTabChange = (index: number | null) => {
     if (index !== null) {
       const selectedTab = navigationTabs[index];
-      router.push(selectedTab.href);
+      
+      // Handle theme toggle separately (it's the last tab)
+      if (index === navigationTabs.length) {
+        setTheme(theme === "dark" ? "light" : "dark");
+      } else {
+        router.push(selectedTab.href);
+      }
     }
   };
 
-  // Map navigation tabs to expandable tabs format
-  const tabs = navigationTabs.map((tab) => ({
-    title: tab.title,
-    icon: tab.icon,
-  }));
+  // Map navigation tabs to expandable tabs format, plus theme toggle
+  const tabs = [
+    ...navigationTabs.map((tab) => ({
+      title: tab.title,
+      icon: tab.icon,
+    })),
+    {
+      title: "Theme",
+      icon: theme === "dark" ? Moon : Sun,
+    },
+  ];
 
   return (
-    <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+    <div className={cn("sticky top-0 z-20 bg-gradient-to-b from-background via-background/95 to-background/0 backdrop-blur supports-backdrop-filter:bg-background/60", className)}>
       <div className="container px-4 py-3">
         <ExpandableTabs 
           tabs={tabs} 

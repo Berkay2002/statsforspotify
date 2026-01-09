@@ -36,7 +36,7 @@ export function GenresPageClient({ genresByTimeRange }: GenresPageProps) {
             Genres from your most played artists
           </p>
         </div>
-        <SpotifyAttribution />
+        <SpotifyAttribution className="hidden md:flex" />
       </div>
 
       <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)} className="w-full">
