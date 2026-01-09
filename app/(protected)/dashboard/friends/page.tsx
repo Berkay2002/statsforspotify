@@ -228,7 +228,7 @@ export default function FriendsPage() {
       
       {/* Main Content Tabs */}
       <Tabs defaultValue="friends" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+        <TabsList className="grid w-full grid-cols-2 lg:w-100">
           <TabsTrigger value="friends" className="relative">
             <Users className="h-4 w-4 mr-2" />
             Friends
