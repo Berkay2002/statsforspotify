@@ -27,9 +27,9 @@ interface TracksListProps {
   };
 }
 
-function formatDuration(ms: number): string {
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
+function formatDuration(durationMilliseconds: number): string {
+  const minutes = Math.floor(durationMilliseconds / 60000);
+  const seconds = Math.floor((durationMilliseconds % 60000) / 1000);
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
@@ -46,7 +46,7 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
               <div className="p-3 px-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 flex flex-col items-center justify-center shrink-0">
-                    <InlineSparkline itemId={track.id} sparklines={sparklines} loading={loading} />
+                    <InlineSparkline itemId={track.id} sparklinesByItemId={sparklines} isLoading={loading} />
                     <span className="text-xl font-bold text-muted-foreground">
                       {track.rank}
                     </span>

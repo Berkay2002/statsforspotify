@@ -152,7 +152,7 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
                               )}
                             </div>
                           </Link>
-                          <InlineSparkline itemId={artist.id} sparklines={sparklines} loading={loading} />
+                          <InlineSparkline itemId={artist.id} sparklinesByItemId={sparklines} isLoading={loading} />
                           <a
                             href={`https://open.spotify.com/artist/${artist.id}`}
                             target="_blank"
@@ -213,7 +213,7 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
                               </p>
                             </div>
                           </Link>
-                          <InlineSparkline itemId={track.id} sparklines={sparklines} loading={loading} />
+                          <InlineSparkline itemId={track.id} sparklinesByItemId={sparklines} isLoading={loading} />
                           <a
                             href={`https://open.spotify.com/track/${track.id}`}
                             target="_blank"

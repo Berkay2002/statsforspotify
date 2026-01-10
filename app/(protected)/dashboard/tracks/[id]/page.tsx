@@ -12,9 +12,9 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-function formatDuration(ms: number): string {
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
+function formatDuration(durationMilliseconds: number): string {
+  const minutes = Math.floor(durationMilliseconds / 60000);
+  const seconds = Math.floor((durationMilliseconds % 60000) / 1000);
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 

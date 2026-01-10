@@ -44,7 +44,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
                       <span className="text-lg font-bold text-muted-foreground">
                         {album.rank}
                       </span>
-                      <InlineSparkline itemId={album.id} sparklines={sparklines} loading={loading} />
+                      <InlineSparkline itemId={album.id} sparklinesByItemId={sparklines} isLoading={loading} />
                     </div>
                     {album.imageUrl ? (
                       <Image

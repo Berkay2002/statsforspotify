@@ -37,7 +37,7 @@ interface Track {
 
 export default function ArtistDetailPage() {
   const params = useParams();
-  const id = params?.id as string;
+  const artistId = params?.id as string;
   
   const [artist, setArtist] = useState<ArtistDetails | null>(null);
   const [stats, setStats] = useState<ArtistStats | null>(null);
@@ -55,10 +55,10 @@ export default function ArtistDetailPage() {
         
         // Fetch artist details, stats, top tracks, and follow status in parallel
         const [detailsRes, statsRes, tracksRes, followRes] = await Promise.all([
-          fetch(`/api/artists/${id}`),
-          fetch(`/api/artists/${id}/stats`),
-          fetch(`/api/artists/${id}/tracks`),
-          fetch(`/api/artists/${id}/follow`),
+          fetch(`/api/artists/${artistId}`),
+          fetch(`/api/artists/${artistId}/stats`),
+          fetch(`/api/artists/${artistId}/tracks`),
+          fetch(`/api/artists/${artistId}/follow`),
         ]);
 
         if (!detailsRes.ok) throw new Error("Failed to load artist details");
@@ -80,21 +80,21 @@ export default function ArtistDetailPage() {
           const followData = await followRes.json();
           setIsFollowing(followData.isFollowing);
         }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+      } catch (caughtError) {
+        setError(caughtError instanceof Error ? caughtError.message : "An error occurred");
       } finally {
         setLoading(false);
       }
     }
 
-    if (id) {
+    if (artistId) {
       loadArtistData();
     }
-  }, [id]);
+  }, [artistId]);
 
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
+  const formatDuration = (durationMilliseconds: number) => {
+    const minutes = Math.floor(durationMilliseconds / 60000);
+    const seconds = Math.floor((durationMilliseconds % 60000) / 1000);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
@@ -105,7 +105,7 @@ export default function ArtistDetailPage() {
       setFollowLoading(true);
       
       const method = isFollowing ? "DELETE" : "PUT";
-      const response = await fetch(`/api/artists/${id}/follow`, {
+      const response = await fetch(`/api/artists/${artistId}/follow`, {
         method,
       });
 
@@ -114,8 +114,8 @@ export default function ArtistDetailPage() {
       }
 
       setIsFollowing(!isFollowing);
-    } catch (err) {
-      console.error("Error toggling follow:", err);
+    } catch (caughtError) {
+      console.error("Error toggling follow:", caughtError);
       // Optionally show an error message to the user
     } finally {
       setFollowLoading(false);
@@ -328,7 +328,7 @@ export default function ArtistDetailPage() {
 
       {/* Ranking History */}
       <div className="px-6 pt-8">
-        <RankingHistoryLoader itemId={id} itemType="artist" />
+        <RankingHistoryLoader itemId={artistId} itemType="artist" />
       </div>
     </div>
   );

@@ -73,7 +73,9 @@ export async function GET(request: Request) {
       if (user && session) {
         // Get Spotify identity data
         const { data: identities } = await supabase.auth.getUserIdentities();
-        const spotifyIdentity = identities?.identities.find(i => i.provider === 'spotify');
+        const spotifyIdentity = identities?.identities.find(
+          (identity) => identity.provider === "spotify",
+        );
 
         if (spotifyIdentity?.identity_data) {
           // Extract username from OAuth token (the 'sub' claim)
@@ -100,8 +102,8 @@ export async function GET(request: Request) {
             } else {
               console.error('[Auth Callback] Failed to fetch Spotify profile:', spotifyResponse.status, spotifyResponse.statusText);
             }
-          } catch (err) {
-            console.error('[Auth Callback] Failed to fetch Spotify profile:', err);
+          } catch (caughtError) {
+            console.error("[Auth Callback] Failed to fetch Spotify profile:", caughtError);
           }
           
           const displayName = spotifyIdentity.identity_data.name || spotifyIdentity.identity_data.full_name || 'User';

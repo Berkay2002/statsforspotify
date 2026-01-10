@@ -199,8 +199,8 @@ export default function FriendsPage() {
           <CardContent>
             {isSearching ? (
               <div className="space-y-3">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-20 w-full" />
+                {[1, 2, 3].map((skeletonRowKey) => (
+                  <Skeleton key={skeletonRowKey} className="h-20 w-full" />
                 ))}
               </div>
             ) : searchResults.length === 0 ? (
@@ -263,8 +263,8 @@ export default function FriendsPage() {
             <CardContent>
               {isLoadingFriends ? (
                 <div className="grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
-                  {[1, 2, 3, 4].map(i => (
-                    <Skeleton key={i} className="h-24 w-full" />
+                  {[1, 2, 3, 4].map((skeletonCardKey) => (
+                    <Skeleton key={skeletonCardKey} className="h-24 w-full" />
                   ))}
                 </div>
               ) : friends.length === 0 ? (
@@ -300,8 +300,8 @@ export default function FriendsPage() {
             <CardContent>
               {isLoadingPending ? (
                 <div className="space-y-3">
-                  {[1, 2].map(i => (
-                    <Skeleton key={i} className="h-20 w-full" />
+                  {[1, 2].map((skeletonRowKey) => (
+                    <Skeleton key={skeletonRowKey} className="h-20 w-full" />
                   ))}
                 </div>
               ) : pendingRequests.length === 0 ? (

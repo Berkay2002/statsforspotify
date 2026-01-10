@@ -15,66 +15,66 @@ interface RankingHistoryLoaderProps {
 
 export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderProps) {
   const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("long_term");
-  const [data, setData] = useState<RankingHistoryResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [rankingHistoryResponse, setRankingHistoryResponse] = useState<RankingHistoryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    let isCancelled = false;
 
-    const fetchHistory = async () => {
-      if (cancelled) return;
+    const fetchRankingHistory = async () => {
+      if (isCancelled) return;
       
       setError(null);
 
-      const params = new URLSearchParams({
+      const queryParameters = new URLSearchParams({
         type: itemType,
         id: itemId,
         time_range: timeRange, // Always send time_range (long_term = All Time)
       });
 
       try {
-        const res = await fetch(`/api/rankings/history?${params}`);
+        const response = await fetch(`/api/rankings/history?${queryParameters}`);
         
-        if (cancelled) return;
+        if (isCancelled) return;
 
-        if (!res.ok) {
-          if (res.status === 404) {
+        if (!response.ok) {
+          if (response.status === 404) {
             // No history yet - this is expected for new items, handle gracefully
-            if (!cancelled) {
-              setData(null);
+            if (!isCancelled) {
+              setRankingHistoryResponse(null);
               setError(null);
-              setLoading(false);
+              setIsLoading(false);
             }
             return;
           }
           throw new Error("Failed to fetch ranking history");
         }
         
-        const responseData = await res.json();
+        const responseBody = (await response.json()) as RankingHistoryResponse;
         
-        if (!cancelled) {
-          setData(responseData);
-          setLoading(false);
+        if (!isCancelled) {
+          setRankingHistoryResponse(responseBody);
+          setIsLoading(false);
         }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to fetch ranking history:", err);
-          setError(err instanceof Error ? err.message : "Unknown error");
-          setLoading(false);
+      } catch (caughtError) {
+        if (!isCancelled) {
+          console.error("Failed to fetch ranking history:", caughtError);
+          setError(caughtError instanceof Error ? caughtError.message : "Unknown error");
+          setIsLoading(false);
         }
       }
     };
 
-    setLoading(true);
-    fetchHistory();
+    setIsLoading(true);
+    fetchRankingHistory();
 
     return () => {
-      cancelled = true;
+      isCancelled = true;
     };
   }, [itemId, itemType, timeRange]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -87,7 +87,7 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
     );
   }
 
-  if (error || !data) {
+  if (error || !rankingHistoryResponse) {
     return (
       <Card>
         <CardHeader>
@@ -104,7 +104,7 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
     );
   }
 
-  const mostRecentEntry = data.history[data.history.length - 1];
+  const mostRecentEntry = rankingHistoryResponse.history[rankingHistoryResponse.history.length - 1];
 
   return (
     <Card className="w-full">
@@ -112,7 +112,7 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
         <div className="flex items-center gap-3">
           <CardTitle>Ranking History</CardTitle>
           <RankingBadge
-            isNewEntry={data.metadata.totalSnapshots === 1}
+            isNewEntry={rankingHistoryResponse.metadata.totalSnapshots === 1}
             isReentry={mostRecentEntry?.isReentry}
           />
         </div>
@@ -134,8 +134,8 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
       <CardContent>
         <div className="h-[350px] w-full pt-2 pb-4">
           <RankingChart
-            data={data.history}
-            peakPosition={data.metadata.peakRank}
+            data={rankingHistoryResponse.history}
+            peakPosition={rankingHistoryResponse.metadata.peakRank}
           />
         </div>
 
@@ -143,8 +143,8 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">Peak Position</p>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold">#{data.metadata.peakRank}</span>
-              {data.metadata.currentRank === data.metadata.peakRank && (
+              <span className="text-2xl font-bold">#{rankingHistoryResponse.metadata.peakRank}</span>
+              {rankingHistoryResponse.metadata.currentRank === rankingHistoryResponse.metadata.peakRank && (
                 <span className="text-xs font-medium text-amber-500">Current</span>
               )}
             </div>
@@ -153,19 +153,19 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">Current Rank</p>
             <div className="text-2xl font-bold">
-              {data.metadata.currentRank ? `#${data.metadata.currentRank}` : "—"}
+              {rankingHistoryResponse.metadata.currentRank ? `#${rankingHistoryResponse.metadata.currentRank}` : "—"}
             </div>
           </div>
 
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">Times Charted</p>
-            <div className="text-2xl font-bold">{data.metadata.totalSnapshots}</div>
+            <div className="text-2xl font-bold">{rankingHistoryResponse.metadata.totalSnapshots}</div>
           </div>
 
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">First Seen</p>
             <div className="text-2xl font-bold truncate">
-              {new Date(data.metadata.firstSeen).toLocaleDateString("en-US", {
+              {new Date(rankingHistoryResponse.metadata.firstSeen).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric"

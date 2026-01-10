@@ -22,15 +22,15 @@ function getStrictContext<T>(
     children?: React.ReactNode;
   }) => <Context.Provider value={value}>{children}</Context.Provider>;
 
-  const useSafeContext = () => {
-    const ctx = React.useContext(Context);
-    if (ctx === undefined) {
+  const useRequiredContext = () => {
+    const contextValue = React.useContext(Context);
+    if (contextValue === undefined) {
       throw new Error(`useContext must be used within ${name ?? 'a Provider'}`);
     }
-    return ctx;
+    return contextValue;
   };
 
-  return [Provider, useSafeContext] as const;
+  return [Provider, useRequiredContext] as const;
 }
 
 export { getStrictContext };

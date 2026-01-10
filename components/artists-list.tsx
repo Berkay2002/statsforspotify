@@ -70,7 +70,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                       </p>
                     </Link>
                   </div>
-                  <InlineSparkline itemId={artist.id} sparklines={sparklines} loading={loading} />
+                  <InlineSparkline itemId={artist.id} sparklinesByItemId={sparklines} isLoading={loading} />
                 </div>
                 <a
                   href={`https://open.spotify.com/artist/${artist.id}`}

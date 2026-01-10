@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { SPARKLINE_CACHE_INVALIDATE_EVENT } from "@/components/charts/sparkline-cache";
+import { SPARKLINE_CACHE_INVALIDATION_EVENT_NAME } from "@/components/charts/sparkline-cache";
 
 /**
  * Auto-triggers snapshot collection when dashboard loads
@@ -24,22 +24,22 @@ export function AutoSnapshotTrigger() {
         "Content-Type": "application/json",
       },
     })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && !data.skipped) {
+      .then((response) => response.json())
+      .then((snapshotResult) => {
+        if (snapshotResult.success && !snapshotResult.skipped) {
           // Invalidate sparkline cache
-          window.dispatchEvent(new CustomEvent(SPARKLINE_CACHE_INVALIDATE_EVENT));
+          window.dispatchEvent(new CustomEvent(SPARKLINE_CACHE_INVALIDATION_EVENT_NAME));
           
           // Show success notification
           toast.success("Stats updated!", {
             duration: 3000,
-            description: `Updated ${data.succeeded || 'all'} time ranges`,
+            description: `Updated ${snapshotResult.succeeded || "all"} time ranges`,
           });
         }
       })
-      .catch((error) => {
+      .catch((caughtError) => {
         // Silent fail - don't interrupt user experience
-        console.error("Auto-snapshot failed:", error);
+        console.error("Auto-snapshot failed:", caughtError);
       });
   }, []);
 

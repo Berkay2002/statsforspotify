@@ -2,97 +2,106 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  clearSparklineCache,
-  getCachedSparklines,
-  setCachedSparklines,
-  SPARKLINE_CACHE_INVALIDATE_EVENT,
-  type SparklineMap,
+  clearSparklinesCache,
+  readCachedSparklines,
+  writeCachedSparklines,
+  SPARKLINE_CACHE_INVALIDATION_EVENT_NAME,
+  type SparklinesByItemId,
 } from "@/components/charts/sparkline-cache";
 
 interface SparklineLoaderProps {
   itemIds: string[];
-  type: "artist" | "track" | "album";
-  children: (sparklines: Record<string, { date: string; rank: number }[]>, loading: boolean) => React.ReactNode;
+  itemType: "artist" | "track" | "album";
+  children: (sparklinesByItemId: SparklinesByItemId, isLoading: boolean) => React.ReactNode;
 }
 
-export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProps) {
-  const [sparklines, setSparklines] = useState<SparklineMap>({});
-  const [loading, setLoading] = useState(true);
-  const [cacheBuster, setCacheBuster] = useState(0);
+export function SparklineLoader({ itemIds, itemType, children }: SparklineLoaderProps) {
+  const [sparklinesByItemId, setSparklinesByItemId] = useState<SparklinesByItemId>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [cacheInvalidationCounter, setCacheInvalidationCounter] = useState(0);
 
   // Stable key to prevent unnecessary refetches when array reference changes
   // Only refetch if the actual IDs or their order changes
-  const itemIdsKey = useMemo(() => itemIds.join(","), [itemIds]);
-  const cacheKey = `${type}:${itemIdsKey}`;
+  const itemIdsSignature = useMemo(() => itemIds.join(","), [itemIds]);
+  const sparklinesCacheKey = `${itemType}:${itemIdsSignature}`;
   
   // Track ongoing requests to prevent duplicate fetches
-  const fetchingRef = useRef<string | null>(null);
+  const inFlightCacheKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const handleInvalidate = () => {
-      clearSparklineCache();
-      fetchingRef.current = null;
-      setCacheBuster((previousValue) => previousValue + 1);
+    const handleSparklinesCacheInvalidation = () => {
+      clearSparklinesCache();
+      inFlightCacheKeyRef.current = null;
+      setCacheInvalidationCounter((previousValue) => previousValue + 1);
     };
 
-    window.addEventListener(SPARKLINE_CACHE_INVALIDATE_EVENT, handleInvalidate);
-    return () => window.removeEventListener(SPARKLINE_CACHE_INVALIDATE_EVENT, handleInvalidate);
+    window.addEventListener(
+      SPARKLINE_CACHE_INVALIDATION_EVENT_NAME,
+      handleSparklinesCacheInvalidation,
+    );
+    return () =>
+      window.removeEventListener(
+        SPARKLINE_CACHE_INVALIDATION_EVENT_NAME,
+        handleSparklinesCacheInvalidation,
+      );
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    let isCancelled = false;
 
     const fetchSparklines = async () => {
       if (itemIds.length === 0) {
-        if (!cancelled) setLoading(false);
+        if (!isCancelled) setIsLoading(false);
         return;
       }
 
       // Check cache first
-      const cached = getCachedSparklines(cacheKey);
+      const cached = readCachedSparklines(sparklinesCacheKey);
       if (cached) {
-        if (!cancelled) {
-          setSparklines(cached);
-          setLoading(false);
+        if (!isCancelled) {
+          setSparklinesByItemId(cached);
+          setIsLoading(false);
         }
         return;
       }
 
       // Prevent duplicate requests for the same data
-      if (fetchingRef.current === cacheKey) {
+      if (inFlightCacheKeyRef.current === sparklinesCacheKey) {
         return;
       }
 
-      if (!cancelled) {
-        setLoading(true);
-        fetchingRef.current = cacheKey;
+      if (!isCancelled) {
+        setIsLoading(true);
+        inFlightCacheKeyRef.current = sparklinesCacheKey;
       }
       
       try {
-        const response = await fetch(`/api/rankings/sparklines?type=${type}&ids=${itemIdsKey}`);
+        const response = await fetch(
+          `/api/rankings/sparklines?type=${itemType}&ids=${itemIdsSignature}`,
+        );
         
-        if (cancelled) return;
+        if (isCancelled) return;
         
         if (!response.ok) {
           throw new Error("Failed to fetch sparklines");
         }
 
-        const data = await response.json();
+        const responseBody = await response.json();
         
-        if (!cancelled) {
-          if (data.sparklines) {
+        if (!isCancelled) {
+          if (responseBody.sparklines) {
             // Cache the result
-            setCachedSparklines(cacheKey, data.sparklines);
-            setSparklines(data.sparklines);
+            writeCachedSparklines(sparklinesCacheKey, responseBody.sparklines);
+            setSparklinesByItemId(responseBody.sparklines);
           }
-          setLoading(false);
-          fetchingRef.current = null;
+          setIsLoading(false);
+          inFlightCacheKeyRef.current = null;
         }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to fetch sparklines:", err);
-          setLoading(false);
-          fetchingRef.current = null;
+      } catch (caughtError) {
+        if (!isCancelled) {
+          console.error("Failed to fetch sparklines:", caughtError);
+          setIsLoading(false);
+          inFlightCacheKeyRef.current = null;
         }
       }
     };
@@ -100,31 +109,31 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
     fetchSparklines();
 
     return () => {
-      cancelled = true;
+      isCancelled = true;
     };
-  }, [itemIds.length, itemIdsKey, type, cacheKey, cacheBuster]); // Use stable key instead of itemIds array
+  }, [itemIds.length, itemIdsSignature, itemType, sparklinesCacheKey, cacheInvalidationCounter]); // Use stable key instead of itemIds array
 
-  return <>{children(sparklines, loading)}</>;
+  return <>{children(sparklinesByItemId, isLoading)}</>;
 }
 
 interface InlineSparklineProps {
   itemId: string;
-  sparklines: Record<string, { date: string; rank: number }[]>;
-  loading: boolean;
+  sparklinesByItemId: SparklinesByItemId;
+  isLoading: boolean;
 }
 
-export function InlineSparkline({ itemId, sparklines, loading }: InlineSparklineProps) {
-  if (loading) {
+export function InlineSparkline({ itemId, sparklinesByItemId, isLoading }: InlineSparklineProps) {
+  if (isLoading) {
     return null;
   }
 
-  const data = sparklines[itemId];
-  if (!data || data.length < 2) {
+  const sparklinePoints = sparklinesByItemId[itemId];
+  if (!sparklinePoints || sparklinePoints.length < 2) {
     return null;
   }
 
-  const firstRank = data[0].rank;
-  const lastRank = data[data.length - 1].rank;
+  const firstRank = sparklinePoints[0].rank;
+  const lastRank = sparklinePoints[sparklinePoints.length - 1].rank;
   
   // Lower rank number = better position (went up)
   // Higher rank number = worse position (went down)
