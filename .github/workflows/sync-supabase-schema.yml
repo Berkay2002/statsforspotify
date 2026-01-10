@@ -40,8 +40,9 @@ jobs:
         run: |
           echo "Dumping schema from Supabase..."
 
-          # Generate the database connection string
-          DB_URL="postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${SUPABASE_PROJECT_ID}.supabase.co:5432/postgres"
+          # Generate the database connection string using Transaction Pooler (IPv4-compatible)
+          # GitHub Actions runners only support IPv4, so we use the pooler endpoint instead of direct connection
+          DB_URL="postgresql://postgres.${SUPABASE_PROJECT_ID}:${SUPABASE_DB_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:6543/postgres"
 
           # Dump schema using supabase db dump
           # This includes tables, functions, triggers, policies, etc.
