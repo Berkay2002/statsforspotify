@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "validate:schema-sync": "bash scripts/validate-schema-sync.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
