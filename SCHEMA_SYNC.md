@@ -254,10 +254,29 @@ If you encounter problems with schema synchronization:
 1. Check this document first
 2. Review workflow logs in GitHub Actions
 3. Check Supabase Dashboard for database status
-4. Reach out to the team for assistance
+4. Consult the quick start guide: [QUICKSTART_SCHEMA_SYNC.md](QUICKSTART_SCHEMA_SYNC.md)
+5. Reach out to the team for assistance
 
 ## Related Documentation
 
+- **[QUICKSTART_SCHEMA_SYNC.md](QUICKSTART_SCHEMA_SYNC.md)** - Quick setup guide for first-time users
+- **[.github/SECRETS_SETUP.md](.github/SECRETS_SETUP.md)** - Detailed secret configuration guide
+- **[.github/WORKFLOW_MONITORING.md](.github/WORKFLOW_MONITORING.md)** - Monitoring and troubleshooting workflows
+- **[.github/README.md](.github/README.md)** - Overview of GitHub Actions workflows
 - [Supabase CLI Documentation](https://supabase.com/docs/guides/cli)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [PostgreSQL Schema Documentation](https://www.postgresql.org/docs/current/ddl-schemas.html)
+
+## Validation
+
+Run the validation script to check your setup:
+
+```bash
+# Via npm
+npm run validate:schema-sync
+
+# Or directly
+./scripts/validate-schema-sync.sh
+```
+
+This validates that all files are in place and the workflow is properly configured.
