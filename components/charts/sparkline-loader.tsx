@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  clearSparklineCache,
+  getCachedSparklines,
+  setCachedSparklines,
+  SPARKLINE_CACHE_INVALIDATE_EVENT,
+  type SparklineMap,
+} from "@/components/charts/sparkline-cache";
 
 interface SparklineLoaderProps {
   itemIds: string[];
@@ -8,15 +15,10 @@ interface SparklineLoaderProps {
   children: (sparklines: Record<string, { date: string; rank: number }[]>, loading: boolean) => React.ReactNode;
 }
 
-// Simple in-memory cache for sparkline data
-const sparklineCache = new Map<string, { data: Record<string, { date: string; rank: number }[]>; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProps) {
-  const [sparklines, setSparklines] = useState<
-    Record<string, { date: string; rank: number }[]>
-  >({});
+  const [sparklines, setSparklines] = useState<SparklineMap>({});
   const [loading, setLoading] = useState(true);
+  const [cacheBuster, setCacheBuster] = useState(0);
 
   // Stable key to prevent unnecessary refetches when array reference changes
   // Only refetch if the actual IDs or their order changes
@@ -25,6 +27,17 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
   
   // Track ongoing requests to prevent duplicate fetches
   const fetchingRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const handleInvalidate = () => {
+      clearSparklineCache();
+      fetchingRef.current = null;
+      setCacheBuster((previousValue) => previousValue + 1);
+    };
+
+    window.addEventListener(SPARKLINE_CACHE_INVALIDATE_EVENT, handleInvalidate);
+    return () => window.removeEventListener(SPARKLINE_CACHE_INVALIDATE_EVENT, handleInvalidate);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,10 +49,10 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
       }
 
       // Check cache first
-      const cached = sparklineCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      const cached = getCachedSparklines(cacheKey);
+      if (cached) {
         if (!cancelled) {
-          setSparklines(cached.data);
+          setSparklines(cached);
           setLoading(false);
         }
         return;
@@ -56,19 +69,20 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
       }
       
       try {
-        const res = await fetch(`/api/rankings/sparklines?type=${type}&ids=${itemIdsKey}`);
+        const response = await fetch(`/api/rankings/sparklines?type=${type}&ids=${itemIdsKey}`);
         
         if (cancelled) return;
         
-        const data = await res.json();
+        if (!response.ok) {
+          throw new Error("Failed to fetch sparklines");
+        }
+
+        const data = await response.json();
         
         if (!cancelled) {
           if (data.sparklines) {
             // Cache the result
-            sparklineCache.set(cacheKey, {
-              data: data.sparklines,
-              timestamp: Date.now(),
-            });
+            setCachedSparklines(cacheKey, data.sparklines);
             setSparklines(data.sparklines);
           }
           setLoading(false);
@@ -88,7 +102,7 @@ export function SparklineLoader({ itemIds, type, children }: SparklineLoaderProp
     return () => {
       cancelled = true;
     };
-  }, [itemIdsKey, type, cacheKey]); // Use stable key instead of itemIds array
+  }, [itemIds.length, itemIdsKey, type, cacheKey, cacheBuster]); // Use stable key instead of itemIds array
 
   return <>{children(sparklines, loading)}</>;
 }

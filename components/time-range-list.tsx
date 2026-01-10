@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ReactNode } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { TimeRangeTabs } from "@/components/ui/time-range-tabs";
 import { SparklineLoader } from "@/components/charts/sparkline-loader";
@@ -35,9 +35,10 @@ export function TimeRangeList<T extends ItemWithId>({
 }: TimeRangeListProps<T>) {
   const [timeRange, setTimeRange] = useState<TimeRange>("short_term");
   const items = itemsByTimeRange[timeRange];
+  const itemIds = useMemo(() => items.map((item) => item.id), [items]);
 
   return (
-    <SparklineLoader itemIds={items.map((item) => item.id)} type={itemType}>
+    <SparklineLoader itemIds={itemIds} type={itemType}>
       {(sparklines, loading) => (
         <TimeRangeTabs value={timeRange} onValueChange={setTimeRange} className={className}>
           <TabsContent value={timeRange} className="mt-6">

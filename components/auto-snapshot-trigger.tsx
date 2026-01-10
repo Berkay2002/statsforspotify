@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { SPARKLINE_CACHE_INVALIDATE_EVENT } from "@/components/charts/sparkline-cache";
 
 /**
  * Auto-triggers snapshot collection when dashboard loads
@@ -27,7 +28,7 @@ export function AutoSnapshotTrigger() {
       .then((data) => {
         if (data.success && !data.skipped) {
           // Invalidate sparkline cache
-          window.dispatchEvent(new CustomEvent('invalidate-sparklines'));
+          window.dispatchEvent(new CustomEvent(SPARKLINE_CACHE_INVALIDATE_EVENT));
           
           // Show success notification
           toast.success("Stats updated!", {

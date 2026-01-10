@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  clearSparklineCache,
+  getCachedSparklines,
+  setCachedSparklines,
+  SPARKLINE_CACHE_INVALIDATE_EVENT,
+  type SparklineMap,
+} from "@/components/charts/sparkline-cache";
 
 interface CombinedSparklineLoaderProps {
   artistIds: string[];
@@ -8,15 +15,10 @@ interface CombinedSparklineLoaderProps {
   children: (sparklines: Record<string, { date: string; rank: number }[]>, loading: boolean) => React.ReactNode;
 }
 
-// Shared cache with SparklineLoader
-const sparklineCache = new Map<string, { data: Record<string, { date: string; rank: number }[]>; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
 export function CombinedSparklineLoader({ artistIds, trackIds, children }: CombinedSparklineLoaderProps) {
-  const [sparklines, setSparklines] = useState<
-    Record<string, { date: string; rank: number }[]>
-  >({});
+  const [sparklines, setSparklines] = useState<SparklineMap>({});
   const [loading, setLoading] = useState(true);
+  const [cacheBuster, setCacheBuster] = useState(0);
 
   // Stable keys to prevent unnecessary refetches
   const artistIdsKey = useMemo(() => artistIds.join(","), [artistIds]);
@@ -29,14 +31,13 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
   // Listen for cache invalidation events
   useEffect(() => {
     const handleInvalidate = () => {
-      console.log("[Cache] Invalidating sparkline cache");
-      sparklineCache.clear();
-      setLoading(true);
-      // Re-fetch will happen automatically via the other useEffect
+      clearSparklineCache();
+      fetchingRef.current = null;
+      setCacheBuster((previousValue) => previousValue + 1);
     };
     
-    window.addEventListener('invalidate-sparklines', handleInvalidate);
-    return () => window.removeEventListener('invalidate-sparklines', handleInvalidate);
+    window.addEventListener(SPARKLINE_CACHE_INVALIDATE_EVENT, handleInvalidate);
+    return () => window.removeEventListener(SPARKLINE_CACHE_INVALIDATE_EVENT, handleInvalidate);
   }, []);
 
   useEffect(() => {
@@ -49,10 +50,10 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
       }
 
       // Check cache first
-      const cached = sparklineCache.get(cacheKey);
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      const cached = getCachedSparklines(cacheKey);
+      if (cached) {
         if (!cancelled) {
-          setSparklines(cached.data);
+          setSparklines(cached);
           setLoading(false);
         }
         return;
@@ -70,17 +71,27 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
 
       try {
         // Fetch both artist and track sparklines in parallel
-        const requests = [];
+        const requests: Array<Promise<{ sparklines?: SparklineMap }>> = [];
         
         if (artistIds.length > 0) {
           requests.push(
-            fetch(`/api/rankings/sparklines?type=artist&ids=${artistIdsKey}`).then(r => r.json())
+            fetch(`/api/rankings/sparklines?type=artist&ids=${artistIdsKey}`).then(async (response) => {
+              if (!response.ok) {
+                throw new Error("Failed to fetch artist sparklines");
+              }
+              return response.json();
+            })
           );
         }
         
         if (trackIds.length > 0) {
           requests.push(
-            fetch(`/api/rankings/sparklines?type=track&ids=${trackIdsKey}`).then(r => r.json())
+            fetch(`/api/rankings/sparklines?type=track&ids=${trackIdsKey}`).then(async (response) => {
+              if (!response.ok) {
+                throw new Error("Failed to fetch track sparklines");
+              }
+              return response.json();
+            })
           );
         }
 
@@ -99,10 +110,7 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
 
         if (!cancelled) {
           // Cache the result
-          sparklineCache.set(cacheKey, {
-            data: mergedSparklines,
-            timestamp: Date.now(),
-          });
+          setCachedSparklines(cacheKey, mergedSparklines);
           setSparklines(mergedSparklines);
           setLoading(false);
           fetchingRef.current = null;
@@ -121,7 +129,7 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
     return () => {
       cancelled = true;
     };
-  }, [artistIdsKey, trackIdsKey, artistIds.length, trackIds.length, cacheKey]); // Use stable keys
+  }, [artistIdsKey, trackIdsKey, artistIds.length, trackIds.length, cacheKey, cacheBuster]); // Use stable keys
 
   return <>{children(sparklines, loading)}</>;
 }
