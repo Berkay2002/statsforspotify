@@ -167,8 +167,34 @@ if (artist.previous_rank) {
 
 ## Database Changes
 
-- Add new migrations as numbered SQL files in `supabase/migrations/`
+### Schema Management
+
+**The database schema is automatically synchronized from Supabase:**
+
+- Schema file: `supabase/schema/schema.sql` (complete dump)
+- TypeScript types: `lib/supabase/database.ts` (auto-generated)
+- Sync schedule: Daily at 2 AM UTC via GitHub Actions
+- Manual trigger: Available in GitHub Actions UI
+
+**DO NOT manually edit these files** - they are auto-generated and will be overwritten.
+
+### Making Schema Changes
+
+1. Make changes in Supabase Dashboard or SQL Editor
+2. (Optional) Document as migration: `supabase/migrations/YYYYMMDD_description.sql`
+3. Wait for automatic sync or manually trigger the workflow
+4. Review the automated commit before merging
+
+**Important:**
 - Always enable RLS on new tables
+- Test schema changes in development first
+- See [SCHEMA_SYNC.md](SCHEMA_SYNC.md) for detailed workflow
+
+### Migration Files
+
+- Add new migrations as numbered SQL files in `supabase/migrations/`
+- Example: `20260110_add_user_preferences.sql`
+- Migrations are for documentation/history; the schema.sql is the source of truth
 - Run migrations manually via Supabase SQL Editor
 
 ## Environment Variables
