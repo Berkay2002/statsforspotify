@@ -1,6 +1,6 @@
 import { getTopArtists, getTopTracks, extractAlbumsFromTracks } from "@/lib/spotify/api";
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
+import { authenticateUser, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
 import type { TimeRange, RankedArtist, RankedTrack, RankedAlbum } from "@/lib/spotify/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -257,7 +257,7 @@ async function createSnapshotWithRollback(
 
 export async function POST() {
   try {
-    const authResult = await getAuthenticatedUser();
+    const authResult = await authenticateUser();
     if (!authResult) {
       return unauthorizedResponse();
     }

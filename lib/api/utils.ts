@@ -3,11 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
 import { SpotifyAPIError } from "@/lib/spotify/api";
 
-/**
- * Validates that the user is authenticated
- * @returns User object if authenticated, null otherwise
- */
-export async function validateAuth() {
+async function getAuthContext() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,7 +14,16 @@ export async function validateAuth() {
     return null;
   }
 
-  return user;
+  return { user, supabase };
+}
+
+/**
+ * Validates that the user is authenticated
+ * @returns User object if authenticated, null otherwise
+ */
+export async function validateAuth() {
+  const authContext = await getAuthContext();
+  return authContext?.user ?? null;
 }
 
 /**
@@ -46,18 +51,12 @@ export function withAuthHandler<T extends Record<string, unknown> = Record<strin
  * Gets the authenticated user and Supabase client
  * @returns Object with user and supabase client, or null if not authenticated
  */
+export async function authenticateUser() {
+  return getAuthContext();
+}
+
 export async function getAuthenticatedUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return null;
-  }
-
-  return { user, supabase };
+  return authenticateUser();
 }
 
 /**

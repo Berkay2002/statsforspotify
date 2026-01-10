@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser, serverErrorResponse } from "@/lib/api/utils";
+import { authenticateUser, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 
 /**
  * GET /api/friends/list - List accepted friends
  */
 export async function GET() {
   try {
-    const authResult = await getAuthenticatedUser();
+    const authResult = await authenticateUser();
     if (!authResult) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedResponse();
     }
     
     const { user, supabase } = authResult;

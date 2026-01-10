@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser, serverErrorResponse } from "@/lib/api/utils";
+import { authenticateUser, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 import type { Database } from "@/lib/supabase/database";
 
 type Snapshot = Database['public']['Tables']['snapshots']['Row'];
@@ -18,9 +18,9 @@ interface ExportData {
 
 export async function GET(request: Request) {
   try {
-    const authResult = await getAuthenticatedUser();
+    const authResult = await authenticateUser();
     if (!authResult) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedResponse();
     }
 
     const { user, supabase } = authResult;

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
+import { authenticateUser, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
 
 export async function POST() {
   try {
-    const authResult = await getAuthenticatedUser();
+    const authResult = await authenticateUser();
     if (!authResult) {
       return unauthorizedResponse();
     }

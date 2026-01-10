@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
+import { authenticateUser, badRequestResponse, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 
 /**
  * POST /api/friends/unfollow - Remove a friendship
@@ -7,9 +7,9 @@ import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@
  */
 export async function POST(request: Request) {
   try {
-    const authResult = await getAuthenticatedUser();
+    const authResult = await authenticateUser();
     if (!authResult) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return unauthorizedResponse();
     }
     
     const { user, supabase } = authResult;
