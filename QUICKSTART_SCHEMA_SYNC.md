@@ -55,6 +55,28 @@ You need three pieces of information from your Supabase project:
 
 ### Step 3: Test the Workflow
 
+⚠️ **Important**: The workflow will only appear in the Actions tab AFTER this branch is merged to main. GitHub Actions workflows must be on the default branch to be manually triggered.
+
+#### Before Merging (Test Secrets Locally)
+
+You can test that your secrets are correctly configured:
+
+```bash
+# Set environment variables (use your actual secrets)
+export SUPABASE_ACCESS_TOKEN="your-token-here"
+export SUPABASE_PROJECT_ID="your-project-id"
+export SUPABASE_DB_PASSWORD="your-db-password"
+
+# Run the test script
+./scripts/test-supabase-connection.sh
+```
+
+If all tests pass ✅, your secrets are configured correctly!
+
+#### After Merging (Manual Trigger)
+
+Once this PR is merged to main:
+
 1. Go to **Actions** tab in your repository
 2. Find **Sync Supabase Schema** in the workflows list
 3. Click on it
