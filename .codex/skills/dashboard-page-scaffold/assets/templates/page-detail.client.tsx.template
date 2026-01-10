@@ -1,0 +1,85 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft } from "lucide-react";
+
+interface {{ItemDetailsTypeName}} {
+  id: string;
+  name: string;
+}
+
+export default function {{DetailPageComponentName}}() {
+  const params = useParams();
+  const id = params?.id as string | undefined;
+
+  const [item, setItem] = useState<{{ItemDetailsTypeName}} | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      if (!id) return;
+      try {
+        setLoading(true);
+        setErrorMessage(null);
+
+        const response = await fetch(`/api/{{apiPath}}/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to load details");
+        }
+
+        const responseBody = (await response.json()) as {{ItemDetailsTypeName}};
+        setItem(responseBody);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  if (errorMessage || !item) {
+    return (
+      <div className="flex min-h-[320px] flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">{errorMessage ?? "Not found"}</p>
+        <Button asChild>
+          <Link href="/dashboard/{{slug}}">Back</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/dashboard/{{slug}}">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{item.name}</h1>
+          <p className="text-muted-foreground">{{detailSubtitle}}</p>
+        </div>
+      </div>
+
+      {{detailBodyPlaceholder}}
+    </div>
+  );
+}
+

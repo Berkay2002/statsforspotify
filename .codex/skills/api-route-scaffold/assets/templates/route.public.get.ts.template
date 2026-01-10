@@ -1,0 +1,14 @@
+import { NextResponse } from "next/server";
+import { serverErrorResponse } from "@/lib/api/utils";
+
+export async function GET(request: Request) {
+  try {
+    // TODO: implement (avoid leaking private data if user context exists)
+    const responseBody = await {{todoExpression}};
+    return NextResponse.json(responseBody);
+  } catch (error) {
+    console.error("Error in public GET {{routeDescription}}:", error);
+    return serverErrorResponse("Failed to {{failureMessageVerb}}");
+  }
+}
+

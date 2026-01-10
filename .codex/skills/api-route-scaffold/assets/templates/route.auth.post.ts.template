@@ -1,0 +1,29 @@
+import { NextResponse } from "next/server";
+import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
+
+export async function POST(request: Request) {
+  try {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { supabase, user } = authResult;
+    const requestBody = (await request.json()) as Record<string, unknown>;
+
+    // TODO: validate inputs
+    const {{requiredFieldName}} = requestBody["{{requiredFieldKey}}"];
+    if (!{{requiredFieldName}}) {
+      return badRequestResponse("{{requiredFieldKey}} is required");
+    }
+
+    // TODO: implement action using `supabase` and `user.id`
+    await {{todoExpression}};
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error in POST {{routeDescription}}:", error);
+    return serverErrorResponse("Failed to {{failureMessageVerb}}");
+  }
+}
+

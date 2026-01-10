@@ -1,0 +1,2 @@
+const requestBody = (await request.json()) as Record<string, unknown>;
+

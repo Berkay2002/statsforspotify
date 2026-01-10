@@ -1,0 +1,5 @@
+const {{variableName}} = requestBody["{{fieldName}}"];
+if (!{{variableName}} || typeof {{variableName}} !== "string") {
+  return badRequestResponse("{{fieldName}} is required");
+}
+

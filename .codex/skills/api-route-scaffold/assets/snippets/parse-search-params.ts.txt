@@ -1,0 +1,10 @@
+const { searchParams } = new URL(request.url);
+
+const query = searchParams.get("q");
+const rawLimit = searchParams.get("limit");
+
+const limit = rawLimit ? Number.parseInt(rawLimit, 10) : 50;
+if (Number.isNaN(limit) || limit <= 0) {
+  return badRequestResponse("limit must be a positive integer");
+}
+

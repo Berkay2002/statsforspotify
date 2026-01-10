@@ -1,0 +1,37 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function {{DetailPageComponentName}}({ params }: PageProps) {
+  const { id } = await params;
+
+  const item = await {{fetchDetailExpression}};
+
+  if (!item) {
+    notFound();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/dashboard/{{slug}}">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{item.name}</h1>
+          <p className="text-muted-foreground">{{detailSubtitle}}</p>
+        </div>
+      </div>
+
+      {{detailBodyPlaceholder}}
+    </div>
+  );
+}
+

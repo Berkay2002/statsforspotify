@@ -1,0 +1,29 @@
+import { NextResponse } from "next/server";
+import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
+
+export async function GET(request: Request) {
+  try {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { supabase, user } = authResult;
+    const { searchParams } = new URL(request.url);
+
+    const rawLimit = searchParams.get("limit");
+    const limit = rawLimit ? Number.parseInt(rawLimit, 10) : {{defaultLimit}};
+    if (Number.isNaN(limit) || limit <= 0) {
+      return badRequestResponse("limit must be a positive integer");
+    }
+
+    // TODO: implement query using `supabase` and `user.id`
+    const results = await {{todoExpression}};
+
+    return NextResponse.json({ {{successKey}}: results });
+  } catch (error) {
+    console.error("Error in GET {{routeDescription}}:", error);
+    return serverErrorResponse("Failed to {{failureMessageVerb}}");
+  }
+}
+

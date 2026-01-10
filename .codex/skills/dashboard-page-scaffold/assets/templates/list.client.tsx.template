@@ -1,0 +1,41 @@
+"use client";
+
+import { TimeRangeList } from "@/components/time-range-list";
+
+interface {{ItemTypeName}} {
+  id: string;
+  name: string;
+  rank: number;
+  imageUrl?: string | null;
+  previous_rank?: number | null;
+}
+
+interface {{ListComponentName}}Props {
+  {{itemsPropName}}: {
+    short_term: {{ItemTypeName}}[];
+    medium_term: {{ItemTypeName}}[];
+    long_term: {{ItemTypeName}}[];
+  };
+}
+
+export function {{ListComponentName}}({ {{itemsPropName}} }: {{ListComponentName}}Props) {
+  return (
+    <TimeRangeList
+      itemsByTimeRange={{"{"}}{{itemsPropName}}{{"}"}}
+      itemType="{{timeRangeItemType}}"
+      className="w-full"
+      renderItems={(items) => (
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="rounded-md border p-4">
+              <p className="truncate font-semibold">
+                {item.rank}. {item.name}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    />
+  );
+}
+

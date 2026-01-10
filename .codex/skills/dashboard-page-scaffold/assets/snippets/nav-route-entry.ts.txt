@@ -1,0 +1,8 @@
+// Add to `navRoutes` in `components/app-sidebar.tsx`
+{
+  id: "{{slug}}",
+  title: "{{sidebarTitle}}",
+  icon: <{{LucideIcon}} className="size-4" />,
+  href: "/dashboard/{{slug}}",
+},
+

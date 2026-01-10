@@ -1,0 +1,31 @@
+import { NextResponse } from "next/server";
+import { getAuthenticatedUser, badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
+
+/**
+ * Action-style endpoint: returns a stable `status` for UI branching.
+ */
+export async function POST(request: Request) {
+  try {
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { supabase, user } = authResult;
+    const requestBody = (await request.json()) as Record<string, unknown>;
+
+    const targetId = requestBody["targetId"];
+    if (!targetId || typeof targetId !== "string") {
+      return badRequestResponse("targetId is required");
+    }
+
+    // TODO: implement action; compute a stable status string
+    const status = await {{todoExpression}};
+
+    return NextResponse.json({ success: true, status });
+  } catch (error) {
+    console.error("Error in POST {{routeDescription}}:", error);
+    return serverErrorResponse("Failed to {{failureMessageVerb}}");
+  }
+}
+

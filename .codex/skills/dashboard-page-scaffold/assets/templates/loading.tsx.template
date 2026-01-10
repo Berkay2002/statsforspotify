@@ -1,0 +1,26 @@
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHeaderLoading, TimeRangeTabsLoading } from "@/components/ui/loading-skeletons";
+
+export default function {{LoadingComponentName}}() {
+  return (
+    <div className="space-y-6">
+      <PageHeaderLoading />
+
+      <div className="space-y-6">
+        <TimeRangeTabsLoading />
+
+        <div className="{{gridOrListClassName}}">
+          {Array.from({ length: {{skeletonCount}} }).map((_, index) => (
+            <Card key={index} className="overflow-hidden">
+              <CardContent className="p-4">
+                <Skeleton className="h-6 w-2/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
