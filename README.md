@@ -66,13 +66,16 @@ bun install
 ### 2. Set Up Supabase
 
 1. Create a new project at [supabase.com](https://supabase.com)
-2. Set up your database schema (you'll need to create tables for snapshots, rankings, user profiles, etc.)
+2. Set up your database schema:
+   - **Option A (Recommended)**: Apply the schema from `supabase/schema/schema.sql`
+   - **Option B**: Create tables manually (snapshots, rankings, user profiles, etc.)
 3. Enable Row Level Security (RLS) on all tables
 4. Go to **Authentication > Providers > Spotify** and configure:
    - Client ID and Secret from your [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Callback URL: `https://<your-project>.supabase.co/auth/v1/callback`
    - Add required scopes: `user-read-email`, `user-top-read`, `user-follow-read`, `user-follow-modify`
-5. Generate TypeScript types: `supabase gen types typescript --project-id <id> > lib/supabase/database.ts`
+
+**Note**: The database schema is automatically synchronized from Supabase to this repository via GitHub Actions. See [SCHEMA_SYNC.md](SCHEMA_SYNC.md) for details.
 
 ### 3. Configure Environment
 
@@ -129,6 +132,17 @@ Open [http://localhost:3000](http://localhost:3000)
 ```
 
 ## Database Schema
+
+### Automated Schema Synchronization
+
+The database schema is automatically synchronized from Supabase to this repository:
+
+- **Schema file**: `supabase/schema/schema.sql` (complete database structure)
+- **TypeScript types**: `lib/supabase/database.ts` (auto-generated)
+- **Sync frequency**: Daily at 2 AM UTC via GitHub Actions
+- **Documentation**: See [SCHEMA_SYNC.md](SCHEMA_SYNC.md) for details
+
+This ensures the repository always reflects the authoritative database schema, with all changes tracked in Git.
 
 ### Core Tables
 - **snapshots** — Tracks when data was collected (auto-collected on dashboard visits)
