@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
+import { SparklineInfo } from "@/components/charts/sparkline-info";
 
 interface Artist {
   id: string;
@@ -33,6 +33,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
       itemsByTimeRange={artistsByTimeRange}
       itemType="artist"
       className="w-full"
+      tabsRightContent={<SparklineInfo />}
       renderItems={(artists, sparklines, loading) => (
         <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {artists.map((artist, index) => (
@@ -64,13 +65,21 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                   </span>
                   <div className="flex-1 min-w-0">
                     <Link href={`/dashboard/artists/${artist.id}`}>
-                      <p className="truncate font-semibold text-lg">
-                        {artist.name}
-                        <RankBadgeInline currentRank={artist.rank} previousRank={artist.previous_rank ?? null} />
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="truncate font-semibold text-lg flex-1 min-w-0">
+                          {artist.name}
+                        </p>
+                        <div className="shrink-0">
+                          <InlineSparkline itemId={artist.id} sparklinesByItemId={sparklines} isLoading={loading} />
+                        </div>
+                      </div>
                     </Link>
                   </div>
-                  <InlineSparkline itemId={artist.id} sparklinesByItemId={sparklines} isLoading={loading} />
+                  <RankBadgeInline
+                    currentRank={artist.rank}
+                    previousRank={artist.previous_rank ?? null}
+                    className="ml-0"
+                  />
                 </div>
                 <a
                   href={`https://open.spotify.com/artist/${artist.id}`}

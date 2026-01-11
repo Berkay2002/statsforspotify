@@ -7,6 +7,7 @@ import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
+import { SparklineInfo } from "@/components/charts/sparkline-info";
 
 interface Album {
   id: string;
@@ -32,6 +33,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
       itemsByTimeRange={albumsByTimeRange}
       itemType="album"
       className="w-full"
+      tabsRightContent={<SparklineInfo />}
       renderItems={(albums, sparklines, loading) => (
         <div className="space-y-2">
           {albums.map((album, index) => (
@@ -39,7 +41,11 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
               <div className="p-3 px-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 flex flex-col items-center justify-center shrink-0">
-                    <InlineSparkline itemId={album.id} sparklinesByItemId={sparklines} isLoading={loading} />
+                    <RankBadgeInline
+                      currentRank={album.rank}
+                      previousRank={album.previous_rank ?? null}
+                      className="ml-0"
+                    />
                     <span className="text-xl font-bold text-muted-foreground">
                       {album.rank}
                     </span>
@@ -61,10 +67,14 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
                       <div className="h-16 w-16 rounded-lg bg-muted shrink-0" />
                     )}
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <p className="truncate font-semibold text-base">
-                        {album.name}
-                        <RankBadgeInline currentRank={album.rank} previousRank={album.previous_rank ?? null} />
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="truncate font-semibold text-base flex-1 min-w-0">
+                          {album.name}
+                        </p>
+                        <div className="shrink-0">
+                          <InlineSparkline itemId={album.id} sparklinesByItemId={sparklines} isLoading={loading} />
+                        </div>
+                      </div>
                       <p className="truncate text-sm text-muted-foreground max-w-75 sm:max-w-100 md:max-w-125">
                         {album.artistName}
                       </p>

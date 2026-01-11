@@ -7,6 +7,7 @@ import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
+import { SparklineInfo } from "@/components/charts/sparkline-info";
 
 interface Track {
   id: string;
@@ -39,6 +40,7 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
       itemsByTimeRange={tracksByTimeRange}
       itemType="track"
       className="w-full"
+      tabsRightContent={<SparklineInfo />}
       renderItems={(tracks, sparklines, loading) => (
         <div className="space-y-2">
           {tracks.map((track, index) => (
@@ -46,7 +48,11 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
               <div className="p-3 px-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 flex flex-col items-center justify-center shrink-0">
-                    <InlineSparkline itemId={track.id} sparklinesByItemId={sparklines} isLoading={loading} />
+                    <RankBadgeInline
+                      currentRank={track.rank}
+                      previousRank={track.previous_rank ?? null}
+                      className="ml-0"
+                    />
                     <span className="text-xl font-bold text-muted-foreground">
                       {track.rank}
                     </span>
@@ -68,10 +74,14 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
                       <div className="h-16 w-16 rounded-lg bg-muted shrink-0" />
                     )}
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <p className="truncate font-semibold text-base">
-                        {track.name}
-                        <RankBadgeInline currentRank={track.rank} previousRank={track.previous_rank ?? null} />
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="truncate font-semibold text-base flex-1 min-w-0">
+                          {track.name}
+                        </p>
+                        <div className="shrink-0">
+                          <InlineSparkline itemId={track.id} sparklinesByItemId={sparklines} isLoading={loading} />
+                        </div>
+                      </div>
                       <p className="truncate text-sm text-muted-foreground max-w-75 sm:max-w-100 md:max-w-125">
                         {track.artistName} • {track.albumName}
                       </p>
