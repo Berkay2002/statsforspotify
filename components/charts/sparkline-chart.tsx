@@ -2,6 +2,7 @@
 
 import React from "react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { getRankMovementFromSeries } from "@/lib/rank-change";
 
 interface SparklineChartProps {
   data: { date: string; rank: number }[];
@@ -30,17 +31,16 @@ const SparklineChart = React.memo(
     // Determine trend color
     let strokeColor = color;
     if (showTrend && data.length >= 2) {
-      const firstRank = data[0].rank;
-      const lastRank = data[data.length - 1].rank;
-      
-      if (lastRank < firstRank) {
-        // Improved (lower rank number = better position)
+      const movement = getRankMovementFromSeries({
+        ranks: data.map((point) => point.rank),
+        comparison: "window",
+      });
+
+      if (movement?.movement === "improved") {
         strokeColor = "hsl(var(--chart-2))"; // green
-      } else if (lastRank > firstRank) {
-        // Declined (higher rank number = worse position)
+      } else if (movement?.movement === "declined") {
         strokeColor = "hsl(var(--destructive))"; // red
-      } else {
-        // Stable
+      } else if (movement?.movement === "unchanged") {
         strokeColor = "hsl(var(--muted-foreground))"; // neutral
       }
     }

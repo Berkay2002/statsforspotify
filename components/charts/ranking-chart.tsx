@@ -11,6 +11,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import type { RankingHistory } from "@/lib/spotify/types";
+import { getRankDelta } from "@/lib/rank-change";
 
 // Define theme-aware colors for rank changes
 const RANK_CHANGE_COLORS = {
@@ -55,7 +56,7 @@ export function RankingChart({
     const previousEntry = index > 0 ? data[index - 1] : null;
     const previousRank =
       item.isNewEntry || item.isReentry ? null : (previousEntry?.rank ?? null);
-    const rankChange = typeof previousRank === "number" ? previousRank - item.rank : 0;
+    const rankChange = getRankDelta({ previousRank, currentRank: item.rank }) ?? 0;
     const isSignificant = typeof previousRank === "number" && Math.abs(rankChange) >= 5;
     
     const point: RankingChartPoint = {

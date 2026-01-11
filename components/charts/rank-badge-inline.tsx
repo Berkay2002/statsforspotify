@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { getRankMovement } from "@/lib/rank-change";
 
 interface RankBadgeInlineProps {
   currentRank: number;
@@ -18,19 +19,17 @@ export default function RankBadgeInline({
   previousRank, 
   className 
 }: RankBadgeInlineProps) {
-  // New entry (no previous rank)
-  if (previousRank === null || previousRank === undefined) {
+  const { movement, delta } = getRankMovement({ previousRank, currentRank });
+
+  if (movement === "new") {
     return (
       <span className={cn("text-xs font-medium text-blue-600 dark:text-blue-400 ml-2", className)}>
         NEW
       </span>
     );
   }
-  
-  const change = previousRank - currentRank; // Positive = improved (lower rank number is better)
-  
-  // No change
-  if (change === 0) {
+
+  if (movement === "unchanged") {
     return (
       <span className={cn("text-xs text-muted-foreground ml-2", className)}>
         —
@@ -39,15 +38,15 @@ export default function RankBadgeInline({
   }
   
   // Improved or declined
-  const isImprovement = change > 0;
+  const isImprovement = movement === "improved";
   const arrow = isImprovement ? "↑" : "↓";
-  const colorClass = isImprovement 
+  const colorClass = isImprovement
     ? "text-green-600 dark:text-green-400" 
     : "text-red-600 dark:text-red-400";
   
   return (
     <span className={cn("text-xs font-medium ml-2", colorClass, className)}>
-      {arrow}{Math.abs(change)}
+      {arrow}{Math.abs(delta ?? 0)}
     </span>
   );
 }

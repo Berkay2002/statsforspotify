@@ -8,6 +8,7 @@ import {
   SPARKLINE_CACHE_INVALIDATION_EVENT_NAME,
   type SparklinesByItemId,
 } from "@/components/charts/sparkline-cache";
+import { getRankMovementFromSeries } from "@/lib/rank-change";
 
 interface SparklineLoaderProps {
   itemIds: string[];
@@ -132,12 +133,16 @@ export function InlineSparkline({ itemId, sparklinesByItemId, isLoading }: Inlin
     return null;
   }
 
-  const firstRank = sparklinePoints[0].rank;
-  const lastRank = sparklinePoints[sparklinePoints.length - 1].rank;
-  
-  // Lower rank number = better position (went up)
-  // Higher rank number = worse position (went down)
-  if (lastRank < firstRank) {
+  const movement = getRankMovementFromSeries({
+    ranks: sparklinePoints.map((point) => point.rank),
+    comparison: "window",
+  });
+
+  if (!movement || movement.movement === "unchanged") {
+    return null;
+  }
+
+  if (movement.movement === "improved") {
     return (
       <div className="flex items-center justify-center text-green-500">
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -145,7 +150,9 @@ export function InlineSparkline({ itemId, sparklinesByItemId, isLoading }: Inlin
         </svg>
       </div>
     );
-  } else if (lastRank > firstRank) {
+  }
+
+  if (movement.movement === "declined") {
     return (
       <div className="flex items-center justify-center text-red-500">
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
