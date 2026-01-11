@@ -1,11 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, Mic2, Music, Waves, UserPlus, Moon, Sun } from "lucide-react";
+import { Disc3, LayoutDashboard, Mic2, Music, UserPlus, Waves } from "lucide-react";
 import { ExpandableTabs } from "@/components/ui/expandable-tabs";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "next-themes";
 
 interface NavigationTab {
   title: string;
@@ -34,6 +33,11 @@ const navigationTabs: NavigationTab[] = [
     href: "/dashboard/tracks",
   },
   {
+    title: "Albums",
+    icon: Disc3,
+    href: "/dashboard/albums",
+  },
+  {
     title: "Genres",
     icon: Waves,
     href: "/dashboard/genres",
@@ -47,31 +51,18 @@ const navigationTabs: NavigationTab[] = [
 
 export function MobileNavigation({ className }: MobileNavigationProps = {}) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
 
   const handleTabChange = (index: number | null) => {
     if (index !== null) {
-      const isThemeTab = index === navigationTabs.length;
-      if (isThemeTab) {
-        setTheme(theme === "dark" ? "light" : "dark");
-      } else {
-        const selectedTab = navigationTabs[index];
-        router.push(selectedTab.href);
-      }
+      const selectedTab = navigationTabs[index];
+      router.push(selectedTab.href);
     }
   };
 
-  // Map navigation tabs to expandable tabs format, plus theme toggle
-  const tabs = [
-    ...navigationTabs.map((tab) => ({
-      title: tab.title,
-      icon: tab.icon,
-    })),
-    {
-      title: "Theme",
-      icon: theme === "dark" ? Moon : Sun,
-    },
-  ];
+  const tabs = navigationTabs.map((tab) => ({
+    title: tab.title,
+    icon: tab.icon,
+  }));
 
   return (
     <div className={cn("sticky top-0 z-20 bg-linear-to-b from-background via-background/95 to-background/0 backdrop-blur supports-backdrop-filter:bg-background/60", className)}>
