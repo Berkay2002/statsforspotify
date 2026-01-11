@@ -114,7 +114,13 @@ export function RankingChart({
                   <div className="text-sm font-semibold flex items-center gap-2 mb-1">
                     <span className="text-foreground">Rank #{data.rank}</span>
                     {rankChange !== 0 && (
-                      <span className={rankChange > 0 ? "text-chart-1" : "text-destructive"}>
+                      <span
+                        className={
+                          rankChange > 0
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }
+                      >
                          {rankChange > 0 ? "↑" : "↓"}{Math.abs(rankChange)}
                       </span>
                     )}

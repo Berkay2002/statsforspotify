@@ -8,7 +8,7 @@ import {
   SPARKLINE_CACHE_INVALIDATION_EVENT_NAME,
   type SparklinesByItemId,
 } from "@/components/charts/sparkline-cache";
-import { getRankMovementFromSeries } from "@/lib/rank-change";
+import SparklineChart from "@/components/charts/sparkline-chart";
 
 interface SparklineLoaderProps {
   itemIds: string[];
@@ -133,34 +133,15 @@ export function InlineSparkline({ itemId, sparklinesByItemId, isLoading }: Inlin
     return null;
   }
 
-  const movement = getRankMovementFromSeries({
-    ranks: sparklinePoints.map((point) => point.rank),
-    comparison: "window",
-  });
-
-  if (!movement || movement.movement === "unchanged") {
-    return null;
-  }
-
-  if (movement.movement === "improved") {
-    return (
-      <div className="flex items-center justify-center text-green-500">
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-        </svg>
-      </div>
-    );
-  }
-
-  if (movement.movement === "declined") {
-    return (
-      <div className="flex items-center justify-center text-red-500">
-        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </div>
-    );
-  }
-  
-  return null;
+  return (
+    <div className="flex items-center justify-center">
+      <SparklineChart
+        data={sparklinePoints}
+        width={32}
+        height={16}
+        color="var(--muted-foreground)"
+        showTrend={false}
+      />
+    </div>
+  );
 }

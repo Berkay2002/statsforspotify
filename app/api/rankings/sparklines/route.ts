@@ -82,6 +82,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Ensure stable chronological ordering per item (defensive against any upstream ordering changes)
+    for (const sparklinePoints of Object.values(sparklines)) {
+      sparklinePoints.sort((firstPoint, secondPoint) => {
+        return new Date(firstPoint.date).getTime() - new Date(secondPoint.date).getTime();
+      });
+    }
+
     const response: SparklineResponse = {
       sparklines,
     };

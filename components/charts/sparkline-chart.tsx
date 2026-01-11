@@ -10,15 +10,19 @@ interface SparklineChartProps {
   height?: number;
   color?: string;
   showTrend?: boolean;
+  invertRankForDisplay?: boolean;
 }
+
+type SparklineChartPoint = { date: string; rank: number; displayRank?: number };
 
 const SparklineChart = React.memo(
   ({
     data,
     width = 64,
     height = 24,
-    color = "hsl(var(--primary))",
+    color = "var(--primary)",
     showTrend = true,
+    invertRankForDisplay = true,
   }: SparklineChartProps) => {
     if (!data || data.length === 0) {
       return (
@@ -27,6 +31,10 @@ const SparklineChart = React.memo(
         </div>
       );
     }
+
+    const chartData: SparklineChartPoint[] = invertRankForDisplay
+      ? data.map((point) => ({ ...point, displayRank: 51 - point.rank }))
+      : data;
 
     // Determine trend color
     let strokeColor = color;
@@ -37,21 +45,21 @@ const SparklineChart = React.memo(
       });
 
       if (movement?.movement === "improved") {
-        strokeColor = "hsl(var(--chart-2))"; // green
+        strokeColor = "var(--chart-1)";
       } else if (movement?.movement === "declined") {
-        strokeColor = "hsl(var(--destructive))"; // red
+        strokeColor = "var(--destructive)";
       } else if (movement?.movement === "unchanged") {
-        strokeColor = "hsl(var(--muted-foreground))"; // neutral
+        strokeColor = "var(--muted-foreground)";
       }
     }
 
     return (
       <div style={{ width, height }} className="flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={chartData}>
             <Line
               type="monotone"
-              dataKey="rank"
+              dataKey={invertRankForDisplay ? "displayRank" : "rank"}
               stroke={strokeColor}
               strokeWidth={1.5}
               dot={false}
