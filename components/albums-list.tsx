@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
@@ -34,50 +33,61 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
       itemType="album"
       className="w-full"
       renderItems={(albums, sparklines, loading) => (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="space-y-2">
           {albums.map((album, index) => (
-            <Link key={album.id} href={`/dashboard/albums/${album.id}`}>
-              <Card className="transition-colors hover:bg-muted/50">
-                <CardContent className="p-4">
-                  <div className="flex flex-col items-center text-center">
-                    <div className="self-start flex items-center gap-2">
-                      <span className="text-lg font-bold text-muted-foreground">
-                        {album.rank}
-                      </span>
-                      <InlineSparkline itemId={album.id} sparklinesByItemId={sparklines} isLoading={loading} />
-                    </div>
+            <div key={album.id} className="bg-transparent transition-colors hover:bg-muted/30 rounded-md">
+              <div className="p-3 px-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 flex flex-col items-center justify-center shrink-0">
+                    <InlineSparkline itemId={album.id} sparklinesByItemId={sparklines} isLoading={loading} />
+                    <span className="text-xl font-bold text-muted-foreground">
+                      {album.rank}
+                    </span>
+                  </div>
+                  <Link href={`/dashboard/albums/${album.id}`} className="flex items-center gap-3 flex-1 min-w-0">
                     {album.imageUrl ? (
                       <Image
                         src={album.imageUrl}
                         alt={album.name}
-                        width={120}
-                        height={120}
-                        className="rounded-lg object-cover shadow-md"
-                        sizes="120px"
-                        loading={index < 8 ? "eager" : "lazy"}
-                        priority={index < 4}
+                        width={64}
+                        height={64}
+                        className="rounded-lg object-cover shrink-0"
+                        loading={index < 10 ? "eager" : "lazy"}
+                        priority={index < 5}
                         placeholder="blur"
-                        blurDataURL={BLUR_DATA_URL.LARGE}
+                        blurDataURL={BLUR_DATA_URL.SMALL}
                       />
                     ) : (
-                      <div className="h-30 w-30 rounded-lg bg-muted" />
+                      <div className="h-16 w-16 rounded-lg bg-muted shrink-0" />
                     )}
-                    <div className="mt-3 w-full">
-                      <p className="truncate font-semibold">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <p className="truncate font-semibold text-base">
                         {album.name}
                         <RankBadgeInline currentRank={album.rank} previousRank={album.previous_rank ?? null} />
                       </p>
-                      <p className="truncate text-sm text-muted-foreground">
+                      <p className="truncate text-sm text-muted-foreground max-w-75 sm:max-w-100 md:max-w-125">
                         {album.artistName}
                       </p>
-                      <Badge variant="secondary" className="mt-2">
-                        {album.trackCount} {album.trackCount === 1 ? "track" : "tracks"} in your top
-                      </Badge>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </Link>
+                  <span
+                    className="text-sm text-muted-foreground shrink-0 hidden sm:block"
+                    title="Tracks from this album in your top tracks"
+                  >
+                    {album.trackCount} top tracks
+                  </span>
+                  <a
+                    href={`https://open.spotify.com/album/${album.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#1DB954] hover:text-[#1ed760] transition-colors p-2"
+                    title="Open on Spotify"
+                  >
+                    <SpotifyIcon />
+                  </a>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -14,9 +14,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronsUpDown, User, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut, Moon, Sun, User } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
+import { useTheme } from "next-themes";
 
 type UserInfo = {
   name: string;
@@ -26,6 +27,8 @@ type UserInfo = {
 
 export function UserMenu({ user }: { user: UserInfo }) {
   const { isMobile } = useSidebar();
+  const { theme, setTheme } = useTheme();
+  const isDarkTheme = theme === "dark";
 
   return (
     <SidebarMenu>
@@ -60,6 +63,20 @@ export function UserMenu({ user }: { user: UserInfo }) {
                 <User className="mr-2 h-4 w-4" />
                 Profile & Settings
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                setTheme(isDarkTheme ? "light" : "dark");
+              }}
+              className="cursor-pointer"
+            >
+              {isDarkTheme ? (
+                <Sun className="mr-2 h-4 w-4" />
+              ) : (
+                <Moon className="mr-2 h-4 w-4" />
+              )}
+              Theme
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

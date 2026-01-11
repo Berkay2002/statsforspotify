@@ -6,15 +6,11 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarTrigger,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Users, Music, Music2, Moon, Sun, UserPlus } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Disc3, LayoutDashboard, Music, Music2, UserPlus, Users } from "lucide-react";
 import { SpotifyBrand } from "@/components/spotify-stats-logo";
 import { SidebarNavigation, type NavRoute } from "@/components/sidebar-navigation";
 import { UserMenu } from "@/components/user-menu";
@@ -37,6 +33,12 @@ const navRoutes: NavRoute[] = [
     title: "Tracks",
     icon: <Music className="size-4" />,
     href: "/dashboard/tracks",
+  },
+  {
+    id: "albums",
+    title: "Albums",
+    icon: <Disc3 className="size-4" />,
+    href: "/dashboard/albums",
   },
   {
     id: "genres",
@@ -62,7 +64,6 @@ interface AppSidebarProps {
 
 export function AppSidebar({ user }: AppSidebarProps) {
   const { state } = useSidebar();
-  const { theme, setTheme } = useTheme();
   const isCollapsed = state === "collapsed";
 
   return (
@@ -98,18 +99,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
         <SidebarNavigation routes={navRoutes} />
       </SidebarContent>
       <SidebarFooter className="px-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              tooltip="Toggle theme"
-            >
-              <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-              {!isCollapsed && <span>Theme</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
         <UserMenu user={user} />
       </SidebarFooter>
     </Sidebar>

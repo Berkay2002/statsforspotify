@@ -2,120 +2,116 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTopAlbums, getTopTracks } from "@/lib/spotify/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { TopTracksSection } from "@/components/detail/top-tracks-section";
+import { ArrowLeft, Play } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function AlbumDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id: albumId } = await params;
 
-  // Get albums and tracks
-  const [albums, tracks] = await Promise.all([
-    getTopAlbums("medium_term", 50),
-    getTopTracks("medium_term", 50),
-  ]);
+  const tracks = await getTopTracks("medium_term", 50);
+  const albums = await getTopAlbums("medium_term", 50, tracks);
   
-  const album = albums.find((albumItem) => albumItem.id === id);
+  const album = albums.find((albumItem) => albumItem.id === albumId);
 
   if (!album) {
     notFound();
   }
 
-  // Get tracks from this album that are in user's top tracks
-  const albumTracks = tracks.filter((track) => track.albumId === id);
+  const albumTracks = tracks
+    .filter((track) => track.albumId === albumId)
+    .map((track) => ({
+      rank: track.rank,
+      id: track.id,
+      name: track.name,
+      imageUrl: track.imageUrl,
+      subtitle: track.artistName,
+      durationMs: track.durationMs,
+      popularity: track.popularity,
+    }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/albums">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{album.name}</h1>
-          <p className="text-muted-foreground">Album Details</p>
+    <div className="space-y-0 -mt-6 -mx-6 pb-6">
+      <div className="relative h-[500px] overflow-hidden">
+        <div className="absolute inset-0">
+          {album.imageUrl ? (
+            <>
+              <Image
+                src={album.imageUrl}
+                alt={album.name}
+                fill
+                className="object-cover object-center"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/60 to-background" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
+          )}
+        </div>
+
+        <div className="relative h-full flex flex-col justify-end px-6 pb-8">
+          <div className="absolute top-6 left-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              asChild
+            >
+              <Link href="/dashboard/albums">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="space-y-6">
+            <h1 className="text-7xl font-bold text-white tracking-tight">
+              {album.name}
+            </h1>
+
+            <div className="flex items-center gap-6 text-white text-base">
+              <span className="font-semibold">{album.artistName}</span>
+              <span className="text-white/60">•</span>
+              <span className="font-medium">
+                {album.trackCount} {album.trackCount === 1 ? "track" : "tracks"}{" "}
+                in your top 50
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Album Info Card */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-              {album.imageUrl ? (
-                <Image
-                  src={album.imageUrl}
-                  alt={album.name}
-                  width={180}
-                  height={180}
-                  className="rounded-lg object-cover shadow-lg"
-                />
-              ) : (
-                <div className="h-[180px] w-[180px] rounded-lg bg-muted" />
-              )}
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex items-center justify-center gap-2 sm:justify-start">
-                  <Badge variant="default" className="text-lg px-3 py-1">
-                    #{album.rank}
-                  </Badge>
-                </div>
-                <h2 className="mt-3 text-2xl font-bold">{album.name}</h2>
-                <p className="mt-1 text-lg text-muted-foreground">
-                  {album.artistName}
-                </p>
-                <div className="mt-3">
-                  <Badge variant="secondary">
-                    {album.trackCount} {album.trackCount === 1 ? "track" : "tracks"} in your top 50
-                  </Badge>
-                </div>
-                <Button className="mt-4" asChild>
-                  <a
-                    href={`https://open.spotify.com/album/${album.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open in Spotify
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Ranking History Chart */}
-        <RankingHistoryLoader itemId={id} itemType="album" />
+      <div className="px-6 pt-6 flex items-center gap-4">
+        <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
+          <a
+            href={`https://open.spotify.com/album/${album.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Play on Spotify"
+          >
+            <Play className="h-6 w-6 fill-current" />
+          </a>
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          className="rounded-full px-8"
+          asChild
+        >
+          <Link href={`/dashboard/artists/${album.artistId}`}>View Artist</Link>
+        </Button>
       </div>
 
-      {/* Tracks from this album in user's top tracks */}
-      {albumTracks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Top Tracks from this Album</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {albumTracks.map((track) => (
-                <Link
-                  key={track.id}
-                  href={`/dashboard/tracks/${track.id}`}
-                  className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted"
-                >
-                  <Badge variant="outline">#{track.rank}</Badge>
-                  <span className="font-medium">{track.name}</span>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <TopTracksSection title="My Top Tracks" tracks={albumTracks} />
+
+      <div className="px-6 pt-8">
+        <RankingHistoryLoader itemId={albumId} itemType="album" />
+      </div>
     </div>
   );
 }

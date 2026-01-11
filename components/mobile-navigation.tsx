@@ -1,8 +1,7 @@
 "use client";
 
-import * as React from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Mic2, Music, Waves, UserPlus, Settings, Moon, Sun } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LayoutDashboard, Mic2, Music, Waves, UserPlus, Moon, Sun } from "lucide-react";
 import { ExpandableTabs } from "@/components/ui/expandable-tabs";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,11 +43,6 @@ const navigationTabs: NavigationTab[] = [
     icon: UserPlus,
     href: "/dashboard/friends",
   },
-  {
-    title: "Profile",
-    icon: Settings,
-    href: "/profile",
-  },
 ];
 
 export function MobileNavigation({ className }: MobileNavigationProps = {}) {
@@ -57,12 +51,11 @@ export function MobileNavigation({ className }: MobileNavigationProps = {}) {
 
   const handleTabChange = (index: number | null) => {
     if (index !== null) {
-      const selectedTab = navigationTabs[index];
-      
-      // Handle theme toggle separately (it's the last tab)
-      if (index === navigationTabs.length) {
+      const isThemeTab = index === navigationTabs.length;
+      if (isThemeTab) {
         setTheme(theme === "dark" ? "light" : "dark");
       } else {
+        const selectedTab = navigationTabs[index];
         router.push(selectedTab.href);
       }
     }

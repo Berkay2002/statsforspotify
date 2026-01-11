@@ -2,11 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTopTracks } from "@/lib/spotify/api";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
-import { ArrowLeft, ExternalLink, Clock } from "lucide-react";
+import { TopTracksSection } from "@/components/detail/top-tracks-section";
+import { ArrowLeft, Play } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -19,90 +18,112 @@ function formatDuration(durationMilliseconds: number): string {
 }
 
 export default async function TrackDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id: trackId } = await params;
 
-  // Get current track from Spotify
   const tracks = await getTopTracks("medium_term", 50);
-  const track = tracks.find((trackItem) => trackItem.id === id);
+  const track = tracks.find((trackItem) => trackItem.id === trackId);
 
   if (!track) {
     notFound();
   }
 
+  const relatedTracks = tracks
+    .filter((trackItem) => trackItem.albumId === track.albumId && trackItem.id !== track.id)
+    .map((trackItem) => ({
+      rank: trackItem.rank,
+      id: trackItem.id,
+      name: trackItem.name,
+      imageUrl: trackItem.imageUrl,
+      subtitle: trackItem.artistName,
+      durationMs: trackItem.durationMs,
+      popularity: trackItem.popularity,
+    }));
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/tracks">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{track.name}</h1>
-          <p className="text-muted-foreground">Track Details</p>
+    <div className="space-y-0 -mt-6 -mx-6 pb-6">
+      <div className="relative h-[500px] overflow-hidden">
+        <div className="absolute inset-0">
+          {track.imageUrl ? (
+            <>
+              <Image
+                src={track.imageUrl}
+                alt={track.name}
+                fill
+                className="object-cover object-center"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/60 to-background" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
+          )}
+        </div>
+
+        <div className="relative h-full flex flex-col justify-end px-6 pb-8">
+          <div className="absolute top-6 left-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/20"
+              asChild
+            >
+              <Link href="/dashboard/tracks">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="space-y-6">
+            <h1 className="text-7xl font-bold text-white tracking-tight">
+              {track.name}
+            </h1>
+
+            <div className="flex flex-wrap items-center gap-3 text-white text-base">
+              <span className="font-semibold">{track.artistName}</span>
+              <span className="text-white/60">•</span>
+              <span className="font-medium">{track.albumName}</span>
+              <span className="text-white/60">•</span>
+              <span className="font-medium tabular-nums">
+                {formatDuration(track.durationMs)}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Track Info Card */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-              {track.imageUrl ? (
-                <Image
-                  src={track.imageUrl}
-                  alt={track.name}
-                  width={160}
-                  height={160}
-                  className="rounded-lg object-cover shadow-lg"
-                />
-              ) : (
-                <div className="h-40 w-40 rounded-lg bg-muted" />
-              )}
-              <div className="flex-1 text-center sm:text-left">
-                <div className="flex items-center justify-center gap-2 sm:justify-start">
-                  <Badge variant="default" className="text-lg px-3 py-1">
-                    #{track.rank}
-                  </Badge>
-                </div>
-                <h2 className="mt-3 text-2xl font-bold">{track.name}</h2>
-                <p className="mt-1 text-lg text-muted-foreground">
-                  {track.artistName}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {track.albumName}
-                </p>
-                <div className="mt-4 flex items-center justify-center gap-4 text-sm text-muted-foreground sm:justify-start">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {formatDuration(track.durationMs)}
-                  </span>
-                  <span>Popularity: {track.popularity}/100</span>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start">
-                  <Button asChild>
-                    <a
-                      href={`https://open.spotify.com/track/${track.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open in Spotify
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href={`/dashboard/albums/${track.albumId}`}>
-                      View Album
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="px-6 pt-6 flex items-center gap-4">
+        <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
+          <a
+            href={`https://open.spotify.com/track/${track.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Play on Spotify"
+          >
+            <Play className="h-6 w-6 fill-current" />
+          </a>
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          className="rounded-full px-8"
+          asChild
+        >
+          <Link href={`/dashboard/albums/${track.albumId}`}>View Album</Link>
+        </Button>
+        <Button
+          variant="outline"
+          size="lg"
+          className="rounded-full px-8"
+          asChild
+        >
+          <Link href={`/dashboard/artists/${track.artistId}`}>View Artist</Link>
+        </Button>
+      </div>
 
-        {/* Ranking History Chart */}
-        <RankingHistoryLoader itemId={id} itemType="track" />
+      <TopTracksSection title="More from this Album" tracks={relatedTracks} />
+
+      <div className="px-6 pt-8">
+        <RankingHistoryLoader itemId={trackId} itemType="track" />
       </div>
     </div>
   );
