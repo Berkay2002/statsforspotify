@@ -101,102 +101,16 @@ COMMENT ON FUNCTION "public"."check_friendship_status"("p_user_id_1" "uuid", "p_
 
 CREATE OR REPLACE FUNCTION "public"."create_user_profile_on_signup"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
-DECLARE
-  v_spotify_username TEXT;
-  v_display_name TEXT;
-  v_avatar_url TEXT;
-  v_discriminator TEXT;
-  v_max_retries INT := 10;
-  v_retry_count INT := 0;
-  v_unique_found BOOLEAN := FALSE;
 BEGIN
-  -- Only process Spotify auth signups
-  IF NEW.raw_app_meta_data->>'provider' = 'spotify' THEN
-    -- Extract Spotify user data from identities (with fallback to raw_user_meta_data)
-    -- The 'sub' claim contains the Spotify USERNAME, not the user ID
-    SELECT 
-      COALESCE(identity_data->>'sub', NEW.raw_user_meta_data->>'provider_id'),
-      COALESCE(
-        identity_data->>'name', 
-        identity_data->>'full_name',
-        NEW.raw_user_meta_data->>'name',
-        NEW.raw_user_meta_data->>'full_name',
-        'User'
-      ),
-      COALESCE(
-        identity_data->'picture'->>'url',
-        NEW.raw_user_meta_data->'picture'->>'url'
-      )
-    INTO 
-      v_spotify_username,
-      v_display_name,
-      v_avatar_url
-    FROM auth.identities
-    WHERE user_id = NEW.id 
-    AND provider = 'spotify'
-    LIMIT 1;
-    
-    -- Fallback if identity not found yet
-    IF v_spotify_username IS NULL THEN
-      v_spotify_username := NEW.raw_user_meta_data->>'provider_id';
-      v_display_name := COALESCE(
-        NEW.raw_user_meta_data->>'name',
-        NEW.raw_user_meta_data->>'full_name',
-        'User'
-      );
-      v_avatar_url := NEW.raw_user_meta_data->'picture'->>'url';
-    END IF;
-    
-    -- Generate unique discriminator with retry logic
-    WHILE NOT v_unique_found AND v_retry_count < v_max_retries LOOP
-      v_discriminator := LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0');
-      
-      -- Check if this discriminator is unique for this display name
-      IF NOT EXISTS (
-        SELECT 1 FROM public.user_profiles 
-        WHERE display_name = v_display_name 
-        AND discriminator = v_discriminator
-      ) THEN
-        v_unique_found := TRUE;
-      ELSE
-        v_retry_count := v_retry_count + 1;
-      END IF;
-    END LOOP;
-    
-    -- If we couldn't find a unique discriminator, use a timestamp-based one
-    IF NOT v_unique_found THEN
-      v_discriminator := LPAD((EXTRACT(EPOCH FROM NOW())::BIGINT % 10000)::TEXT, 4, '0');
-    END IF;
-    
-    -- Insert user profile
-    -- spotify_user_name gets the username from OAuth
-    -- spotify_user_id will be NULL initially, auth callback will fetch the real ID from Spotify API
-    INSERT INTO public.user_profiles (
-      user_id,
-      spotify_user_name,
-      spotify_user_id,
-      display_name,
-      discriminator,
-      avatar_url,
-      stats_visibility
-    ) VALUES (
-      NEW.id,
-      v_spotify_username,  -- Username from OAuth (e.g., "ludwig100")
-      NULL,                -- Real ID will be fetched by auth callback from /me endpoint
-      v_display_name,
-      v_discriminator,
-      v_avatar_url,
-      'followers'
-    ) ON CONFLICT (user_id) DO NOTHING;
-  END IF;
-  
+  INSERT INTO public.user_profiles (id, username, discriminator)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'display_name', 'User'),
+    generate_discriminator()
+  );
   RETURN NEW;
-EXCEPTION
-  WHEN OTHERS THEN
-    -- Log the error but don't fail the user creation
-    RAISE WARNING 'Failed to create user profile for user %: %', NEW.id, SQLERRM;
-    RETURN NEW;
 END;
 $$;
 
@@ -297,8 +211,25 @@ $$;
 ALTER FUNCTION "public"."export_user_data"("target_user_id" "uuid") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."generate_discriminator"() RETURNS "text"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  result TEXT;
+BEGIN
+  result := LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0');
+  RETURN result;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."generate_discriminator"() OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."generate_discriminator"("p_display_name" "text") RETURNS "text"
-    LANGUAGE "plpgsql"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 DECLARE
   v_discriminator TEXT;
@@ -331,9 +262,12 @@ ALTER FUNCTION "public"."generate_discriminator"("p_display_name" "text") OWNER 
 
 
 CREATE OR REPLACE FUNCTION "public"."get_date_only"("timestamp_val" timestamp with time zone) RETURNS "date"
-    LANGUAGE "sql" IMMUTABLE
+    LANGUAGE "plpgsql" IMMUTABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
-  SELECT timestamp_val::date;
+BEGIN
+  RETURN timestamp_val::DATE;
+END;
 $$;
 
 
@@ -359,8 +293,9 @@ $$;
 ALTER FUNCTION "public"."get_latest_snapshot"("target_user_id" "uuid", "target_time_range" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item_id" "text", "p_item_type" "text", "p_time_range" "text" DEFAULT NULL::"text") RETURNS TABLE("date" timestamp with time zone, "rank" integer, "is_new_entry" boolean, "is_reentry" boolean, "peak_rank" integer, "time_range" "text")
-    LANGUAGE "plpgsql"
+CREATE OR REPLACE FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item_id" "text", "p_item_type" "text", "p_time_range" "text") RETURNS TABLE("date" timestamp with time zone, "rank" integer, "is_new_entry" boolean, "is_reentry" boolean, "peak_rank" integer, "time_range" "text")
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $_$
 BEGIN
   RETURN QUERY
@@ -410,12 +345,52 @@ $_$;
 ALTER FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item_id" "text", "p_item_type" "text", "p_time_range" "text") OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item_id" "text", "p_item_type" "text", "p_time_range" "text") IS 'Fetches historical ranking data for a specific item with entry/re-entry detection and peak rank';
+CREATE OR REPLACE FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer DEFAULT 100) RETURNS TABLE("snapshot_id" "uuid", "created_at" timestamp with time zone, "rank" integer, "previous_rank" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+BEGIN
+  IF p_entity_type = 'artist' THEN
+    RETURN QUERY
+    SELECT ar.snapshot_id, s.created_at, ar.rank, ar.previous_rank
+    FROM artist_rankings ar
+    JOIN snapshots s ON ar.snapshot_id = s.id
+    WHERE ar.user_id = p_user_id
+      AND ar.artist_id = p_entity_id
+      AND s.time_range = p_time_range
+    ORDER BY s.created_at DESC
+    LIMIT p_limit;
+  ELSIF p_entity_type = 'track' THEN
+    RETURN QUERY
+    SELECT tr.snapshot_id, s.created_at, tr.rank, tr.previous_rank
+    FROM track_rankings tr
+    JOIN snapshots s ON tr.snapshot_id = s.id
+    WHERE tr.user_id = p_user_id
+      AND tr.track_id = p_entity_id
+      AND s.time_range = p_time_range
+    ORDER BY s.created_at DESC
+    LIMIT p_limit;
+  ELSIF p_entity_type = 'album' THEN
+    RETURN QUERY
+    SELECT alr.snapshot_id, s.created_at, alr.rank, alr.previous_rank
+    FROM album_rankings alr
+    JOIN snapshots s ON alr.snapshot_id = s.id
+    WHERE alr.user_id = p_user_id
+      AND alr.album_id = p_entity_id
+      AND s.time_range = p_time_range
+    ORDER BY s.created_at DESC
+    LIMIT p_limit;
+  END IF;
+END;
+$$;
 
 
+ALTER FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) OWNER TO "postgres";
 
-CREATE OR REPLACE FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer DEFAULT 14) RETURNS TABLE("item_id" "text", "date" timestamp with time zone, "rank" integer)
-    LANGUAGE "plpgsql"
+
+CREATE OR REPLACE FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer) RETURNS TABLE("item_id" "text", "date" timestamp with time zone, "rank" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $_$
 BEGIN
   RETURN QUERY
@@ -462,37 +437,59 @@ $_$;
 ALTER FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer) OWNER TO "postgres";
 
 
-COMMENT ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer) IS 'Batch fetches recent ranking data for multiple items for sparkline visualization';
+CREATE OR REPLACE FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer DEFAULT 30) RETURNS TABLE("created_at" timestamp with time zone, "rank" integer)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+BEGIN
+  IF p_entity_type = 'artist' THEN
+    RETURN QUERY
+    SELECT s.created_at, ar.rank
+    FROM artist_rankings ar
+    JOIN snapshots s ON ar.snapshot_id = s.id
+    WHERE ar.user_id = p_user_id
+      AND ar.artist_id = p_entity_id
+      AND s.time_range = p_time_range
+    ORDER BY s.created_at DESC
+    LIMIT p_limit;
+  ELSIF p_entity_type = 'track' THEN
+    RETURN QUERY
+    SELECT s.created_at, tr.rank
+    FROM track_rankings tr
+    JOIN snapshots s ON tr.snapshot_id = s.id
+    WHERE tr.user_id = p_user_id
+      AND tr.track_id = p_entity_id
+      AND s.time_range = p_time_range
+    ORDER BY s.created_at DESC
+    LIMIT p_limit;
+  ELSIF p_entity_type = 'album' THEN
+    RETURN QUERY
+    SELECT s.created_at, alr.rank
+    FROM album_rankings alr
+    JOIN snapshots s ON alr.snapshot_id = s.id
+    WHERE alr.user_id = p_user_id
+      AND alr.album_id = p_entity_id
+      AND s.time_range = p_time_range
+    ORDER BY s.created_at DESC
+    LIMIT p_limit;
+  END IF;
+END;
+$$;
 
+
+ALTER FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_valid_spotify_user_id"("user_id" "text") RETURNS boolean
-    LANGUAGE "plpgsql" IMMUTABLE
-    AS $_$
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
 BEGIN
-  -- A valid Spotify user ID is typically:
-  -- - Longer than 10 characters
-  -- - Contains alphanumeric characters
-  -- - Does NOT look like a simple username (no special patterns)
-  -- This is not perfect but helps identify obvious usernames
-  
-  IF user_id IS NULL THEN
-    RETURN FALSE;
-  END IF;
-  
-  -- If it's very short, it's likely a username
-  IF LENGTH(user_id) < 10 THEN
-    RETURN FALSE;
-  END IF;
-  
-  -- If it's all lowercase letters, it's likely a username
-  IF user_id ~ '^[a-z0-9_]+$' AND LENGTH(user_id) < 20 THEN
-    RETURN FALSE;
-  END IF;
-  
-  RETURN TRUE;
+  RETURN user_id IS NOT NULL 
+    AND LENGTH(user_id) > 0 
+    AND LENGTH(user_id) <= 255;
 END;
-$_$;
+$$;
 
 
 ALTER FUNCTION "public"."is_valid_spotify_user_id"("user_id" "text") OWNER TO "postgres";
@@ -559,10 +556,11 @@ COMMENT ON FUNCTION "public"."update_artist_listening_stats"() IS 'Updates artis
 
 
 CREATE OR REPLACE FUNCTION "public"."update_spotify_connections_updated_at"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
     AS $$
 BEGIN
-  NEW.updated_at = now();
+  NEW.updated_at = NOW();
   RETURN NEW;
 END;
 $$;
@@ -738,10 +736,6 @@ CREATE OR REPLACE VIEW "public"."profiles_needing_real_user_id" AS
 ALTER VIEW "public"."profiles_needing_real_user_id" OWNER TO "postgres";
 
 
-COMMENT ON VIEW "public"."profiles_needing_real_user_id" IS 'Shows user profiles that need their real Spotify user ID fetched. Users should re-authenticate to get their IDs updated via auth callback.';
-
-
-
 CREATE TABLE IF NOT EXISTS "public"."snapshots" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -889,35 +883,7 @@ ALTER TABLE ONLY "public"."user_profiles"
 
 
 
-CREATE INDEX "idx_album_rankings_album_id" ON "public"."album_rankings" USING "btree" ("album_id");
-
-
-
-CREATE INDEX "idx_album_rankings_created_brin" ON "public"."album_rankings" USING "brin" ("created_at") WITH ("pages_per_range"='128');
-
-
-
-CREATE INDEX "idx_album_rankings_history" ON "public"."album_rankings" USING "btree" ("user_id", "album_id", "created_at" DESC);
-
-
-
-CREATE INDEX "idx_album_rankings_previous_rank" ON "public"."album_rankings" USING "btree" ("previous_rank") WHERE ("previous_rank" IS NOT NULL);
-
-
-
-CREATE INDEX "idx_album_rankings_rank" ON "public"."album_rankings" USING "btree" ("rank");
-
-
-
-CREATE INDEX "idx_album_rankings_snapshot_created" ON "public"."album_rankings" USING "btree" ("snapshot_id", "created_at" DESC);
-
-
-
 CREATE INDEX "idx_album_rankings_snapshot_id" ON "public"."album_rankings" USING "btree" ("snapshot_id");
-
-
-
-CREATE INDEX "idx_album_rankings_user_album" ON "public"."album_rankings" USING "btree" ("user_id", "album_id");
 
 
 
@@ -929,27 +895,7 @@ CREATE INDEX "idx_artist_listening_stats_user_artist" ON "public"."artist_listen
 
 
 
-CREATE INDEX "idx_artist_listening_stats_user_hours" ON "public"."artist_listening_stats" USING "btree" ("user_id", "total_hours_listened" DESC);
-
-
-
-CREATE INDEX "idx_artist_rankings_artist_id" ON "public"."artist_rankings" USING "btree" ("artist_id");
-
-
-
-CREATE INDEX "idx_artist_rankings_created_brin" ON "public"."artist_rankings" USING "brin" ("created_at") WITH ("pages_per_range"='128');
-
-
-
 CREATE INDEX "idx_artist_rankings_history" ON "public"."artist_rankings" USING "btree" ("user_id", "artist_id", "created_at" DESC);
-
-
-
-CREATE INDEX "idx_artist_rankings_previous_rank" ON "public"."artist_rankings" USING "btree" ("previous_rank") WHERE ("previous_rank" IS NOT NULL);
-
-
-
-CREATE INDEX "idx_artist_rankings_rank" ON "public"."artist_rankings" USING "btree" ("rank");
 
 
 
@@ -969,19 +915,7 @@ CREATE INDEX "idx_artist_rankings_user_id" ON "public"."artist_rankings" USING "
 
 
 
-CREATE INDEX "idx_friendships_friend_id" ON "public"."friendships" USING "btree" ("friend_id");
-
-
-
 CREATE INDEX "idx_friendships_friend_status" ON "public"."friendships" USING "btree" ("friend_id", "status");
-
-
-
-CREATE INDEX "idx_friendships_status" ON "public"."friendships" USING "btree" ("status");
-
-
-
-CREATE INDEX "idx_friendships_user_id" ON "public"."friendships" USING "btree" ("user_id");
 
 
 
@@ -997,15 +931,7 @@ CREATE INDEX "idx_snapshots_user_id" ON "public"."snapshots" USING "btree" ("use
 
 
 
-CREATE INDEX "idx_snapshots_user_time_created_covering" ON "public"."snapshots" USING "btree" ("user_id", "time_range", "created_at" DESC) INCLUDE ("id");
-
-
-
 CREATE INDEX "idx_snapshots_user_time_range" ON "public"."snapshots" USING "btree" ("user_id", "time_range");
-
-
-
-CREATE INDEX "idx_spotify_connections_last_sync" ON "public"."spotify_connections" USING "btree" ("last_sync_at");
 
 
 
@@ -1013,23 +939,7 @@ CREATE INDEX "idx_spotify_connections_status" ON "public"."spotify_connections" 
 
 
 
-CREATE INDEX "idx_track_rankings_created_brin" ON "public"."track_rankings" USING "brin" ("created_at") WITH ("pages_per_range"='128');
-
-
-
 CREATE INDEX "idx_track_rankings_history" ON "public"."track_rankings" USING "btree" ("user_id", "track_id", "created_at" DESC);
-
-
-
-CREATE INDEX "idx_track_rankings_previous_rank" ON "public"."track_rankings" USING "btree" ("previous_rank") WHERE ("previous_rank" IS NOT NULL);
-
-
-
-CREATE INDEX "idx_track_rankings_rank" ON "public"."track_rankings" USING "btree" ("rank");
-
-
-
-CREATE INDEX "idx_track_rankings_snapshot_created" ON "public"."track_rankings" USING "btree" ("snapshot_id", "created_at" DESC);
 
 
 
@@ -1053,27 +963,11 @@ CREATE INDEX "idx_user_profiles_display_name_gin" ON "public"."user_profiles" US
 
 
 
-CREATE INDEX "idx_user_profiles_spotify_user_id" ON "public"."user_profiles" USING "btree" ("spotify_user_id");
-
-
-
-CREATE INDEX "idx_user_profiles_spotify_user_id_length" ON "public"."user_profiles" USING "btree" ("length"("spotify_user_id"));
-
-
-
-CREATE INDEX "idx_user_profiles_spotify_user_name" ON "public"."user_profiles" USING "btree" ("spotify_user_name");
-
-
-
 CREATE INDEX "idx_user_profiles_user_id" ON "public"."user_profiles" USING "btree" ("user_id");
 
 
 
 CREATE UNIQUE INDEX "snapshots_user_date_timerange_unique" ON "public"."snapshots" USING "btree" ("user_id", "time_range", "public"."get_date_only"("created_at"));
-
-
-
-COMMENT ON INDEX "public"."snapshots_user_date_timerange_unique" IS 'Ensures only one snapshot per user per time_range per calendar day (UTC). Prevents duplicate ranking history data.';
 
 
 
@@ -1161,7 +1055,7 @@ CREATE POLICY "Users can delete their own track rankings" ON "public"."track_ran
 
 
 
-CREATE POLICY "Users can insert own spotify connection" ON "public"."spotify_connections" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can insert own spotify connection" ON "public"."spotify_connections" FOR INSERT WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -1177,7 +1071,7 @@ CREATE POLICY "Users can insert their own artist stats" ON "public"."artist_list
 
 
 
-CREATE POLICY "Users can insert their own profile" ON "public"."user_profiles" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can insert their own profile" ON "public"."user_profiles" FOR INSERT WITH CHECK (("id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -1189,23 +1083,23 @@ CREATE POLICY "Users can insert their own track rankings" ON "public"."track_ran
 
 
 
-CREATE POLICY "Users can read own spotify connection" ON "public"."spotify_connections" FOR SELECT USING (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can read own spotify connection" ON "public"."spotify_connections" FOR SELECT USING (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "Users can remove friendships" ON "public"."friendships" FOR DELETE USING ((("auth"."uid"() = "user_id") OR ("auth"."uid"() = "friend_id")));
+CREATE POLICY "Users can remove friendships" ON "public"."friendships" FOR DELETE USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("friend_id" = ( SELECT "auth"."uid"() AS "uid"))));
 
 
 
-CREATE POLICY "Users can send friend requests" ON "public"."friendships" FOR INSERT WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can send friend requests" ON "public"."friendships" FOR INSERT WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
-CREATE POLICY "Users can update friendship status" ON "public"."friendships" FOR UPDATE USING ((("auth"."uid"() = "user_id") OR ("auth"."uid"() = "friend_id"))) WITH CHECK (((("auth"."uid"() = "friend_id") AND ("status" = ANY (ARRAY['accepted'::"text", 'blocked'::"text"]))) OR ((("auth"."uid"() = "user_id") OR ("auth"."uid"() = "friend_id")) AND ("status" = 'blocked'::"text"))));
+CREATE POLICY "Users can update friendship status" ON "public"."friendships" FOR UPDATE USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("friend_id" = ( SELECT "auth"."uid"() AS "uid")))) WITH CHECK ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("friend_id" = ( SELECT "auth"."uid"() AS "uid"))));
 
 
 
-CREATE POLICY "Users can update own spotify connection" ON "public"."spotify_connections" FOR UPDATE USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update own spotify connection" ON "public"."spotify_connections" FOR UPDATE USING (("user_id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -1213,7 +1107,7 @@ CREATE POLICY "Users can update their own artist stats" ON "public"."artist_list
 
 
 
-CREATE POLICY "Users can update their own profile" ON "public"."user_profiles" FOR UPDATE USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+CREATE POLICY "Users can update their own profile" ON "public"."user_profiles" FOR UPDATE USING (("id" = ( SELECT "auth"."uid"() AS "uid"))) WITH CHECK (("id" = ( SELECT "auth"."uid"() AS "uid")));
 
 
 
@@ -1221,43 +1115,23 @@ CREATE POLICY "Users can view all public profiles" ON "public"."user_profiles" F
 
 
 
-CREATE POLICY "Users can view friends' album rankings" ON "public"."album_rankings" FOR SELECT USING ((("auth"."uid"() = "user_id") OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "album_rankings"."user_id") AND ("up"."stats_visibility" = 'public'::"text")))) OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "album_rankings"."user_id") AND ("up"."stats_visibility" = 'followers'::"text")))) AND "public"."check_friendship_status"("auth"."uid"(), "user_id")))));
+CREATE POLICY "Users can view their album rankings and friends' rankings" ON "public"."album_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
 
 
 
-CREATE POLICY "Users can view friends' artist rankings" ON "public"."artist_rankings" FOR SELECT USING ((("auth"."uid"() = "user_id") OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "artist_rankings"."user_id") AND ("up"."stats_visibility" = 'public'::"text")))) OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "artist_rankings"."user_id") AND ("up"."stats_visibility" = 'followers'::"text")))) AND "public"."check_friendship_status"("auth"."uid"(), "user_id")))));
-
-
-
-CREATE POLICY "Users can view friends' snapshots" ON "public"."snapshots" FOR SELECT USING ((("auth"."uid"() = "user_id") OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "snapshots"."user_id") AND ("up"."stats_visibility" = 'public'::"text")))) OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "snapshots"."user_id") AND ("up"."stats_visibility" = 'followers'::"text")))) AND "public"."check_friendship_status"("auth"."uid"(), "user_id")))));
-
-
-
-CREATE POLICY "Users can view friends' track rankings" ON "public"."track_rankings" FOR SELECT USING ((("auth"."uid"() = "user_id") OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "track_rankings"."user_id") AND ("up"."stats_visibility" = 'public'::"text")))) OR ((EXISTS ( SELECT 1
-   FROM "public"."user_profiles" "up"
-  WHERE (("up"."user_id" = "track_rankings"."user_id") AND ("up"."stats_visibility" = 'followers'::"text")))) AND "public"."check_friendship_status"("auth"."uid"(), "user_id")))));
-
-
-
-CREATE POLICY "Users can view their own album rankings" ON "public"."album_rankings" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
-CREATE POLICY "Users can view their own artist rankings" ON "public"."artist_rankings" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+CREATE POLICY "Users can view their artist rankings and friends' rankings" ON "public"."artist_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
 
 
 
@@ -1265,15 +1139,27 @@ CREATE POLICY "Users can view their own artist stats" ON "public"."artist_listen
 
 
 
-CREATE POLICY "Users can view their own friendships" ON "public"."friendships" FOR SELECT USING ((("auth"."uid"() = "user_id") OR ("auth"."uid"() = "friend_id")));
+CREATE POLICY "Users can view their own friendships" ON "public"."friendships" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("friend_id" = ( SELECT "auth"."uid"() AS "uid"))));
 
 
 
-CREATE POLICY "Users can view their own snapshots" ON "public"."snapshots" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+CREATE POLICY "Users can view their snapshots and friends' snapshots" ON "public"."snapshots" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
 
 
 
-CREATE POLICY "Users can view their own track rankings" ON "public"."track_rankings" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+CREATE POLICY "Users can view their track rankings and friends' rankings" ON "public"."track_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
 
 
 
@@ -1534,6 +1420,12 @@ GRANT ALL ON FUNCTION "public"."export_user_data"("target_user_id" "uuid") TO "s
 
 
 
+GRANT ALL ON FUNCTION "public"."generate_discriminator"() TO "anon";
+GRANT ALL ON FUNCTION "public"."generate_discriminator"() TO "authenticated";
+GRANT ALL ON FUNCTION "public"."generate_discriminator"() TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."generate_discriminator"("p_display_name" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."generate_discriminator"("p_display_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."generate_discriminator"("p_display_name" "text") TO "service_role";
@@ -1558,9 +1450,21 @@ GRANT ALL ON FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item
 
 
 
+GRANT ALL ON FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "service_role";
 
 
 

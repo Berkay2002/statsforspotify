@@ -403,10 +403,9 @@ export type Database = {
       }
       delete_user_data: { Args: { target_user_id: string }; Returns: undefined }
       export_user_data: { Args: { target_user_id: string }; Returns: Json }
-      generate_discriminator: {
-        Args: { p_display_name: string }
-        Returns: string
-      }
+      generate_discriminator:
+        | { Args: never; Returns: string }
+        | { Args: { p_display_name: string }; Returns: string }
       get_date_only: { Args: { timestamp_val: string }; Returns: string }
       get_latest_snapshot: {
         Args: { target_time_range?: string; target_user_id: string }
@@ -415,35 +414,65 @@ export type Database = {
           snapshot_id: string
         }[]
       }
-      get_ranking_history: {
-        Args: {
-          p_item_id: string
-          p_item_type: string
-          p_time_range?: string
-          p_user_id: string
-        }
-        Returns: {
-          date: string
-          is_new_entry: boolean
-          is_reentry: boolean
-          peak_rank: number
-          rank: number
-          time_range: string
-        }[]
-      }
-      get_sparkline_data: {
-        Args: {
-          p_days?: number
-          p_item_ids: string[]
-          p_item_type: string
-          p_user_id: string
-        }
-        Returns: {
-          date: string
-          item_id: string
-          rank: number
-        }[]
-      }
+      get_ranking_history:
+        | {
+            Args: {
+              p_entity_id: string
+              p_entity_type: string
+              p_limit?: number
+              p_time_range: string
+              p_user_id: string
+            }
+            Returns: {
+              created_at: string
+              previous_rank: number
+              rank: number
+              snapshot_id: string
+            }[]
+          }
+        | {
+            Args: {
+              p_item_id: string
+              p_item_type: string
+              p_time_range: string
+              p_user_id: string
+            }
+            Returns: {
+              date: string
+              is_new_entry: boolean
+              is_reentry: boolean
+              peak_rank: number
+              rank: number
+              time_range: string
+            }[]
+          }
+      get_sparkline_data:
+        | {
+            Args: {
+              p_entity_id: string
+              p_entity_type: string
+              p_limit?: number
+              p_time_range: string
+              p_user_id: string
+            }
+            Returns: {
+              created_at: string
+              rank: number
+            }[]
+          }
+        | {
+            Args: {
+              p_days: number
+              p_item_ids: string[]
+              p_item_type: string
+              p_user_id: string
+            }
+            Returns: {
+              date: string
+              item_id: string
+              rank: number
+            }[]
+          }
       is_valid_spotify_user_id: { Args: { user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
