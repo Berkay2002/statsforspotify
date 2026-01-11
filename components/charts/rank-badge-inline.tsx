@@ -18,9 +18,13 @@ export default function RankBadgeInline({
   previousRank, 
   className 
 }: RankBadgeInlineProps) {
-  // Don't show badge if no previous rank data
+  // New entry (no previous rank)
   if (previousRank === null || previousRank === undefined) {
-    return null;
+    return (
+      <span className={cn("text-xs font-medium text-blue-600 dark:text-blue-400 ml-2", className)}>
+        NEW
+      </span>
+    );
   }
   
   const change = previousRank - currentRank; // Positive = improved (lower rank number is better)
@@ -30,17 +34,6 @@ export default function RankBadgeInline({
     return (
       <span className={cn("text-xs text-muted-foreground ml-2", className)}>
         —
-      </span>
-    );
-  }
-  
-  // New entry (was ranked very low or not ranked)
-  const isNew = previousRank > 50;
-  
-  if (isNew) {
-    return (
-      <span className={cn("text-xs font-medium text-blue-600 dark:text-blue-400 ml-2", className)}>
-        NEW
       </span>
     );
   }

@@ -19,6 +19,16 @@ const RANK_CHANGE_COLORS = {
   neutral: "var(--primary)", // Primary
 } as const;
 
+type RankingChartPoint = {
+  date: string;
+  rank: number;
+  previousRank: number | null;
+  rankChange: number;
+  isSignificant: boolean;
+  displayRank: number;
+  isPeak: boolean;
+};
+
 interface RankingChartProps {
   data: RankingHistory[];
   color?: string;
@@ -41,24 +51,28 @@ export function RankingChart({
   }
 
   // Format data for the chart - reverse rank so higher = better
-  const chartData = data.map((item) => {
-    const previousRank = (item as any).previous_rank;
-    const rankChange = previousRank ? previousRank - item.rank : 0;
-    const isSignificant = Math.abs(rankChange) >= 5;
+  const chartData = data.map((item, index) => {
+    const previousEntry = index > 0 ? data[index - 1] : null;
+    const previousRank =
+      item.isNewEntry || item.isReentry ? null : (previousEntry?.rank ?? null);
+    const rankChange = typeof previousRank === "number" ? previousRank - item.rank : 0;
+    const isSignificant = typeof previousRank === "number" && Math.abs(rankChange) >= 5;
     
-    return {
+    const point: RankingChartPoint = {
       date: new Date(item.date).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
       }),
       rank: item.rank,
-      previous_rank: previousRank,
+      previousRank,
       rankChange,
       isSignificant,
       // Inverted for visual - lower rank is better
       displayRank: 51 - item.rank,
       isPeak: peakPosition ? item.rank === peakPosition : false,
     };
+
+    return point;
   });
 
   return (
@@ -91,7 +105,7 @@ export function RankingChart({
             if (active && payload && payload.length) {
               const data = payload[0].payload;
               const isPeak = data.isPeak;
-              const previousRank = data.previous_rank;
+              const previousRank = data.previousRank;
               const rankChange = data.rankChange;
               
               return (
@@ -108,6 +122,11 @@ export function RankingChart({
                   <div className="text-xs text-muted-foreground">
                     {data.date}
                   </div>
+                  {typeof previousRank === "number" && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Previous: #{previousRank}
+                    </div>
+                  )}
                   {isPeak && (
                     <div className="text-xs font-medium text-amber-500 mt-1">
                       Peak Position
@@ -139,12 +158,12 @@ export function RankingChart({
           stroke={color}
           strokeWidth={3}
           activeDot={{ r: 6, fill: color, strokeWidth: 0 }}
-          dot={(props: any) => {
-            const { cx, cy, payload } = props;
-            if (!payload) return null;
+          dot={(dotProps: { cx?: number; cy?: number; payload?: RankingChartPoint }) => {
+            const { cx, cy, payload } = dotProps;
+            if (!payload || typeof cx !== "number" || typeof cy !== "number") return null;
             
             // Show colored dots for significant rank changes (±5)
-            if (payload.isSignificant && payload.previous_rank) {
+            if (payload.isSignificant && typeof payload.previousRank === "number") {
               const change = payload.rankChange;
               const dotColor = change > 0 ? RANK_CHANGE_COLORS.improved : RANK_CHANGE_COLORS.declined;
               
