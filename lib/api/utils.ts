@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
 import { SpotifyAPIError } from "@/lib/spotify/api";
+import { isTimeRange } from "@/lib/spotify/time-range";
 
 async function getAuthContext() {
   const supabase = await createClient();
@@ -135,5 +136,5 @@ export function validateItemType(type: string | null): type is "artist" | "track
  * Validates time range
  */
 export function validateTimeRange(timeRange: string | null): timeRange is "short_term" | "medium_term" | "long_term" {
-  return timeRange !== null && ["short_term", "medium_term", "long_term"].includes(timeRange);
+  return isTimeRange(timeRange);
 }

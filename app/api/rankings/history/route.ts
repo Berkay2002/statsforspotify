@@ -59,12 +59,14 @@ export async function GET(request: NextRequest) {
       return badRequestResponse("Invalid time_range. Must be: short_term, medium_term, or long_term");
     }
 
+    const effectiveTimeRange = validateTimeRange(timeRange) ? timeRange : "medium_term";
+
     // Call the database function
     const { data, error } = await supabase.rpc("get_ranking_history", {
       p_user_id: user.id,
       p_item_id: id,
       p_item_type: type,
-      p_time_range: timeRange || null,
+      p_time_range: effectiveTimeRange,
     });
 
     if (error) {

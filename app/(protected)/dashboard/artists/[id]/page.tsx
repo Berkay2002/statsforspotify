@@ -3,12 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
+import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
+import { parseTimeRange } from "@/lib/spotify/time-range";
 import { ArrowLeft, Play, UserPlus } from "lucide-react";
+import type { TimeRange } from "@/lib/spotify/types";
 
 interface ArtistDetails {
   id: string;
@@ -37,13 +40,16 @@ interface Track {
 
 export default function ArtistDetailPage() {
   const params = useParams();
+  const searchParameters = useSearchParams();
   const artistId = params?.id as string;
+  const timeRange: TimeRange = parseTimeRange(searchParameters.get("time_range"), "medium_term");
   
   const [artist, setArtist] = useState<ArtistDetails | null>(null);
   const [stats, setStats] = useState<ArtistStats | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [showAllTracks, setShowAllTracks] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tracksLoading, setTracksLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -54,31 +60,25 @@ export default function ArtistDetailPage() {
         setLoading(true);
         
         // Fetch artist details, stats, top tracks, and follow status in parallel
-        const [detailsRes, statsRes, tracksRes, followRes] = await Promise.all([
+        const [detailsResponse, statsResponse, followResponse] = await Promise.all([
           fetch(`/api/artists/${artistId}`),
           fetch(`/api/artists/${artistId}/stats`),
-          fetch(`/api/artists/${artistId}/tracks`),
           fetch(`/api/artists/${artistId}/follow`),
         ]);
 
-        if (!detailsRes.ok) throw new Error("Failed to load artist details");
+        if (!detailsResponse.ok) throw new Error("Failed to load artist details");
         
-        const detailsData = await detailsRes.json();
-        setArtist(detailsData);
+        const artistDetails = (await detailsResponse.json()) as ArtistDetails;
+        setArtist(artistDetails);
 
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setStats(statsData);
+        if (statsResponse.ok) {
+          const artistStats = (await statsResponse.json()) as ArtistStats;
+          setStats(artistStats);
         }
 
-        if (tracksRes.ok) {
-          const tracksData = await tracksRes.json();
-          setTracks(tracksData);
-        }
-
-        if (followRes.ok) {
-          const followData = await followRes.json();
-          setIsFollowing(followData.isFollowing);
+        if (followResponse.ok) {
+          const followStatus = (await followResponse.json()) as { isFollowing: boolean };
+          setIsFollowing(followStatus.isFollowing);
         }
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : "An error occurred");
@@ -91,6 +91,48 @@ export default function ArtistDetailPage() {
       loadArtistData();
     }
   }, [artistId]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadArtistTracks() {
+      try {
+        setTracksLoading(true);
+
+        const tracksResponse = await fetch(
+          `/api/artists/${artistId}/tracks?time_range=${timeRange}`
+        );
+
+        if (isCancelled) return;
+
+        if (tracksResponse.ok) {
+          const artistTopTracks = (await tracksResponse.json()) as Track[];
+          setTracks(artistTopTracks);
+        } else {
+          setTracks([]);
+        }
+      } catch (caughtError) {
+        if (!isCancelled) {
+          console.error("Error fetching artist tracks:", caughtError);
+          setTracks([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setTracksLoading(false);
+        }
+      }
+    }
+
+    setShowAllTracks(false);
+
+    if (artistId) {
+      loadArtistTracks();
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [artistId, timeRange]);
 
   const formatDuration = (durationMilliseconds: number) => {
     const minutes = Math.floor(durationMilliseconds / 60000);
@@ -207,95 +249,109 @@ export default function ArtistDetailPage() {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="px-6 pt-6 flex items-center gap-4">
-        <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
-          <a
-            href={`https://open.spotify.com/artist/${artist.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Play on Spotify"
+      {/* Action Buttons + Time Range */}
+      <div className="px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
+            <a
+              href={`https://open.spotify.com/artist/${artist.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Play on Spotify"
+            >
+              <Play className="h-6 w-6 fill-current" />
+            </a>
+          </Button>
+          <Button
+            variant={isFollowing ? "secondary" : "outline"}
+            size="lg"
+            className="rounded-full px-8"
+            onClick={handleFollowToggle}
+            disabled={followLoading}
           >
-            <Play className="h-6 w-6 fill-current" />
-          </a>
-        </Button>
-        <Button
-          variant={isFollowing ? "secondary" : "outline"}
-          size="lg"
-          className="rounded-full px-8"
-          onClick={handleFollowToggle}
-          disabled={followLoading}
-        >
-          {followLoading ? (
-            <>Loading...</>
-          ) : (
-            <>
-              <UserPlus className="h-5 w-5 mr-2" />
-              {isFollowing ? "Following" : "Follow"}
-            </>
-          )}
-        </Button>
+            {followLoading ? (
+              <>Loading...</>
+            ) : (
+              <>
+                <UserPlus className="h-5 w-5 mr-2" />
+                {isFollowing ? "Following" : "Follow"}
+              </>
+            )}
+          </Button>
+        </div>
+
+        <TimeRangeQueryTabs value={timeRange} className="w-full sm:w-auto" />
       </div>
 
       {/* My Top Tracks Section */}
-      {tracks.length > 0 && (
+      {(tracksLoading || tracks.length > 0) && (
         <div className="px-6 pt-8">
           <h2 className="text-2xl font-bold mb-6">My Top Tracks</h2>
           
           <div className="space-y-1">
-            {displayedTracks.map((track) => (
-              <div
-                key={track.id}
-                className="rounded-lg hover:bg-accent/50 transition-colors cursor-pointer bg-transparent"
-              >
-                <div className="p-5">
-                  <div className="flex items-center gap-5">
-                    {/* Rank */}
-                    <div className="w-10 text-center">
-                      <span className="text-xl font-semibold text-foreground">
-                        {track.rank}
-                      </span>
-                    </div>
-
-                    {/* Album Art */}
-                    {track.imageUrl ? (
-                      <Image
-                        src={track.imageUrl}
-                        alt={track.name}
-                        width={64}
-                        height={64}
-                        className="rounded object-cover"
-                      />
-                    ) : (
-                      <div className="h-16 w-16 rounded bg-muted" />
-                    )}
-
-                    {/* Track Info */}
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/dashboard/tracks/${track.id}`}
-                        className="hover:underline"
-                      >
-                        <p className="text-base font-semibold truncate">{track.name}</p>
-                      </Link>
-                      <p className="text-base text-muted-foreground truncate mt-1">
-                        {track.albumName}
-                      </p>
-                    </div>
-
-                    {/* Play Count Badge (if available) */}
-                    <Badge variant="secondary" className="hidden sm:inline-flex text-sm px-3 py-1">
-                      {track.popularity}% popularity
-                    </Badge>
-
-                    {/* Duration */}
-                    <div className="text-base text-muted-foreground tabular-nums">
-                      {formatDuration(track.durationMs)}
+            {tracksLoading
+              ? Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="p-5">
+                    <div className="flex items-center gap-5">
+                      <Skeleton className="h-6 w-10" />
+                      <Skeleton className="h-16 w-16 rounded" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-5 w-36" />
+                      </div>
+                      <Skeleton className="hidden sm:block h-6 w-24" />
+                      <Skeleton className="h-6 w-14" />
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                ))
+              : displayedTracks.map((track) => (
+                  <div
+                    key={track.id}
+                    className="rounded-lg hover:bg-accent/50 transition-colors cursor-pointer bg-transparent"
+                  >
+                    <div className="p-5">
+                      <div className="flex items-center gap-5">
+                        <div className="w-10 text-center">
+                          <span className="text-xl font-semibold text-foreground">
+                            {track.rank}
+                          </span>
+                        </div>
+
+                        {track.imageUrl ? (
+                          <Image
+                            src={track.imageUrl}
+                            alt={track.name}
+                            width={64}
+                            height={64}
+                            className="rounded object-cover"
+                          />
+                        ) : (
+                          <div className="h-16 w-16 rounded bg-muted" />
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <Link
+                            href={`/dashboard/tracks/${track.id}`}
+                            className="hover:underline"
+                          >
+                            <p className="text-base font-semibold truncate">{track.name}</p>
+                          </Link>
+                          <p className="text-base text-muted-foreground truncate mt-1">
+                            {track.albumName}
+                          </p>
+                        </div>
+
+                        <Badge variant="secondary" className="hidden sm:inline-flex text-sm px-3 py-1">
+                          {track.popularity}% popularity
+                        </Badge>
+
+                        <div className="text-base text-muted-foreground tabular-nums">
+                          {formatDuration(track.durationMs)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
           </div>
 
           {/* See More Button */}
@@ -328,7 +384,12 @@ export default function ArtistDetailPage() {
 
       {/* Ranking History */}
       <div className="px-6 pt-8">
-        <RankingHistoryLoader itemId={artistId} itemType="artist" />
+        <RankingHistoryLoader
+          itemId={artistId}
+          itemType="artist"
+          timeRange={timeRange}
+          showTimeRangeSelect={false}
+        />
       </div>
     </div>
   );

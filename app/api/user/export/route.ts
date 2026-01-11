@@ -37,7 +37,12 @@ export async function GET(request: Request) {
       return serverErrorResponse("Failed to export data");
     }
 
-    const exportData = data as ExportData;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      console.error("Export user data returned unexpected shape:", data);
+      return serverErrorResponse("Failed to export data");
+    }
+
+    const exportData = data as unknown as ExportData;
 
     if (format === "csv") {
       // Convert to CSV format
@@ -121,7 +126,7 @@ function convertToCSV(data: ExportData): string {
   return lines.join("\n");
 }
 
-function escapeCSV(str: string): string {
-  if (!str) return "";
-  return str.replace(/"/g, '""');
+function escapeCSV(value: string): string {
+  if (!value) return "";
+  return value.replace(/"/g, '""');
 }

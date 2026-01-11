@@ -7,17 +7,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { RankingHistoryResponse } from "@/lib/spotify/types";
+import type { TimeRange } from "@/lib/spotify/types";
 
 interface RankingHistoryLoaderProps {
   itemId: string;
   itemType: "artist" | "track" | "album";
+  timeRange?: TimeRange;
+  onTimeRangeChange?: (timeRange: TimeRange) => void;
+  showTimeRangeSelect?: boolean;
 }
 
-export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderProps) {
-  const [timeRange, setTimeRange] = useState<"short_term" | "medium_term" | "long_term">("long_term");
+export function RankingHistoryLoader({
+  itemId,
+  itemType,
+  timeRange: controlledTimeRange,
+  onTimeRangeChange,
+  showTimeRangeSelect = true,
+}: RankingHistoryLoaderProps) {
+  const [uncontrolledTimeRange, setUncontrolledTimeRange] = useState<TimeRange>("medium_term");
+  const timeRange = controlledTimeRange ?? uncontrolledTimeRange;
   const [rankingHistoryResponse, setRankingHistoryResponse] = useState<RankingHistoryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleTimeRangeChange = (nextTimeRange: TimeRange) => {
+    if (controlledTimeRange) {
+      onTimeRangeChange?.(nextTimeRange);
+      return;
+    }
+    setUncontrolledTimeRange(nextTimeRange);
+  };
 
   useEffect(() => {
     let isCancelled = false;
@@ -116,19 +135,18 @@ export function RankingHistoryLoader({ itemId, itemType }: RankingHistoryLoaderP
             isReentry={mostRecentEntry?.isReentry}
           />
         </div>
-        <Select 
-          value={timeRange} 
-          onValueChange={(value: string) => setTimeRange(value as "short_term" | "medium_term" | "long_term")}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="long_term">All Time</SelectItem>
-            <SelectItem value="short_term">Last 4 Weeks</SelectItem>
-            <SelectItem value="medium_term">Last 6 Months</SelectItem>
-          </SelectContent>
-        </Select>
+        {showTimeRangeSelect && (
+          <Select value={timeRange} onValueChange={(value: string) => handleTimeRangeChange(value as TimeRange)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="short_term">Past 4 weeks</SelectItem>
+              <SelectItem value="medium_term">Past 6 months</SelectItem>
+              <SelectItem value="long_term">All time</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </CardHeader>
       
       <CardContent>

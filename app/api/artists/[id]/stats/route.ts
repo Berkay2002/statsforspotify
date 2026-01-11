@@ -34,9 +34,9 @@ export async function GET(
     }
 
     return NextResponse.json({
-      totalHoursListened: parseFloat(stats.total_hours_listened) || 0,
-      uniqueTracksCount: stats.unique_tracks_count || 0,
-      totalPlayCount: stats.total_play_count || 0,
+      totalHoursListened: stats.total_hours_listened ?? 0,
+      uniqueTracksCount: stats.unique_tracks_count ?? 0,
+      totalPlayCount: stats.total_play_count ?? 0,
     });
   } catch (error) {
     console.error("Error fetching artist stats:", error);

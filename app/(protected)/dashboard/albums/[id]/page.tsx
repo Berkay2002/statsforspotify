@@ -1,27 +1,34 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTopAlbums, getTopTracks } from "@/lib/spotify/api";
+import { getAlbumDetails, getTopAlbums, getTopTracks } from "@/lib/spotify/api";
+import { parseTimeRange } from "@/lib/spotify/time-range";
 import { Button } from "@/components/ui/button";
 import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
 import { TopTracksSection } from "@/components/detail/top-tracks-section";
+import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
 import { ArrowLeft, Play } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ time_range?: string | string[] }>;
 }
 
-export default async function AlbumDetailPage({ params }: PageProps) {
+export default async function AlbumDetailPage({ params, searchParams }: PageProps) {
   const { id: albumId } = await params;
+  const { time_range: rawTimeRange } = (await searchParams) ?? {};
+  const timeRange = parseTimeRange(
+    Array.isArray(rawTimeRange) ? rawTimeRange[0] : rawTimeRange,
+    "medium_term"
+  );
 
-  const tracks = await getTopTracks("medium_term", 50);
-  const albums = await getTopAlbums("medium_term", 50, tracks);
-  
-  const album = albums.find((albumItem) => albumItem.id === albumId);
+  const [album, tracks] = await Promise.all([
+    getAlbumDetails(albumId),
+    getTopTracks(timeRange, 50),
+  ]);
 
-  if (!album) {
-    notFound();
-  }
+  const rankedAlbums = await getTopAlbums(timeRange, 50, tracks);
+  const rankedAlbum = rankedAlbums.find((albumItem) => albumItem.id === albumId) ?? null;
 
   const albumTracks = tracks
     .filter((track) => track.albumId === albumId)
@@ -35,14 +42,22 @@ export default async function AlbumDetailPage({ params }: PageProps) {
       popularity: track.popularity,
     }));
 
+  const imageUrl = album.images[1]?.url ?? album.images[0]?.url ?? null;
+  const artistName = album.artists.map((artist) => artist.name).join(", ");
+  const primaryArtistId = album.artists[0]?.id;
+
+  if (!primaryArtistId) {
+    notFound();
+  }
+
   return (
     <div className="space-y-0 -mt-6 -mx-6 pb-6">
       <div className="relative h-[500px] overflow-hidden">
         <div className="absolute inset-0">
-          {album.imageUrl ? (
+          {imageUrl ? (
             <>
               <Image
-                src={album.imageUrl}
+                src={imageUrl}
                 alt={album.name}
                 fill
                 className="object-cover object-center"
@@ -75,42 +90,57 @@ export default async function AlbumDetailPage({ params }: PageProps) {
             </h1>
 
             <div className="flex items-center gap-6 text-white text-base">
-              <span className="font-semibold">{album.artistName}</span>
+              <span className="font-semibold">{artistName}</span>
               <span className="text-white/60">•</span>
-              <span className="font-medium">
-                {album.trackCount} {album.trackCount === 1 ? "track" : "tracks"}{" "}
-                in your top 50
-              </span>
+              {rankedAlbum?.trackCount ? (
+                <span className="font-medium">
+                  {rankedAlbum.trackCount}{" "}
+                  {rankedAlbum.trackCount === 1 ? "track" : "tracks"} in your top 50
+                </span>
+              ) : (
+                <span className="font-medium text-white/80">
+                  Not in your top 50 for this time period
+                </span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="px-6 pt-6 flex items-center gap-4">
-        <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
-          <a
-            href={`https://open.spotify.com/album/${album.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Play on Spotify"
+      <div className="px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
+            <a
+              href={album.external_urls.spotify}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Play on Spotify"
+            >
+              <Play className="h-6 w-6 fill-current" />
+            </a>
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className="rounded-full px-8"
+            asChild
           >
-            <Play className="h-6 w-6 fill-current" />
-          </a>
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          className="rounded-full px-8"
-          asChild
-        >
-          <Link href={`/dashboard/artists/${album.artistId}`}>View Artist</Link>
-        </Button>
+            <Link href={`/dashboard/artists/${primaryArtistId}`}>View Artist</Link>
+          </Button>
+        </div>
+
+        <TimeRangeQueryTabs value={timeRange} className="w-full sm:w-auto" />
       </div>
 
       <TopTracksSection title="My Top Tracks" tracks={albumTracks} />
 
       <div className="px-6 pt-8">
-        <RankingHistoryLoader itemId={albumId} itemType="album" />
+        <RankingHistoryLoader
+          itemId={albumId}
+          itemType="album"
+          timeRange={timeRange}
+          showTimeRangeSelect={false}
+        />
       </div>
     </div>
   );

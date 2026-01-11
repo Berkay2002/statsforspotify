@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type {
   SpotifyArtist,
+  SpotifyAlbum,
   SpotifyTrack,
   SpotifyTopItemsResponse,
   SpotifyUser,
@@ -247,6 +248,14 @@ export const getArtistDetails = cache(async (artistId: string): Promise<SpotifyA
   return spotifyFetch<SpotifyArtist>(`/artists/${artistId}`);
 });
 
+export const getAlbumDetails = cache(async (albumId: string): Promise<SpotifyAlbum> => {
+  return spotifyFetch<SpotifyAlbum>(`/albums/${albumId}`);
+});
+
+export const getTrackDetails = cache(async (trackId: string): Promise<SpotifyTrack> => {
+  return spotifyFetch<SpotifyTrack>(`/tracks/${trackId}`);
+});
+
 // Get user's top tracks from a specific artist
 export const getArtistTopTracks = cache(async (
   artistId: string,
@@ -409,4 +418,3 @@ export async function unfollowUser(spotifyUserId: string): Promise<void> {
     );
   }
 }
-

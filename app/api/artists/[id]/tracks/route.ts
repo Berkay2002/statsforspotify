@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistTopTracks } from "@/lib/spotify/api";
-import { serverErrorResponse } from "@/lib/api/utils";
+import { badRequestResponse, serverErrorResponse, validateTimeRange } from "@/lib/api/utils";
 
 export async function GET(
   request: NextRequest,
@@ -8,7 +8,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const tracks = await getArtistTopTracks(id, "medium_term", 10);
+    const timeRangeParameter = request.nextUrl.searchParams.get("time_range");
+
+    if (timeRangeParameter && !validateTimeRange(timeRangeParameter)) {
+      return badRequestResponse(
+        "Invalid time_range. Must be: short_term, medium_term, or long_term"
+      );
+    }
+
+    const timeRange = validateTimeRange(timeRangeParameter)
+      ? timeRangeParameter
+      : "medium_term";
+
+    const tracks = await getArtistTopTracks(id, timeRange, 10);
 
     return NextResponse.json(
       tracks.map((track) => ({
