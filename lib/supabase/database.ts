@@ -393,6 +393,14 @@ export type Database = {
       }
     }
     Functions: {
+      assert_can_view_user_stats: {
+        Args: { p_target_user_id: string }
+        Returns: undefined
+      }
+      can_view_user_stats: {
+        Args: { p_target_user_id: string }
+        Returns: boolean
+      }
       check_friendship_status: {
         Args: { p_user_id_1: string; p_user_id_2: string }
         Returns: boolean
@@ -406,13 +414,25 @@ export type Database = {
       generate_discriminator:
         | { Args: never; Returns: string }
         | { Args: { p_display_name: string }; Returns: string }
+      get_album_takeover_recap: {
+        Args: { p_days?: number; p_target_user_id: string }
+        Returns: Json
+      }
       get_date_only: { Args: { timestamp_val: string }; Returns: string }
+      get_hall_of_fame_recap: {
+        Args: { p_days?: number; p_limit?: number; p_target_user_id: string }
+        Returns: Json
+      }
       get_latest_snapshot: {
         Args: { target_time_range?: string; target_user_id: string }
         Returns: {
           created_at: string
           snapshot_id: string
         }[]
+      }
+      get_plot_twists_recap: {
+        Args: { p_days?: number; p_limit?: number; p_target_user_id: string }
+        Returns: Json
       }
       get_ranking_history:
         | {
@@ -473,6 +493,10 @@ export type Database = {
               rank: number
             }[]
           }
+      get_three_versions_of_you: {
+        Args: { p_limit?: number; p_target_user_id: string }
+        Returns: Json
+      }
       is_valid_spotify_user_id: { Args: { user_id: string }; Returns: boolean }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

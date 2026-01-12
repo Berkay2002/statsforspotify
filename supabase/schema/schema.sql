@@ -73,6 +73,65 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
 
+CREATE OR REPLACE FUNCTION "public"."assert_can_view_user_stats"("p_target_user_id" "uuid") RETURNS "void"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+begin
+  if not public.can_view_user_stats(p_target_user_id) then
+    raise exception 'stats_visibility_denied' using errcode = '42501';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."assert_can_view_user_stats"("p_target_user_id" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."can_view_user_stats"("p_target_user_id" "uuid") RETURNS boolean
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  viewer_id uuid := auth.uid();
+  visibility text;
+begin
+  if p_target_user_id is null then
+    return false;
+  end if;
+
+  if viewer_id = p_target_user_id then
+    return true;
+  end if;
+
+  select up.stats_visibility
+  into visibility
+  from public.user_profiles up
+  where up.user_id = p_target_user_id;
+
+  if visibility is null then
+    return false;
+  end if;
+
+  if visibility = 'public' then
+    return true;
+  end if;
+
+  if visibility = 'followers' then
+    if viewer_id is null then
+      return false;
+    end if;
+    return public.check_friendship_status(viewer_id, p_target_user_id);
+  end if;
+
+  return false;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."can_view_user_stats"("p_target_user_id" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."check_friendship_status"("p_user_id_1" "uuid", "p_user_id_2" "uuid") RETURNS boolean
     LANGUAGE "plpgsql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
@@ -261,6 +320,167 @@ $$;
 ALTER FUNCTION "public"."generate_discriminator"("p_display_name" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."get_album_takeover_recap"("p_target_user_id" "uuid", "p_days" integer DEFAULT 90) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  effective_days int := greatest(1, least(coalesce(p_days, 90), 3650));
+  timeline_limit int := least(effective_days, 90);
+  result jsonb;
+begin
+  perform public.assert_can_view_user_stats(p_target_user_id);
+
+  with window_snapshots as (
+    select
+      s.id,
+      s.time_range,
+      date(s.created_at at time zone 'utc') as day,
+      s.created_at
+    from public.snapshots s
+    where s.user_id = p_target_user_id
+      and s.created_at >= now() - (effective_days || ' days')::interval
+  ),
+  top_album_per_snapshot as (
+    select
+      ws.time_range,
+      ws.day,
+      ar.album_id,
+      ar.album_name,
+      ar.album_image_url,
+      ar.track_count,
+      (ar.track_count / 50.0) as takeover_percent
+    from window_snapshots ws
+    join public.album_rankings ar on ar.snapshot_id = ws.id
+    where ar.rank = 1
+  ),
+  latest_per_range as (
+    select distinct on (time_range) *
+    from top_album_per_snapshot
+    order by time_range, day desc
+  ),
+  record_per_range as (
+    select distinct on (time_range) *
+    from top_album_per_snapshot
+    order by time_range, track_count desc, day desc
+  ),
+  most_frequent_counts as (
+    select
+      time_range,
+      album_id,
+      max(album_name) as album_name,
+      max(album_image_url) as album_image_url,
+      count(*)::int as days_at_1,
+      max(day) as latest_day
+    from top_album_per_snapshot
+    group by time_range, album_id
+  ),
+  most_frequent_per_range as (
+    select distinct on (time_range)
+      time_range,
+      album_id,
+      album_name,
+      album_image_url,
+      days_at_1
+    from most_frequent_counts
+    order by time_range, days_at_1 desc, latest_day desc, album_id asc
+  ),
+  timeline_ranked as (
+    select
+      t.*,
+      row_number() over (partition by t.time_range order by t.day desc) as rn
+    from top_album_per_snapshot t
+  ),
+  timeline_limited as (
+    select
+      time_range,
+      day,
+      album_id,
+      album_name,
+      album_image_url,
+      track_count,
+      takeover_percent
+    from timeline_ranked
+    where rn <= timeline_limit
+  ),
+  time_ranges as (
+    select unnest(array['short_term'::text, 'medium_term'::text, 'long_term'::text]) as time_range
+  ),
+  per_range as (
+    select
+      tr.time_range,
+      jsonb_build_object(
+        'latest',
+        (
+          select case when l.time_range is null then null else jsonb_build_object(
+            'date', l.day::text,
+            'album_id', l.album_id,
+            'album_name', l.album_name,
+            'album_image_url', l.album_image_url,
+            'track_count', l.track_count,
+            'takeover_percent', l.takeover_percent
+          ) end
+          from latest_per_range l
+          where l.time_range = tr.time_range
+        ),
+        'record',
+        (
+          select case when r.time_range is null then null else jsonb_build_object(
+            'date', r.day::text,
+            'album_id', r.album_id,
+            'album_name', r.album_name,
+            'album_image_url', r.album_image_url,
+            'track_count', r.track_count,
+            'takeover_percent', r.takeover_percent
+          ) end
+          from record_per_range r
+          where r.time_range = tr.time_range
+        ),
+        'most_frequent',
+        (
+          select case when mf.time_range is null then null else jsonb_build_object(
+            'album_id', mf.album_id,
+            'album_name', mf.album_name,
+            'album_image_url', mf.album_image_url,
+            'days_at_1', mf.days_at_1
+          ) end
+          from most_frequent_per_range mf
+          where mf.time_range = tr.time_range
+        ),
+        'timeline',
+        coalesce(
+          (
+            select jsonb_agg(
+              jsonb_build_object(
+                'date', tl.day::text,
+                'album_id', tl.album_id,
+                'album_name', tl.album_name,
+                'album_image_url', tl.album_image_url,
+                'track_count', tl.track_count,
+                'takeover_percent', tl.takeover_percent
+              )
+              order by tl.day asc
+            )
+            from timeline_limited tl
+            where tl.time_range = tr.time_range
+          ),
+          '[]'::jsonb
+        )
+      ) as value
+    from time_ranges tr
+  )
+  select jsonb_object_agg(time_range, value)
+  into result
+  from per_range;
+
+  return coalesce(result, '{}'::jsonb);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."get_album_takeover_recap"("p_target_user_id" "uuid", "p_days" integer) OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_date_only"("timestamp_val" timestamp with time zone) RETURNS "date"
     LANGUAGE "plpgsql" IMMUTABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -272,6 +492,341 @@ $$;
 
 
 ALTER FUNCTION "public"."get_date_only"("timestamp_val" timestamp with time zone) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_hall_of_fame_recap"("p_target_user_id" "uuid", "p_days" integer DEFAULT 365, "p_limit" integer DEFAULT 10) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  effective_days int := greatest(1, least(coalesce(p_days, 365), 3650));
+  effective_limit int := greatest(1, least(coalesce(p_limit, 10), 50));
+  result jsonb;
+begin
+  perform public.assert_can_view_user_stats(p_target_user_id);
+
+  with window_snapshots as (
+    select
+      s.id,
+      s.time_range,
+      date(s.created_at at time zone 'utc') as day,
+      s.created_at
+    from public.snapshots s
+    where s.user_id = p_target_user_id
+      and s.created_at >= now() - (effective_days || ' days')::interval
+  ),
+  artist_days as (
+    select
+      ws.time_range,
+      ar.artist_id as id,
+      ar.artist_name as name,
+      ar.artist_image_url as image_url,
+      ws.day,
+      ar.rank
+    from window_snapshots ws
+    join public.artist_rankings ar on ar.snapshot_id = ws.id
+  ),
+  album_days as (
+    select
+      ws.time_range,
+      abr.album_id as id,
+      abr.album_name as name,
+      abr.album_image_url as image_url,
+      ws.day,
+      abr.rank
+    from window_snapshots ws
+    join public.album_rankings abr on abr.snapshot_id = ws.id
+  ),
+  artist_days_charted as (
+    select
+      time_range,
+      id,
+      max(name) as name,
+      max(image_url) as image_url,
+      count(distinct day)::int as days_charted
+    from artist_days
+    group by time_range, id
+  ),
+  album_days_charted as (
+    select
+      time_range,
+      id,
+      max(name) as name,
+      max(image_url) as image_url,
+      count(distinct day)::int as days_charted
+    from album_days
+    group by time_range, id
+  ),
+  artist_days_charted_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by days_charted desc, name asc, id asc) as rn
+    from artist_days_charted
+  ),
+  album_days_charted_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by days_charted desc, name asc, id asc) as rn
+    from album_days_charted
+  ),
+  artist_most_days_charted as (
+    select
+      time_range,
+      coalesce(
+        jsonb_agg(
+          jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'days_charted', days_charted)
+          order by days_charted desc, name asc, id asc
+        ),
+        '[]'::jsonb
+      ) as value
+    from artist_days_charted_ranked
+    where rn <= effective_limit
+    group by time_range
+  ),
+  album_most_days_charted as (
+    select
+      time_range,
+      coalesce(
+        jsonb_agg(
+          jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'days_charted', days_charted)
+          order by days_charted desc, name asc, id asc
+        ),
+        '[]'::jsonb
+      ) as value
+    from album_days_charted_ranked
+    where rn <= effective_limit
+    group by time_range
+  ),
+  artist_number_one_days as (
+    select
+      time_range,
+      id,
+      max(name) as name,
+      max(image_url) as image_url,
+      count(*)::int as number_one_days
+    from artist_days
+    where rank = 1
+    group by time_range, id
+  ),
+  album_number_one_days as (
+    select
+      time_range,
+      id,
+      max(name) as name,
+      max(image_url) as image_url,
+      count(*)::int as number_one_days
+    from album_days
+    where rank = 1
+    group by time_range, id
+  ),
+  artist_most_number_one_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by number_one_days desc, id asc) as rn
+    from artist_number_one_days
+  ),
+  album_most_number_one_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by number_one_days desc, id asc) as rn
+    from album_number_one_days
+  ),
+  artist_best_peak as (
+    select
+      time_range,
+      id,
+      max(name) as name,
+      max(image_url) as image_url,
+      min(rank)::int as peak_rank
+    from artist_days
+    group by time_range, id
+  ),
+  album_best_peak as (
+    select
+      time_range,
+      id,
+      max(name) as name,
+      max(image_url) as image_url,
+      min(rank)::int as peak_rank
+    from album_days
+    group by time_range, id
+  ),
+  artist_best_peak_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by peak_rank asc, id asc) as rn
+    from artist_best_peak
+  ),
+  album_best_peak_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by peak_rank asc, id asc) as rn
+    from album_best_peak
+  ),
+  artist_distinct_days as (
+    select distinct time_range, id, name, image_url, day
+    from artist_days
+  ),
+  album_distinct_days as (
+    select distinct time_range, id, name, image_url, day
+    from album_days
+  ),
+  artist_streak_groups as (
+    select
+      time_range,
+      id,
+      day,
+      (day::timestamp - (row_number() over (partition by time_range, id order by day) * interval '1 day')) as grp
+    from artist_distinct_days
+  ),
+  album_streak_groups as (
+    select
+      time_range,
+      id,
+      day,
+      (day::timestamp - (row_number() over (partition by time_range, id order by day) * interval '1 day')) as grp
+    from album_distinct_days
+  ),
+  artist_streak_lengths as (
+    select
+      time_range,
+      id,
+      grp,
+      count(*)::int as streak_len
+    from artist_streak_groups
+    group by time_range, id, grp
+  ),
+  album_streak_lengths as (
+    select
+      time_range,
+      id,
+      grp,
+      count(*)::int as streak_len
+    from album_streak_groups
+    group by time_range, id, grp
+  ),
+  artist_max_streak as (
+    select
+      asl.time_range,
+      asl.id,
+      max(ad.name) as name,
+      max(ad.image_url) as image_url,
+      max(asl.streak_len)::int as longest_streak_days
+    from artist_streak_lengths asl
+    join artist_distinct_days ad on ad.time_range = asl.time_range and ad.id = asl.id
+    group by asl.time_range, asl.id
+  ),
+  album_max_streak as (
+    select
+      asl.time_range,
+      asl.id,
+      max(ad.name) as name,
+      max(ad.image_url) as image_url,
+      max(asl.streak_len)::int as longest_streak_days
+    from album_streak_lengths asl
+    join album_distinct_days ad on ad.time_range = asl.time_range and ad.id = asl.id
+    group by asl.time_range, asl.id
+  ),
+  artist_max_streak_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by longest_streak_days desc, id asc) as rn
+    from artist_max_streak
+  ),
+  album_max_streak_ranked as (
+    select
+      *,
+      row_number() over (partition by time_range order by longest_streak_days desc, id asc) as rn
+    from album_max_streak
+  ),
+  time_ranges as (
+    select unnest(array['short_term'::text, 'medium_term'::text, 'long_term'::text]) as time_range
+  ),
+  per_range as (
+    select
+      tr.time_range,
+      jsonb_build_object(
+        'artists', jsonb_build_object(
+          'most_days_charted', coalesce(amdc.value, '[]'::jsonb),
+          'most_number_one_days', (
+            select case when an1.time_range is null then null else jsonb_build_object(
+              'id', an1.id,
+              'name', an1.name,
+              'image_url', an1.image_url,
+              'number_one_days', an1.number_one_days
+            ) end
+            from artist_most_number_one_ranked an1
+            where an1.time_range = tr.time_range and an1.rn = 1
+          ),
+          'best_peak_rank', (
+            select case when ap.time_range is null then null else jsonb_build_object(
+              'id', ap.id,
+              'name', ap.name,
+              'image_url', ap.image_url,
+              'peak_rank', ap.peak_rank
+            ) end
+            from artist_best_peak_ranked ap
+            where ap.time_range = tr.time_range and ap.rn = 1
+          ),
+          'longest_streak', (
+            select case when ast.time_range is null then null else jsonb_build_object(
+              'id', ast.id,
+              'name', ast.name,
+              'image_url', ast.image_url,
+              'longest_streak_days', ast.longest_streak_days
+            ) end
+            from artist_max_streak_ranked ast
+            where ast.time_range = tr.time_range and ast.rn = 1
+          )
+        ),
+        'albums', jsonb_build_object(
+          'most_days_charted', coalesce(bmdc.value, '[]'::jsonb),
+          'most_number_one_days', (
+            select case when bn1.time_range is null then null else jsonb_build_object(
+              'id', bn1.id,
+              'name', bn1.name,
+              'image_url', bn1.image_url,
+              'number_one_days', bn1.number_one_days
+            ) end
+            from album_most_number_one_ranked bn1
+            where bn1.time_range = tr.time_range and bn1.rn = 1
+          ),
+          'best_peak_rank', (
+            select case when bp.time_range is null then null else jsonb_build_object(
+              'id', bp.id,
+              'name', bp.name,
+              'image_url', bp.image_url,
+              'peak_rank', bp.peak_rank
+            ) end
+            from album_best_peak_ranked bp
+            where bp.time_range = tr.time_range and bp.rn = 1
+          ),
+          'longest_streak', (
+            select case when bst.time_range is null then null else jsonb_build_object(
+              'id', bst.id,
+              'name', bst.name,
+              'image_url', bst.image_url,
+              'longest_streak_days', bst.longest_streak_days
+            ) end
+            from album_max_streak_ranked bst
+            where bst.time_range = tr.time_range and bst.rn = 1
+          )
+        )
+      ) as value
+    from time_ranges tr
+    left join artist_most_days_charted amdc on amdc.time_range = tr.time_range
+    left join album_most_days_charted bmdc on bmdc.time_range = tr.time_range
+  )
+  select jsonb_object_agg(time_range, value)
+  into result
+  from per_range;
+
+  return coalesce(result, '{}'::jsonb);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."get_hall_of_fame_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_latest_snapshot"("target_user_id" "uuid", "target_time_range" "text" DEFAULT 'medium_term'::"text") RETURNS TABLE("snapshot_id" "uuid", "created_at" timestamp with time zone)
@@ -291,6 +846,394 @@ $$;
 
 
 ALTER FUNCTION "public"."get_latest_snapshot"("target_user_id" "uuid", "target_time_range" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_plot_twists_recap"("p_target_user_id" "uuid", "p_days" integer DEFAULT 30, "p_limit" integer DEFAULT 20) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  effective_days int := greatest(1, least(coalesce(p_days, 30), 3650));
+  effective_limit int := greatest(1, least(coalesce(p_limit, 20), 100));
+  result jsonb;
+begin
+  perform public.assert_can_view_user_stats(p_target_user_id);
+
+  with ordered_snapshots as (
+    select
+      s.time_range,
+      s.id as snapshot_id,
+      date(s.created_at at time zone 'utc') as day,
+      lead(s.id) over (partition by s.time_range order by s.created_at asc) as next_snapshot_id,
+      lead(date(s.created_at at time zone 'utc')) over (partition by s.time_range order by s.created_at asc) as next_day
+    from public.snapshots s
+    where s.user_id = p_target_user_id
+      and s.created_at >= now() - (effective_days || ' days')::interval
+  ),
+  artist_ranked as (
+    select
+      os.time_range,
+      os.day,
+      ar.artist_id as item_id,
+      ar.artist_name as item_name,
+      ar.artist_image_url as item_image_url,
+      ar.rank,
+      ar.previous_rank,
+      (ar.previous_rank - ar.rank) as delta
+    from ordered_snapshots os
+    join public.artist_rankings ar on ar.snapshot_id = os.snapshot_id
+    where ar.rank <= 20
+      and ar.previous_rank is not null
+  ),
+  album_ranked as (
+    select
+      os.time_range,
+      os.day,
+      abr.album_id as item_id,
+      abr.album_name as item_name,
+      abr.album_image_url as item_image_url,
+      abr.rank,
+      abr.previous_rank,
+      (abr.previous_rank - abr.rank) as delta
+    from ordered_snapshots os
+    join public.album_rankings abr on abr.snapshot_id = os.snapshot_id
+    where abr.rank <= 20
+      and abr.previous_rank is not null
+  ),
+  artist_best_climb_per_day as (
+    select
+      *,
+      row_number() over (partition by time_range, day order by delta desc, rank asc, item_id asc) as rn
+    from artist_ranked
+    where delta > 0
+  ),
+  artist_best_drop_per_day as (
+    select
+      *,
+      row_number() over (partition by time_range, day order by delta asc, rank asc, item_id asc) as rn
+    from artist_ranked
+    where delta < 0
+  ),
+  album_best_climb_per_day as (
+    select
+      *,
+      row_number() over (partition by time_range, day order by delta desc, rank asc, item_id asc) as rn
+    from album_ranked
+    where delta > 0
+  ),
+  album_best_drop_per_day as (
+    select
+      *,
+      row_number() over (partition by time_range, day order by delta asc, rank asc, item_id asc) as rn
+    from album_ranked
+    where delta < 0
+  ),
+  artist_new_entry_top10_ranked as (
+    select
+      os.time_range,
+      os.day,
+      ar.artist_id as item_id,
+      ar.artist_name as item_name,
+      ar.artist_image_url as item_image_url,
+      ar.rank,
+      ar.previous_rank,
+      null::int as delta,
+      row_number() over (partition by os.time_range, os.day order by ar.rank asc, ar.artist_id asc) as rn
+    from ordered_snapshots os
+    join public.artist_rankings ar on ar.snapshot_id = os.snapshot_id
+    where ar.rank <= 10
+      and ar.previous_rank is null
+  ),
+  album_new_entry_top10_ranked as (
+    select
+      os.time_range,
+      os.day,
+      abr.album_id as item_id,
+      abr.album_name as item_name,
+      abr.album_image_url as item_image_url,
+      abr.rank,
+      abr.previous_rank,
+      null::int as delta,
+      row_number() over (partition by os.time_range, os.day order by abr.rank asc, abr.album_id asc) as rn
+    from ordered_snapshots os
+    join public.album_rankings abr on abr.snapshot_id = os.snapshot_id
+    where abr.rank <= 10
+      and abr.previous_rank is null
+  ),
+  artist_top10_with_next as (
+    select
+      os.time_range,
+      os.day,
+      os.next_snapshot_id,
+      os.next_day,
+      ar.artist_id as item_id,
+      ar.artist_name as item_name,
+      ar.artist_image_url as item_image_url,
+      ar.rank,
+      ar.previous_rank
+    from ordered_snapshots os
+    join public.artist_rankings ar on ar.snapshot_id = os.snapshot_id
+    where ar.rank <= 10
+  ),
+  album_top10_with_next as (
+    select
+      os.time_range,
+      os.day,
+      os.next_snapshot_id,
+      os.next_day,
+      abr.album_id as item_id,
+      abr.album_name as item_name,
+      abr.album_image_url as item_image_url,
+      abr.rank,
+      abr.previous_rank
+    from ordered_snapshots os
+    join public.album_rankings abr on abr.snapshot_id = os.snapshot_id
+    where abr.rank <= 10
+  ),
+  artist_dropouts as (
+    select
+      ct.time_range,
+      ct.day,
+      ct.item_id,
+      ct.item_name,
+      ct.item_image_url,
+      ct.rank,
+      ct.previous_rank,
+      null::int as delta,
+      jsonb_build_object('next_date', ct.next_day::text, 'was_rank', ct.rank) as context
+    from artist_top10_with_next ct
+    left join public.artist_rankings next_ar
+      on next_ar.snapshot_id = ct.next_snapshot_id
+     and next_ar.artist_id = ct.item_id
+    where ct.next_snapshot_id is not null
+      and next_ar.artist_id is null
+  ),
+  album_dropouts as (
+    select
+      ct.time_range,
+      ct.day,
+      ct.item_id,
+      ct.item_name,
+      ct.item_image_url,
+      ct.rank,
+      ct.previous_rank,
+      null::int as delta,
+      jsonb_build_object('next_date', ct.next_day::text, 'was_rank', ct.rank) as context
+    from album_top10_with_next ct
+    left join public.album_rankings next_abr
+      on next_abr.snapshot_id = ct.next_snapshot_id
+     and next_abr.album_id = ct.item_id
+    where ct.next_snapshot_id is not null
+      and next_abr.album_id is null
+  ),
+  artist_events as (
+    select
+      time_range,
+      'biggest_climb'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      delta::int as delta,
+      null::jsonb as context
+    from artist_best_climb_per_day
+    where rn = 1
+
+    union all
+
+    select
+      time_range,
+      'biggest_drop'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      delta::int as delta,
+      null::jsonb as context
+    from artist_best_drop_per_day
+    where rn = 1
+
+    union all
+
+    select
+      time_range,
+      'new_entry_top10'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      null::int as delta,
+      null::jsonb as context
+    from artist_new_entry_top10_ranked
+    where rn <= 2
+
+    union all
+
+    select
+      time_range,
+      'dropped_out_after_top10'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      null::int as delta,
+      context
+    from artist_dropouts
+  ),
+  album_events as (
+    select
+      time_range,
+      'biggest_climb'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      delta::int as delta,
+      null::jsonb as context
+    from album_best_climb_per_day
+    where rn = 1
+
+    union all
+
+    select
+      time_range,
+      'biggest_drop'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      delta::int as delta,
+      null::jsonb as context
+    from album_best_drop_per_day
+    where rn = 1
+
+    union all
+
+    select
+      time_range,
+      'new_entry_top10'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      null::int as delta,
+      null::jsonb as context
+    from album_new_entry_top10_ranked
+    where rn <= 2
+
+    union all
+
+    select
+      time_range,
+      'dropped_out_after_top10'::text as event_type,
+      day,
+      item_id,
+      item_name,
+      item_image_url,
+      rank,
+      previous_rank,
+      null::int as delta,
+      context
+    from album_dropouts
+  ),
+  artist_events_ranked as (
+    select
+      *,
+      row_number() over (
+        partition by time_range
+        order by coalesce(abs(delta), 0) desc, day desc, rank asc, item_id asc
+      ) as rn
+    from artist_events
+  ),
+  album_events_ranked as (
+    select
+      *,
+      row_number() over (
+        partition by time_range
+        order by coalesce(abs(delta), 0) desc, day desc, rank asc, item_id asc
+      ) as rn
+    from album_events
+  ),
+  time_ranges as (
+    select unnest(array['short_term'::text, 'medium_term'::text, 'long_term'::text]) as time_range
+  ),
+  per_range as (
+    select
+      tr.time_range,
+      jsonb_build_object(
+        'artists',
+        coalesce(
+          (
+            select jsonb_agg(
+              jsonb_build_object(
+                'event_type', aer.event_type,
+                'date', aer.day::text,
+                'item_id', aer.item_id,
+                'item_name', aer.item_name,
+                'item_image_url', aer.item_image_url,
+                'rank', aer.rank,
+                'previous_rank', aer.previous_rank,
+                'delta', aer.delta,
+                'context', aer.context
+              )
+              order by coalesce(abs(aer.delta), 0) desc, aer.day desc, aer.rank asc, aer.item_id asc
+            )
+            from artist_events_ranked aer
+            where aer.time_range = tr.time_range
+              and aer.rn <= effective_limit
+          ),
+          '[]'::jsonb
+        ),
+        'albums',
+        coalesce(
+          (
+            select jsonb_agg(
+              jsonb_build_object(
+                'event_type', ber.event_type,
+                'date', ber.day::text,
+                'item_id', ber.item_id,
+                'item_name', ber.item_name,
+                'item_image_url', ber.item_image_url,
+                'rank', ber.rank,
+                'previous_rank', ber.previous_rank,
+                'delta', ber.delta,
+                'context', ber.context
+              )
+              order by coalesce(abs(ber.delta), 0) desc, ber.day desc, ber.rank asc, ber.item_id asc
+            )
+            from album_events_ranked ber
+            where ber.time_range = tr.time_range
+              and ber.rn <= effective_limit
+          ),
+          '[]'::jsonb
+        )
+      ) as value
+    from time_ranges tr
+  )
+  select jsonb_object_agg(time_range, value)
+  into result
+  from per_range;
+
+  return coalesce(result, '{}'::jsonb);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."get_plot_twists_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item_id" "text", "p_item_type" "text", "p_time_range" "text") RETURNS TABLE("date" timestamp with time zone, "rank" integer, "is_new_entry" boolean, "is_reentry" boolean, "peak_rank" integer, "time_range" "text")
@@ -478,6 +1421,241 @@ $$;
 
 
 ALTER FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_three_versions_of_you"("p_target_user_id" "uuid", "p_limit" integer DEFAULT 10) RETURNS "jsonb"
+    LANGUAGE "plpgsql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+declare
+  effective_limit int := greatest(1, least(coalesce(p_limit, 10), 50));
+  result jsonb;
+begin
+  perform public.assert_can_view_user_stats(p_target_user_id);
+
+  with latest_snapshots as (
+    select
+      'short_term'::text as time_range,
+      (select ls.snapshot_id from public.get_latest_snapshot(p_target_user_id, 'short_term') ls limit 1) as snapshot_id
+    union all
+    select
+      'medium_term'::text as time_range,
+      (select ls.snapshot_id from public.get_latest_snapshot(p_target_user_id, 'medium_term') ls limit 1) as snapshot_id
+    union all
+    select
+      'long_term'::text as time_range,
+      (select ls.snapshot_id from public.get_latest_snapshot(p_target_user_id, 'long_term') ls limit 1) as snapshot_id
+  ),
+  artist_short as (
+    select
+      ar.artist_id as id,
+      ar.artist_name as name,
+      ar.artist_image_url as image_url,
+      ar.rank
+    from public.artist_rankings ar
+    join latest_snapshots ls on ls.snapshot_id = ar.snapshot_id and ls.time_range = 'short_term'
+    order by ar.rank asc
+    limit effective_limit
+  ),
+  artist_medium as (
+    select
+      ar.artist_id as id,
+      ar.artist_name as name,
+      ar.artist_image_url as image_url,
+      ar.rank
+    from public.artist_rankings ar
+    join latest_snapshots ls on ls.snapshot_id = ar.snapshot_id and ls.time_range = 'medium_term'
+    order by ar.rank asc
+    limit effective_limit
+  ),
+  artist_long as (
+    select
+      ar.artist_id as id,
+      ar.artist_name as name,
+      ar.artist_image_url as image_url,
+      ar.rank
+    from public.artist_rankings ar
+    join latest_snapshots ls on ls.snapshot_id = ar.snapshot_id and ls.time_range = 'long_term'
+    order by ar.rank asc
+    limit effective_limit
+  ),
+  artist_constants as (
+    select id from artist_short
+    intersect
+    select id from artist_medium
+    intersect
+    select id from artist_long
+  ),
+  artist_unique_short as (
+    select id from artist_short
+    except
+    (select id from artist_medium union select id from artist_long)
+  ),
+  artist_unique_medium as (
+    select id from artist_medium
+    except
+    (select id from artist_short union select id from artist_long)
+  ),
+  artist_unique_long as (
+    select id from artist_long
+    except
+    (select id from artist_short union select id from artist_medium)
+  ),
+  artist_shift_long_vs_short as (
+    select
+      s.id,
+      s.name,
+      s.image_url,
+      s.rank as short_rank,
+      l.rank as long_rank,
+      (l.rank - s.rank) as delta
+    from artist_short s
+    join artist_long l on l.id = s.id
+    order by abs(l.rank - s.rank) desc, l.rank asc
+    limit least(effective_limit, 10)
+  ),
+  album_short as (
+    select
+      ar.album_id as id,
+      ar.album_name as name,
+      ar.album_image_url as image_url,
+      ar.rank
+    from public.album_rankings ar
+    join latest_snapshots ls on ls.snapshot_id = ar.snapshot_id and ls.time_range = 'short_term'
+    order by ar.rank asc
+    limit effective_limit
+  ),
+  album_medium as (
+    select
+      ar.album_id as id,
+      ar.album_name as name,
+      ar.album_image_url as image_url,
+      ar.rank
+    from public.album_rankings ar
+    join latest_snapshots ls on ls.snapshot_id = ar.snapshot_id and ls.time_range = 'medium_term'
+    order by ar.rank asc
+    limit effective_limit
+  ),
+  album_long as (
+    select
+      ar.album_id as id,
+      ar.album_name as name,
+      ar.album_image_url as image_url,
+      ar.rank
+    from public.album_rankings ar
+    join latest_snapshots ls on ls.snapshot_id = ar.snapshot_id and ls.time_range = 'long_term'
+    order by ar.rank asc
+    limit effective_limit
+  ),
+  album_constants as (
+    select id from album_short
+    intersect
+    select id from album_medium
+    intersect
+    select id from album_long
+  ),
+  album_unique_short as (
+    select id from album_short
+    except
+    (select id from album_medium union select id from album_long)
+  ),
+  album_unique_medium as (
+    select id from album_medium
+    except
+    (select id from album_short union select id from album_long)
+  ),
+  album_unique_long as (
+    select id from album_long
+    except
+    (select id from album_short union select id from album_medium)
+  ),
+  album_shift_long_vs_short as (
+    select
+      s.id,
+      s.name,
+      s.image_url,
+      s.rank as short_rank,
+      l.rank as long_rank,
+      (l.rank - s.rank) as delta
+    from album_short s
+    join album_long l on l.id = s.id
+    order by abs(l.rank - s.rank) desc, l.rank asc
+    limit least(effective_limit, 10)
+  )
+  select jsonb_build_object(
+    'artists', jsonb_build_object(
+      'short_term', coalesce(
+        (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'rank', rank) order by rank) from artist_short),
+        '[]'::jsonb
+      ),
+      'medium_term', coalesce(
+        (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'rank', rank) order by rank) from artist_medium),
+        '[]'::jsonb
+      ),
+      'long_term', coalesce(
+        (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'rank', rank) order by rank) from artist_long),
+        '[]'::jsonb
+      ),
+      'constants', coalesce((select jsonb_agg(id order by id) from artist_constants), '[]'::jsonb),
+      'unique_short', coalesce((select jsonb_agg(id order by id) from artist_unique_short), '[]'::jsonb),
+      'unique_medium', coalesce((select jsonb_agg(id order by id) from artist_unique_medium), '[]'::jsonb),
+      'unique_long', coalesce((select jsonb_agg(id order by id) from artist_unique_long), '[]'::jsonb),
+      'biggest_shift_long_vs_short', coalesce(
+        (select jsonb_agg(
+          jsonb_build_object(
+            'id', id,
+            'name', name,
+            'image_url', image_url,
+            'short_rank', short_rank,
+            'long_rank', long_rank,
+            'delta', delta
+          )
+          order by abs(delta) desc, long_rank asc
+        ) from artist_shift_long_vs_short),
+        '[]'::jsonb
+      )
+    ),
+    'albums', jsonb_build_object(
+      'short_term', coalesce(
+        (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'rank', rank) order by rank) from album_short),
+        '[]'::jsonb
+      ),
+      'medium_term', coalesce(
+        (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'rank', rank) order by rank) from album_medium),
+        '[]'::jsonb
+      ),
+      'long_term', coalesce(
+        (select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'image_url', image_url, 'rank', rank) order by rank) from album_long),
+        '[]'::jsonb
+      ),
+      'constants', coalesce((select jsonb_agg(id order by id) from album_constants), '[]'::jsonb),
+      'unique_short', coalesce((select jsonb_agg(id order by id) from album_unique_short), '[]'::jsonb),
+      'unique_medium', coalesce((select jsonb_agg(id order by id) from album_unique_medium), '[]'::jsonb),
+      'unique_long', coalesce((select jsonb_agg(id order by id) from album_unique_long), '[]'::jsonb),
+      'biggest_shift_long_vs_short', coalesce(
+        (select jsonb_agg(
+          jsonb_build_object(
+            'id', id,
+            'name', name,
+            'image_url', image_url,
+            'short_rank', short_rank,
+            'long_rank', long_rank,
+            'delta', delta
+          )
+          order by abs(delta) desc, long_rank asc
+        ) from album_shift_long_vs_short),
+        '[]'::jsonb
+      )
+    )
+  )
+  into result;
+
+  return coalesce(result, '{}'::jsonb);
+end;
+$$;
+
+
+ALTER FUNCTION "public"."get_three_versions_of_you"("p_target_user_id" "uuid", "p_limit" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."is_valid_spotify_user_id"("user_id" "text") RETURNS boolean
@@ -883,7 +2061,15 @@ ALTER TABLE ONLY "public"."user_profiles"
 
 
 
+CREATE INDEX "idx_album_rankings_history" ON "public"."album_rankings" USING "btree" ("user_id", "album_id", "created_at" DESC);
+
+
+
 CREATE INDEX "idx_album_rankings_snapshot_id" ON "public"."album_rankings" USING "btree" ("snapshot_id");
+
+
+
+CREATE INDEX "idx_album_rankings_user_album" ON "public"."album_rankings" USING "btree" ("user_id", "album_id");
 
 
 
@@ -932,6 +2118,10 @@ CREATE INDEX "idx_snapshots_user_id" ON "public"."snapshots" USING "btree" ("use
 
 
 CREATE INDEX "idx_snapshots_user_time_range" ON "public"."snapshots" USING "btree" ("user_id", "time_range");
+
+
+
+CREATE INDEX "idx_snapshots_user_time_range_created" ON "public"."snapshots" USING "btree" ("user_id", "time_range", "created_at" DESC);
 
 
 
@@ -1390,6 +2580,18 @@ GRANT ALL ON FUNCTION "public"."gtrgm_out"("public"."gtrgm") TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."assert_can_view_user_stats"("p_target_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."assert_can_view_user_stats"("p_target_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."assert_can_view_user_stats"("p_target_user_id" "uuid") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."can_view_user_stats"("p_target_user_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."can_view_user_stats"("p_target_user_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."can_view_user_stats"("p_target_user_id" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."check_friendship_status"("p_user_id_1" "uuid", "p_user_id_2" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."check_friendship_status"("p_user_id_1" "uuid", "p_user_id_2" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."check_friendship_status"("p_user_id_1" "uuid", "p_user_id_2" "uuid") TO "service_role";
@@ -1432,15 +2634,33 @@ GRANT ALL ON FUNCTION "public"."generate_discriminator"("p_display_name" "text")
 
 
 
+GRANT ALL ON FUNCTION "public"."get_album_takeover_recap"("p_target_user_id" "uuid", "p_days" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_album_takeover_recap"("p_target_user_id" "uuid", "p_days" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_album_takeover_recap"("p_target_user_id" "uuid", "p_days" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_date_only"("timestamp_val" timestamp with time zone) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_date_only"("timestamp_val" timestamp with time zone) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_date_only"("timestamp_val" timestamp with time zone) TO "service_role";
 
 
 
+GRANT ALL ON FUNCTION "public"."get_hall_of_fame_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_hall_of_fame_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_hall_of_fame_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_latest_snapshot"("target_user_id" "uuid", "target_time_range" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_latest_snapshot"("target_user_id" "uuid", "target_time_range" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_latest_snapshot"("target_user_id" "uuid", "target_time_range" "text") TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_plot_twists_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_plot_twists_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_plot_twists_recap"("p_target_user_id" "uuid", "p_days" integer, "p_limit" integer) TO "service_role";
 
 
 
@@ -1465,6 +2685,12 @@ GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_
 GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer) TO "service_role";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_three_versions_of_you"("p_target_user_id" "uuid", "p_limit" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_three_versions_of_you"("p_target_user_id" "uuid", "p_limit" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_three_versions_of_you"("p_target_user_id" "uuid", "p_limit" integer) TO "service_role";
 
 
 
