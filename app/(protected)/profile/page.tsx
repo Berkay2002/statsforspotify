@@ -135,13 +135,6 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Profile & Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your account and data
-        </p>
-      </div>
-
       {/* Profile Card */}
       <Card className="overflow-hidden">
         <div className="h-20 bg-linear-to-r from-[#1DB954]/20 to-primary/20" />
@@ -221,7 +214,9 @@ export default async function ProfilePage() {
             <p className="text-3xl font-bold">{totalRankings.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-1">Total Rankings</p>
             <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-              <p>{artistRankingsCount || 0} artists</p>
+              <p>{(artistRankingsCount || 0).toLocaleString()} artists</p>
+              <p>{(trackRankingsCount || 0).toLocaleString()} tracks</p>
+              <p>{(albumRankingsCount || 0).toLocaleString()} albums</p>
             </div>
           </CardContent>
         </Card>
@@ -306,53 +301,6 @@ export default async function ProfilePage() {
             ) : (
               <p className="text-sm text-muted-foreground">Loading...</p>
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Detailed Stats */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Ranking Breakdown
-          </CardTitle>
-          <CardDescription>
-            How your rankings are distributed across categories
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-[#1DB954]" />
-                <span className="text-sm font-medium">Artist Rankings</span>
-              </div>
-              <span className="text-sm font-bold">{(artistRankingsCount || 0).toLocaleString()}</span>
-            </div>
-            <Progress value={totalRankings ? (artistRankingsCount || 0) / totalRankings * 100 : 0} className="h-2" />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-primary" />
-                <span className="text-sm font-medium">Track Rankings</span>
-              </div>
-              <span className="text-sm font-bold">{(trackRankingsCount || 0).toLocaleString()}</span>
-            </div>
-            <Progress value={totalRankings ? (trackRankingsCount || 0) / totalRankings * 100 : 0} className="h-2" />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
-                <span className="text-sm font-medium">Album Rankings</span>
-              </div>
-              <span className="text-sm font-bold">{(albumRankingsCount || 0).toLocaleString()}</span>
-            </div>
-            <Progress value={totalRankings ? (albumRankingsCount || 0) / totalRankings * 100 : 0} className="h-2" />
           </div>
         </CardContent>
       </Card>

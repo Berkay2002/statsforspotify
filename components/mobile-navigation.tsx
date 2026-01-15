@@ -45,7 +45,7 @@ const navigationTabs: NavigationTab[] = [
   {
     title: "Settings",
     icon: Settings,
-    href: "/dashboard/profile",
+    href: "/profile",
   },
 ];
 
