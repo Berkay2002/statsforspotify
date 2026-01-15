@@ -506,7 +506,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     }
   }, [session?.provider_token, player, initializePlayer]);
 
-  // Poll for external playback state on mobile/PWA
+  // Poll for external playback state on mobile/PWA with adaptive intervals
   useEffect(() => {
     // Only poll for mobile and PWA users to sync with external Spotify playback
     const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -517,10 +517,31 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     // Initial fetch
     getCurrentPlayback();
 
-    // Poll every 3 seconds
-    pollingIntervalRef.current = setInterval(() => {
-      getCurrentPlayback();
-    }, 3000);
+    // Adaptive polling based on playback state
+    const getPollingInterval = () => {
+      if (playerState.isPlaying) {
+        return 2000; // 2s when actively playing for tighter sync
+      } else if (playerState.track) {
+        return 5000; // 5s when paused but track exists
+      } else {
+        return 10000; // 10s when idle/no track
+      }
+    };
+
+    const startPolling = () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+
+      pollingIntervalRef.current = setInterval(() => {
+        getCurrentPlayback();
+        
+        // Restart polling with new interval based on current state
+        startPolling();
+      }, getPollingInterval());
+    };
+
+    startPolling();
 
     return () => {
       if (pollingIntervalRef.current) {
@@ -528,7 +549,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
         pollingIntervalRef.current = null;
       }
     };
-  }, [isPWA, session?.provider_token, getCurrentPlayback]);
+  }, [isPWA, session?.provider_token, getCurrentPlayback, playerState.isPlaying, playerState.track]);
 
   // Cleanup on unmount
   useEffect(() => {

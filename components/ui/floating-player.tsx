@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,10 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     return saved !== null ? saved === 'false' : false;
   });
   const playerRef = useRef<HTMLDivElement>(null);
+  const [localPosition, setLocalPosition] = useState(0);
+  const [isActionCooldown, setIsActionCooldown] = useState(false);
+  const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const volumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { track, isPlaying, position, duration, volume } = playerState;
 
@@ -88,6 +92,50 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
       getCurrentPlayback();
     }
   }, [isMobile, isPWA, getCurrentPlayback]);
+
+  // Sync local position with player state
+  useEffect(() => {
+    setLocalPosition(position);
+  }, [position]);
+
+  // Real-time position updates when playing
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      setLocalPosition((prev) => {
+        const next = prev + 1000;
+        return next >= duration ? duration : next;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, duration]);
+
+  // Throttled action handler with cooldown
+  const throttledAction = useCallback((action: () => void, cooldownMs: number = 500) => {
+    if (isActionCooldown) return;
+    
+    setIsActionCooldown(true);
+    action();
+    
+    setTimeout(() => {
+      setIsActionCooldown(false);
+    }, cooldownMs);
+  }, [isActionCooldown]);
+
+  // Throttled button handlers
+  const handleTogglePlay = useCallback(() => {
+    throttledAction(() => togglePlay(), 500);
+  }, [throttledAction, togglePlay]);
+
+  const handleNextTrack = useCallback(() => {
+    throttledAction(() => nextTrack(), 800);
+  }, [throttledAction, nextTrack]);
+
+  const handlePreviousTrack = useCallback(() => {
+    throttledAction(() => previousTrack(), 800);
+  }, [throttledAction, previousTrack]);
 
   // Handle drag (desktop only)
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -124,40 +172,70 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     };
   }, [isDragging, dragStart]);
 
-  // Handle volume
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
+  // Debounced volume handler
+  const handleVolumeChange = useCallback((newVolume: number) => {
+    // Update UI immediately
     if (newVolume > 0) {
       setIsMuted(false);
       setSavedVolume(newVolume);
     } else {
       setIsMuted(true);
     }
-  };
-
-  const toggleMute = () => {
-    if (isMuted) {
-      setVolume(savedVolume);
-      setIsMuted(false);
-    } else {
-      setSavedVolume(volume);
-      setVolume(0);
-      setIsMuted(true);
+    
+    // Debounce API call
+    if (volumeTimeoutRef.current) {
+      clearTimeout(volumeTimeoutRef.current);
     }
-  };
+    
+    volumeTimeoutRef.current = setTimeout(() => {
+      setVolume(newVolume);
+    }, 300);
+  }, [setVolume]);
 
-  // Handle seek
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+  const toggleMute = useCallback(() => {
+    throttledAction(() => {
+      if (isMuted) {
+        setVolume(savedVolume);
+        setIsMuted(false);
+      } else {
+        setSavedVolume(volume);
+        setVolume(0);
+        setIsMuted(true);
+      }
+    }, 400);
+  }, [throttledAction, isMuted, savedVolume, volume, setVolume]);
+
+  // Debounced seek handler
+  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
     const newPosition = Math.floor((percentage / 100) * duration);
-    seek(newPosition);
-  };
+    
+    // Update UI immediately
+    setLocalPosition(newPosition);
+    
+    // Debounce API call
+    if (seekTimeoutRef.current) {
+      clearTimeout(seekTimeoutRef.current);
+    }
+    
+    seekTimeoutRef.current = setTimeout(() => {
+      seek(newPosition);
+    }, 300);
+  }, [duration, seek]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (seekTimeoutRef.current) clearTimeout(seekTimeoutRef.current);
+      if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current);
+    };
+  }, []);
 
   if (!isVisible || !track) return null;
 
-  const progressPercentage = duration > 0 ? (position / duration) * 100 : 0;
+  const progressPercentage = duration > 0 ? (localPosition / duration) * 100 : 0;
 
   return (
     <AnimatePresence>
@@ -183,14 +261,14 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
         {/* Drag handle (desktop only) */}
         {!isMobile && (
           <div
-            className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing"
+            className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing z-0"
             onMouseDown={handleMouseDown}
           />
         )}
 
         {/* Header */}
         {!isMinimized && (
-          <div className="flex items-center justify-between px-4 pt-3 pb-1">
+          <div className="relative z-10 flex items-center justify-between px-4 pt-3 pb-1">
             <div className="flex items-center gap-2">
               <Music className="h-4 w-4 text-green-500" />
               <span className="text-xs font-medium text-white/60">Now Playing</span>
@@ -207,7 +285,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
         )}
 
         <motion.div
-          className="p-4 pt-2"
+          className="relative z-10 p-4 pt-2"
           initial={false}
           animate={{ height: isMinimized ? "auto" : "auto" }}
         >
@@ -237,8 +315,9 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                 <div className="flex items-center gap-2 ml-4">
                   <Button
                     size="icon"
-                    className="h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                    onClick={togglePlay}
+                    className="h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleTogglePlay}
+                    disabled={isActionCooldown}
                   >
                     {isPlaying ? (
                       <Pause className="h-4 w-4" />
@@ -290,7 +369,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs text-white/60">
-                  <span>{formatTime(position)}</span>
+                  <span>{formatTime(localPosition)}</span>
                   <span>{formatTime(duration)}</span>
                 </div>
               </div>
@@ -302,15 +381,17 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white/80 hover:text-white"
-                  onClick={previousTrack}
+                  className="h-8 w-8 text-white/80 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handlePreviousTrack}
+                  disabled={isActionCooldown}
                 >
                   <SkipBack className="h-4 w-4" />
                 </Button>
                 <Button
                   size="icon"
-                  className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                  onClick={togglePlay}
+                  className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleTogglePlay}
+                  disabled={isActionCooldown}
                 >
                   {isPlaying ? (
                     <Pause className="h-5 w-5" />
@@ -321,8 +402,9 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white/80 hover:text-white"
-                  onClick={nextTrack}
+                  className="h-8 w-8 text-white/80 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleNextTrack}
+                  disabled={isActionCooldown}
                 >
                   <SkipForward className="h-4 w-4" />
                 </Button>

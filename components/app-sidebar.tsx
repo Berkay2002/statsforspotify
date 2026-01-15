@@ -16,7 +16,7 @@ import { SidebarNavigation, type NavRoute } from "@/components/sidebar-navigatio
 import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 
 const navRoutes: NavRoute[] = [
@@ -70,15 +70,11 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const isMobile = useIsMobile();
-  const [isPlayerVisible, setIsPlayerVisible] = useState(true);
-
-  // Load player visibility preference from localStorage
-  useEffect(() => {
-    const savedVisibility = localStorage.getItem('floating-player-visible');
-    if (savedVisibility !== null) {
-      setIsPlayerVisible(savedVisibility === 'true');
-    }
-  }, []);
+  const [isPlayerVisible, setIsPlayerVisible] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('floating-player-visible');
+    return saved !== null ? saved === 'true' : true;
+  });
 
   const togglePlayerVisibility = () => {
     const newVisibility = !isPlayerVisible;

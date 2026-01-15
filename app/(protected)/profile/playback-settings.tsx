@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
@@ -16,15 +16,11 @@ export function PlaybackSettings() {
   const [localPreference, setLocalPreference] = useState<'in-app' | 'spotify-app' | null>(
     playbackPreference
   );
-  const [isPlayerVisible, setIsPlayerVisible] = useState(true);
-
-  // Load player visibility preference from localStorage
-  useEffect(() => {
-    const savedVisibility = localStorage.getItem('floating-player-visible');
-    if (savedVisibility !== null) {
-      setIsPlayerVisible(savedVisibility === 'true');
-    }
-  }, []);
+  const [isPlayerVisible, setIsPlayerVisible] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('floating-player-visible');
+    return saved !== null ? saved === 'true' : true;
+  });
 
   const handlePreferenceChange = (value: 'in-app' | 'spotify-app') => {
     setLocalPreference(value);
@@ -55,7 +51,7 @@ export function PlaybackSettings() {
                   Show Floating Player
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Hide player since you're using the Spotify app
+                  Hide player since you&apos;re using the Spotify app
                 </p>
               </div>
             </div>
