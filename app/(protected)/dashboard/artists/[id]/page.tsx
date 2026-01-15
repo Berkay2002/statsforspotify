@@ -11,6 +11,8 @@ import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader
 import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
 import { parseTimeRange } from "@/lib/spotify/time-range";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PlaybackPreferenceDialog } from "@/components/playback-preference-dialog";
 import { ArrowLeft, Play, UserPlus } from "lucide-react";
 import type { TimeRange } from "@/lib/spotify/types";
 
@@ -44,7 +46,8 @@ export default function ArtistDetailPage() {
   const searchParameters = useSearchParams();
   const artistId = params?.id as string;
   const timeRange: TimeRange = parseTimeRange(searchParameters.get("time_range"), "medium_term");
-  const { play, playerState } = useSpotifyPlayer();
+  const { play, playerState, isPWA, playbackPreference, openInSpotifyApp } = useSpotifyPlayer();
+  const isMobile = useIsMobile();
   
   const [artist, setArtist] = useState<ArtistDetails | null>(null);
   const [stats, setStats] = useState<ArtistStats | null>(null);
@@ -55,6 +58,8 @@ export default function ArtistDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
+  const [pendingPlayAction, setPendingPlayAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     async function loadArtistData() {
@@ -171,13 +176,27 @@ export default function ArtistDetailPage() {
   const handlePlayTopTracks = useCallback(() => {
     if (!playerState.isReady || tracks.length === 0) return;
 
-    // Get top 5 tracks (or fewer if less available) and convert to Spotify URIs
-    const topTracksToPlay = tracks.slice(0, 5);
-    const trackUris = topTracksToPlay.map(track => `spotify:track:${track.id}`);
+    const executePlay = () => {
+      // Get top 5 tracks (or fewer if less available) and convert to Spotify URIs
+      const topTracksToPlay = tracks.slice(0, 5);
+      const trackUris = topTracksToPlay.map(track => `spotify:track:${track.id}`);
 
-    // Play the tracks using the uris parameter
-    play(undefined, undefined, trackUris);
-  }, [tracks, playerState.isReady, play]);
+      // Play the tracks using the uris parameter
+      play(undefined, undefined, trackUris);
+    };
+
+    // Check if we should show the preference dialog
+    if (isPWA && isMobile && playbackPreference === null) {
+      setPendingPlayAction(() => executePlay);
+      setShowPreferenceDialog(true);
+    } else if (playbackPreference === 'spotify-app' && tracks.length > 0) {
+      // User prefers Spotify app - open the artist URI
+      openInSpotifyApp(`spotify:artist:${artistId}`);
+    } else {
+      // Play in-app (default behavior)
+      executePlay();
+    }
+  }, [tracks, playerState.isReady, play, isPWA, isMobile, playbackPreference, openInSpotifyApp, artistId]);
 
   if (loading) {
     return (
@@ -410,6 +429,18 @@ export default function ArtistDetailPage() {
           showTimeRangeSelect={false}
         />
       </div>
+
+      {/* Playback Preference Dialog */}
+      <PlaybackPreferenceDialog
+        open={showPreferenceDialog}
+        onClose={() => setShowPreferenceDialog(false)}
+        trackUri={`spotify:artist:${artistId}`}
+        onPlayInApp={() => {
+          if (pendingPlayAction) {
+            pendingPlayAction();
+          }
+        }}
+      />
     </div>
   );
 }

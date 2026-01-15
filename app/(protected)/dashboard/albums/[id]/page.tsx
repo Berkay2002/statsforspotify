@@ -11,6 +11,8 @@ import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader
 import { TopTracksSection } from "@/components/detail/top-tracks-section";
 import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PlaybackPreferenceDialog } from "@/components/playback-preference-dialog";
 import { ArrowLeft, Play } from "lucide-react";
 
 export default function AlbumDetailPage() {
@@ -18,12 +20,15 @@ export default function AlbumDetailPage() {
   const searchParameters = useSearchParams();
   const albumId = params?.id as string;
   const timeRange = parseTimeRange(searchParameters.get("time_range"), "medium_term");
-  const { play, playerState } = useSpotifyPlayer();
+  const { play, playerState, isPWA, playbackPreference, openInSpotifyApp } = useSpotifyPlayer();
+  const isMobile = useIsMobile();
 
   const [album, setAlbum] = useState<{ id: string; name: string; images: { url: string }[]; artists: { name: string; id: string }[] } | null>(null);
   const [albumTracks, setAlbumTracks] = useState<{ rank: number; id: string; name: string; imageUrl: string; subtitle: string; durationMs: number; popularity: number }[]>([]);
   const [rankedAlbum, setRankedAlbum] = useState<{ trackCount: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
+  const [pendingPlayAction, setPendingPlayAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     async function loadAlbumData() {
@@ -92,6 +97,26 @@ export default function AlbumDetailPage() {
   const artistName = album.artists.map((artist) => artist.name).join(", ");
   const primaryArtistId = album.artists[0]?.id;
 
+  const handlePlayAlbum = () => {
+    if (!playerState.isReady) return;
+
+    const executePlay = () => {
+      play(undefined, `spotify:album:${album.id}`);
+    };
+
+    // Check if we should show the preference dialog
+    if (isPWA && isMobile && playbackPreference === null) {
+      setPendingPlayAction(() => executePlay);
+      setShowPreferenceDialog(true);
+    } else if (playbackPreference === 'spotify-app') {
+      // User prefers Spotify app - open the album
+      openInSpotifyApp(`spotify:album:${album.id}`);
+    } else {
+      // Play in-app (default behavior)
+      executePlay();
+    }
+  };
+
   return (
     <div className="space-y-0 -mt-6 -mx-6 pb-6">
       <div className="relative h-[500px] overflow-hidden">
@@ -154,7 +179,7 @@ export default function AlbumDetailPage() {
           <Button
             size="lg"
             className="rounded-full h-14 w-14 p-0"
-            onClick={() => play(undefined, `spotify:album:${album.id}`)}
+            onClick={handlePlayAlbum}
             disabled={!playerState.isReady}
             aria-label="Play Album"
           >
@@ -183,6 +208,18 @@ export default function AlbumDetailPage() {
           showTimeRangeSelect={false}
         />
       </div>
+
+      {/* Playback Preference Dialog */}
+      <PlaybackPreferenceDialog
+        open={showPreferenceDialog}
+        onClose={() => setShowPreferenceDialog(false)}
+        trackUri={`spotify:album:${album.id}`}
+        onPlayInApp={() => {
+          if (pendingPlayAction) {
+            pendingPlayAction();
+          }
+        }}
+      />
     </div>
   );
 }

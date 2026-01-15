@@ -27,12 +27,14 @@ import {
   CheckCircle2,
   Eye,
   Users,
-  UserPlus
+  UserPlus,
+  Headphones
 } from "lucide-react";
 import { DeleteDataDialog } from "./delete-data-dialog";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 import { ExportDataButton } from "./export-data-button";
 import { PrivacySettings } from "./privacy-settings";
+import { PlaybackSettings } from "./playback-settings";
 import { getCurrentUser } from "@/lib/spotify/api";
 
 export default async function ProfilePage() {
@@ -302,6 +304,22 @@ export default async function ProfilePage() {
               <p className="text-sm text-muted-foreground">Loading...</p>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Playback Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Headphones className="h-5 w-5" />
+            Playback Preferences
+          </CardTitle>
+          <CardDescription>
+            Choose where to play music when using the app
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PlaybackSettings />
         </CardContent>
       </Card>
 

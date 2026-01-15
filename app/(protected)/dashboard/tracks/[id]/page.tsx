@@ -11,6 +11,8 @@ import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader
 import { TopTracksSection } from "@/components/detail/top-tracks-section";
 import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PlaybackPreferenceDialog } from "@/components/playback-preference-dialog";
 import { ArrowLeft, Play } from "lucide-react";
 
 function formatDuration(durationMilliseconds: number): string {
@@ -24,11 +26,14 @@ export default function TrackDetailPage() {
   const searchParameters = useSearchParams();
   const trackId = params?.id as string;
   const timeRange = parseTimeRange(searchParameters.get("time_range"), "medium_term");
-  const { play, playerState } = useSpotifyPlayer();
+  const { play, playerState, isPWA, playbackPreference, openInSpotifyApp } = useSpotifyPlayer();
+  const isMobile = useIsMobile();
 
   const [track, setTrack] = useState<{ id: string; name: string; album: { id: string; name: string; images: { url: string }[] }; artists: { name: string; id: string }[]; duration_ms: number } | null>(null);
   const [relatedTracks, setRelatedTracks] = useState<{ rank: number; id: string; name: string; imageUrl: string; subtitle: string; durationMs: number; popularity: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
+  const [pendingPlayAction, setPendingPlayAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     async function loadTrackData() {
@@ -92,6 +97,26 @@ export default function TrackDetailPage() {
   const artistName = track.artists.map((artist) => artist.name).join(", ");
   const primaryArtistId = track.artists[0]?.id;
 
+  const handlePlayTrack = () => {
+    if (!playerState.isReady) return;
+
+    const executePlay = () => {
+      play(`spotify:track:${track.id}`);
+    };
+
+    // Check if we should show the preference dialog
+    if (isPWA && isMobile && playbackPreference === null) {
+      setPendingPlayAction(() => executePlay);
+      setShowPreferenceDialog(true);
+    } else if (playbackPreference === 'spotify-app') {
+      // User prefers Spotify app - open the track
+      openInSpotifyApp(`spotify:track:${track.id}`);
+    } else {
+      // Play in-app (default behavior)
+      executePlay();
+    }
+  };
+
   return (
     <div className="space-y-0 -mt-6 -mx-6 pb-6">
       <div className="relative h-[500px] overflow-hidden">
@@ -149,7 +174,7 @@ export default function TrackDetailPage() {
           <Button
             size="lg"
             className="rounded-full h-14 w-14 p-0"
-            onClick={() => play(`spotify:track:${track.id}`)}
+            onClick={handlePlayTrack}
             disabled={!playerState.isReady}
             aria-label="Play Track"
           >
@@ -186,6 +211,18 @@ export default function TrackDetailPage() {
           showTimeRangeSelect={false}
         />
       </div>
+
+      {/* Playback Preference Dialog */}
+      <PlaybackPreferenceDialog
+        open={showPreferenceDialog}
+        onClose={() => setShowPreferenceDialog(false)}
+        trackUri={`spotify:track:${track.id}`}
+        onPlayInApp={() => {
+          if (pendingPlayAction) {
+            pendingPlayAction();
+          }
+        }}
+      />
     </div>
   );
 }
