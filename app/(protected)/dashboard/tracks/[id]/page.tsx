@@ -26,8 +26,8 @@ export default function TrackDetailPage() {
   const timeRange = parseTimeRange(searchParameters.get("time_range"), "medium_term");
   const { play, playerState } = useSpotifyPlayer();
 
-  const [track, setTrack] = useState<any>(null);
-  const [relatedTracks, setRelatedTracks] = useState<any[]>([]);
+  const [track, setTrack] = useState<{ id: string; name: string; album: { id: string; name: string; images: { url: string }[] }; artists: { name: string; id: string }[]; duration_ms: number } | null>(null);
+  const [relatedTracks, setRelatedTracks] = useState<{ rank: number; id: string; name: string; imageUrl: string; subtitle: string; durationMs: number; popularity: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,8 +50,8 @@ export default function TrackDetailPage() {
         if (tracksResponse.ok) {
           const tracksData = await tracksResponse.json();
           const related = tracksData
-            .filter((t: any) => t.albumId === trackData.album.id && t.id !== trackData.id)
-            .map((t: any) => ({
+            .filter((t: { albumId: string; id: string }) => t.albumId === trackData.album.id && t.id !== trackData.id)
+            .map((t: { rank: number; id: string; name: string; imageUrl: string; artistName: string; durationMs: number; popularity: number }) => ({
               rank: t.rank,
               id: t.id,
               name: t.name,
@@ -89,7 +89,7 @@ export default function TrackDetailPage() {
   }
 
   const imageUrl = track.album.images[1]?.url ?? track.album.images[0]?.url ?? null;
-  const artistName = track.artists.map((artist: any) => artist.name).join(", ");
+  const artistName = track.artists.map((artist) => artist.name).join(", ");
   const primaryArtistId = track.artists[0]?.id;
 
   return (

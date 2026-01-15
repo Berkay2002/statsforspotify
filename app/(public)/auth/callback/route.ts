@@ -5,7 +5,6 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const action = searchParams.get("action");
-  const next = searchParams.get("next") ?? "/dashboard";
 
   // If this is a login action, redirect to Spotify OAuth
   if (action === "login") {

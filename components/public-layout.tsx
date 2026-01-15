@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Footer } from "@/components/footer";
-import { SpotifyLogo, SpotifyAttribution } from "@/components/spotify-stats-logo";
+import { SpotifyLogo } from "@/components/spotify-stats-logo";
 
 interface PublicLayoutProps {
   children: React.ReactNode;

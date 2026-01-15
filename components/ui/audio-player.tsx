@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Play,
@@ -141,10 +142,11 @@ const AudioPlayer = ({
           {/* Cover  */}
           {cover && (
             <motion.div className="bg-white/20 overflow-hidden rounded-[16px] h-[180px] w-full relative">
-              <img
+              <Image
                 src={cover}
                 alt="cover"
                 className="!object-cover w-full my-0 p-0 !mt-0 border-none !h-full"
+                fill
               />
             </motion.div>
           )}

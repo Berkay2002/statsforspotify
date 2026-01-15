@@ -41,20 +41,20 @@ export default async function DashboardPage() {
       .limit(1)
       .maybeSingle(),
     supabase.rpc(
-      "get_three_versions_of_you" as any,
-      { p_target_user_id: user.id, p_limit: 10 } as any
+      "get_three_versions_of_you",
+      { p_target_user_id: user.id, p_limit: 10 }
     ),
     supabase.rpc(
-      "get_plot_twists_recap" as any,
-      { p_target_user_id: user.id, p_days: 30, p_limit: 20 } as any
+      "get_plot_twists_recap",
+      { p_target_user_id: user.id, p_days: 30, p_limit: 20 }
     ),
     supabase.rpc(
-      "get_album_takeover_recap" as any,
-      { p_target_user_id: user.id, p_days: 90 } as any
+      "get_album_takeover_recap",
+      { p_target_user_id: user.id, p_days: 90 }
     ),
     supabase.rpc(
-      "get_hall_of_fame_recap" as any,
-      { p_target_user_id: user.id, p_days: 365, p_limit: 10 } as any
+      "get_hall_of_fame_recap",
+      { p_target_user_id: user.id, p_days: 365, p_limit: 10 }
     ),
   ]);
 

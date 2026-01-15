@@ -5,13 +5,16 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export function AnalyticsWrapper() {
-    const [hasConsent, setHasConsent] = useState(false);
+    const [hasConsent, setHasConsent] = useState(() => {
+        // Initialize from localStorage
+        if (typeof window !== "undefined") {
+            const consent = localStorage.getItem("cookie-consent");
+            return consent === "accepted";
+        }
+        return false;
+    });
 
     useEffect(() => {
-        // Check if user has accepted cookies
-        const consent = localStorage.getItem("cookie-consent");
-        setHasConsent(consent === "accepted");
-
         // Listen for consent changes (in case user changes mind)
         const handleStorageChange = () => {
             const newConsent = localStorage.getItem("cookie-consent");

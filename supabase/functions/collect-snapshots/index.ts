@@ -220,9 +220,44 @@ async function calculatePreviousRanks(
   tracksResponse: { items: SpotifyTrack[] },
   albumMap: Map<string, { id: string; name: string; imageUrl: string | null; artistId: string; artistName: string; trackCount: number }>
 ): Promise<{
-  artists: any[];
-  tracks: any[];
-  albums: any[];
+  artists: Array<{
+    snapshot_id: string;
+    user_id: string;
+    artist_id: string;
+    artist_name: string;
+    artist_image_url: string | null;
+    genres: string[];
+    popularity: number | null;
+    rank: number;
+    previous_rank: number | null;
+  }>;
+  tracks: Array<{
+    snapshot_id: string;
+    user_id: string;
+    track_id: string;
+    track_name: string;
+    track_image_url: string | null;
+    artist_id: string;
+    artist_name: string;
+    album_id: string;
+    album_name: string;
+    duration_ms: number;
+    popularity: number;
+    rank: number;
+    previous_rank: number | null;
+  }>;
+  albums: Array<{
+    snapshot_id: string;
+    user_id: string;
+    album_id: string;
+    album_name: string;
+    album_image_url: string | null;
+    artist_id: string;
+    artist_name: string;
+    track_count: number;
+    rank: number;
+    previous_rank: number | null;
+  }>;
 }> {
   const startTime = Date.now();
   
@@ -554,7 +589,7 @@ async function processUser(
 
     return { success: true };
   } catch (error) {
-    const errorObj = error as { errorType?: ErrorType; message?: string };
+    const errorObj = error as { errorType?: ErrorType; message?: string; retryAfter?: number };
     const errorType = errorObj.errorType || ErrorType.TRANSIENT;
     const errorMessage =
       errorObj.message || (error instanceof Error ? error.message : "Unknown error");

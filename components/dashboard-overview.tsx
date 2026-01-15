@@ -4,12 +4,11 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CombinedSparklineLoader } from "@/components/charts/combined-sparkline-loader";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
-import { Disc3, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { TimeRange } from "@/lib/spotify/types";
 
 interface Artist {

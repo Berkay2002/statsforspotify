@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Search, Users, UserPlus, UserCheck, Clock, Loader2, ExternalLink, UserX, Bell } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";

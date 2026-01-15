@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Ultra, Rock_Salt, Protest_Guerrilla } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Ultra, Protest_Guerrilla } from "next/font/google";
 import "./globals.css";
 
-const rockSalt = Rock_Salt({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-rock-salt",
-});
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { CookieConsent } from "@/components/ui/cookies"

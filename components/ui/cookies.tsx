@@ -53,32 +53,34 @@ const PrefRow = ({
 );
 
 export function CookieConsent() {
-    const [mounted, setMounted] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
+    const [isVisible, setIsVisible] = useState(() => {
+        if (typeof window !== "undefined") {
+            const hasConsent = localStorage.getItem("cookie-consent");
+            return !hasConsent;
+        }
+        return false;
+    });
     const [showPrefs, setShowPrefs] = useState(false);
-    const [prefs, setPrefs] = useState<Preferences>({
-        necessary: true,
-        analytics: false,
+    const [prefs, setPrefs] = useState<Preferences>(() => {
+        if (typeof window !== "undefined") {
+            const storedPrefs = localStorage.getItem("cookie-preferences");
+            if (storedPrefs) {
+                try {
+                    const parsed = JSON.parse(storedPrefs) as Preferences;
+                    return { ...parsed, necessary: true };
+                } catch {
+                    // Ignore parse errors
+                }
+            }
+        }
+        return {
+            necessary: true,
+            analytics: false,
+        };
     });
 
     const prefsRef = useRef<HTMLDivElement | null>(null);
     const [prefsHeight, setPrefsHeight] = useState<number>(0);
-
-    useEffect(() => {
-        setMounted(true);
-        const hasConsent = localStorage.getItem("cookie-consent");
-        setIsVisible(!hasConsent);
-
-        const storedPrefs = localStorage.getItem("cookie-preferences");
-        if (storedPrefs) {
-            try {
-                const parsed = JSON.parse(storedPrefs) as Preferences;
-                setPrefs({ ...parsed, necessary: true });
-            } catch {
-                // Ignore parse errors
-            }
-        }
-    }, []);
 
     useEffect(() => {
         if (showPrefs && prefsRef.current) {
@@ -119,8 +121,8 @@ export function CookieConsent() {
         setIsVisible(false);
     };
 
-    // Prevent hydration mismatch by not rendering until client-side mounted
-    if (!mounted || !isVisible) return null;
+    // Only render on client-side to prevent hydration mismatch
+    if (typeof window === "undefined" || !isVisible) return null;
 
     return (
         <div className="fixed bottom-4 right-4 z-50 w-80">

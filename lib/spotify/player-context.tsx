@@ -99,7 +99,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     // Detect PWA mode
     const checkPWA = () => {
       const isPWAMode = window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true;
+        (window.navigator as { standalone?: boolean }).standalone === true;
       setIsPWA(isPWAMode);
     };
     checkPWA();
