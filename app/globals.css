@@ -173,3 +173,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom utilities */
+.rock-salt-regular {
+  font-family: var(--font-rock-salt), cursive;
+  font-weight: 400;
+  font-style: normal;
+}

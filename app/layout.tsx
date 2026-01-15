@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Ultra } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Ultra, Rock_Salt, Protest_Guerrilla } from "next/font/google";
 import "./globals.css";
+
+const rockSalt = Rock_Salt({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-rock-salt",
+});
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { CookieConsent } from "@/components/ui/cookies"
@@ -22,6 +28,12 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const protestGuerrilla = Protest_Guerrilla({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-protest-guerrilla",
 });
 
 export const metadata: Metadata = {
@@ -53,7 +65,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${ultra.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${ultra.variable} ${protestGuerrilla.variable}`}>
       <head>
         <meta name="theme-color" content="#1DB954" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

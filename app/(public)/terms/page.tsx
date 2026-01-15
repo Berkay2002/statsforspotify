@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { Music, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PublicLayout } from "@/components/public-layout";
 
 export const metadata: Metadata = {
   title: "Terms of Service - Stats for Spotify",
@@ -10,33 +9,15 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Music className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Stats for Spotify</span>
-          </Link>
-          <Button variant="ghost" asChild>
-            <Link href="/" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Home
-            </Link>
-          </Button>
-        </div>
-      </header>
+    <PublicLayout showBackButton={true} backHref="/">
+      <div className="container mx-auto max-w-3xl px-4 py-12">
+        <h1 className="text-4xl font-bold">Terms of Service</h1>
+        <p className="mt-2 text-muted-foreground">
+          Last updated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+        </p>
 
-      {/* Content */}
-      <main className="flex-1">
-        <div className="container mx-auto max-w-3xl px-4 py-12">
-          <h1 className="text-4xl font-bold">Terms of Service</h1>
-          <p className="mt-2 text-muted-foreground">
-            Last updated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-          </p>
-
-          <div className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
-            <section className="mt-8">
+        <div className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
+          <section className="mt-8">
               <h2 className="text-2xl font-semibold">1. Acceptance of Terms</h2>
               <p className="mt-4 text-muted-foreground">
                 By accessing or using Stats for Spotify (&quot;the Service&quot;), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.
@@ -167,18 +148,6 @@ export default function TermsPage() {
             </section>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Stats for Spotify. Not affiliated with Spotify AB.</p>
-          <div className="mt-2 flex justify-center gap-4">
-            <Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-foreground">Terms of Service</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </PublicLayout>
   );
 }

@@ -5,6 +5,7 @@ import { SpotifyLogo, SpotifyAttribution } from "@/components/spotify-stats-logo
 import { BarChart3, Clock, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { PublicLayout } from "@/components/public-layout";
 
 export default async function HomePage({
   searchParams,
@@ -15,22 +16,8 @@ export default async function HomePage({
   const needsReauth = params.reauth === "spotify";
 
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <SpotifyLogo className="h-8 w-auto text-[#1DB954]" showWordmark={false} />
-            <span className="text-xl font-bold">Stats for Spotify</span>
-          </div>
-          <LoginDialog>
-            <Button className="bg-[#1DB954] text-black hover:bg-[#1ed760]">Sign In</Button>
-          </LoginDialog>
-        </div>
-      </header>
-
+    <PublicLayout>
       {/* Hero Section */}
-      <main className="flex-1">
         <section className="container mx-auto px-4 py-24 text-center">
           {needsReauth && (
             <Alert variant="destructive" className="mx-auto mb-8 max-w-2xl">
@@ -82,19 +69,7 @@ export default async function HomePage({
             </div>
           </div>
         </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Stats for Spotify. Not affiliated with Spotify AB.</p>
-          <div className="mt-2 flex justify-center gap-4">
-            <Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-foreground">Terms of Service</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </PublicLayout>
   );
 }
 
