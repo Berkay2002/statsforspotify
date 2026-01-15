@@ -1,37 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
-import { Music, Smartphone, Check } from "lucide-react";
+import { Music, Smartphone, Check, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function PlaybackSettings() {
   const { playbackPreference, setPlaybackPreference, isPWA } = useSpotifyPlayer();
+  const isMobile = useIsMobile();
   const [localPreference, setLocalPreference] = useState<'in-app' | 'spotify-app' | null>(
     playbackPreference
   );
+  const [isPlayerVisible, setIsPlayerVisible] = useState(true);
+
+  // Load player visibility preference from localStorage
+  useEffect(() => {
+    const savedVisibility = localStorage.getItem('floating-player-visible');
+    if (savedVisibility !== null) {
+      setIsPlayerVisible(savedVisibility === 'true');
+    }
+  }, []);
 
   const handlePreferenceChange = (value: 'in-app' | 'spotify-app') => {
     setLocalPreference(value);
     setPlaybackPreference(value);
   };
 
-  // Only show for PWA users
-  if (!isPWA) {
-    return (
-      <div className="rounded-lg border border-dashed p-4">
-        <p className="text-sm text-muted-foreground">
-          Playback preferences are available when using Stats for Spotify as a PWA (Progressive Web App).
-          Install the app to access this feature.
-        </p>
-      </div>
-    );
-  }
+  const handleVisibilityChange = (visible: boolean) => {
+    setIsPlayerVisible(visible);
+    localStorage.setItem('floating-player-visible', String(visible));
+    // Dispatch custom event to notify FloatingPlayer
+    window.dispatchEvent(new CustomEvent('player-visibility-change', { detail: { visible } }));
+  };
 
   return (
-    <RadioGroup
+    <div className="space-y-6">
+      {/* Player Visibility Toggle (Mobile Only, only when using Spotify app) */}
+      {isMobile && isPWA && localPreference === 'spotify-app' && (
+        <>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center gap-3">
+              {isPlayerVisible ? (
+                <Eye className="h-5 w-5 text-green-500" />
+              ) : (
+                <EyeOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              <div className="space-y-0.5">
+                <Label htmlFor="player-visibility" className="text-sm font-medium cursor-pointer">
+                  Show Floating Player
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Hide player since you're using the Spotify app
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="player-visibility"
+              checked={isPlayerVisible}
+              onCheckedChange={handleVisibilityChange}
+            />
+          </div>
+          <Separator />
+        </>
+      )}
+
+      {/* Playback Preference (PWA Only) */}
+      {!isPWA ? (
+        <div className="rounded-lg border border-dashed p-4">
+          <p className="text-sm text-muted-foreground">
+            Playback preferences are available when using Stats for Spotify as a PWA (Progressive Web App).
+            Install the app to access this feature.
+          </p>
+        </div>
+      ) : (
+        <RadioGroup
       value={localPreference || 'in-app'}
       onValueChange={(value) => handlePreferenceChange(value as 'in-app' | 'spotify-app')}
       className="space-y-3"
@@ -80,5 +127,7 @@ export function PlaybackSettings() {
         </div>
       </div>
     </RadioGroup>
+      )}
+    </div>
   );
 }

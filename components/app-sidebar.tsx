@@ -10,10 +10,14 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { Disc3, LayoutDashboard, Music, Music2, UserPlus, Users } from "lucide-react";
+import { Disc3, LayoutDashboard, Music, Music2, UserPlus, Users, Eye, EyeOff } from "lucide-react";
 import { SpotifyBrand } from "@/components/spotify-stats-logo";
 import { SidebarNavigation, type NavRoute } from "@/components/sidebar-navigation";
 import { UserMenu } from "@/components/user-menu";
+import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useState, useEffect } from "react";
+import { Separator } from "@/components/ui/separator";
 
 const navRoutes: NavRoute[] = [
   {
@@ -65,6 +69,24 @@ interface AppSidebarProps {
 export function AppSidebar({ user }: AppSidebarProps) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const isMobile = useIsMobile();
+  const [isPlayerVisible, setIsPlayerVisible] = useState(true);
+
+  // Load player visibility preference from localStorage
+  useEffect(() => {
+    const savedVisibility = localStorage.getItem('floating-player-visible');
+    if (savedVisibility !== null) {
+      setIsPlayerVisible(savedVisibility === 'true');
+    }
+  }, []);
+
+  const togglePlayerVisibility = () => {
+    const newVisibility = !isPlayerVisible;
+    setIsPlayerVisible(newVisibility);
+    localStorage.setItem('floating-player-visible', String(newVisibility));
+    // Dispatch custom event to notify FloatingPlayer
+    window.dispatchEvent(new CustomEvent('player-visibility-change', { detail: { visible: newVisibility } }));
+  };
 
   return (
     <Sidebar variant="floating" collapsible="icon">
@@ -98,7 +120,30 @@ export function AppSidebar({ user }: AppSidebarProps) {
       <SidebarContent className="gap-4 px-2 py-4">
         <SidebarNavigation routes={navRoutes} />
       </SidebarContent>
-      <SidebarFooter className="px-2">
+      <SidebarFooter className="px-2 space-y-2">
+        {isMobile && !isCollapsed && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={togglePlayerVisibility}
+              className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+            >
+              {isPlayerVisible ? (
+                <>
+                  <EyeOff className="h-4 w-4" />
+                  <span className="text-sm">Hide Player</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4" />
+                  <span className="text-sm">Show Player</span>
+                </>
+              )}
+            </Button>
+            <Separator />
+          </>
+        )}
         <UserMenu user={user} />
       </SidebarFooter>
     </Sidebar>

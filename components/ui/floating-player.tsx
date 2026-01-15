@@ -49,12 +49,33 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isMuted, setIsMuted] = useState(false);
   const [savedVolume, setSavedVolume] = useState(0.5);
+  const [isPlayerHidden, setIsPlayerHidden] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
 
   const { track, isPlaying, position, duration, volume } = playerState;
 
-  // Derive visibility from track state
-  const isVisible = track !== null;
+  // Load player visibility preference from localStorage
+  useEffect(() => {
+    const savedVisibility = localStorage.getItem('floating-player-visible');
+    if (savedVisibility !== null) {
+      setIsPlayerHidden(savedVisibility === 'false');
+    }
+  }, []);
+
+  // Listen for visibility changes from settings
+  useEffect(() => {
+    const handleVisibilityChange = (event: CustomEvent<{ visible: boolean }>) => {
+      setIsPlayerHidden(!event.detail.visible);
+    };
+
+    window.addEventListener('player-visibility-change', handleVisibilityChange as EventListener);
+    return () => {
+      window.removeEventListener('player-visibility-change', handleVisibilityChange as EventListener);
+    };
+  }, []);
+
+  // Derive visibility from track state and user preference (mobile only)
+  const isVisible = track !== null && !(isMobile && isPlayerHidden);
 
   // Load minimized state from localStorage on mount
   useEffect(() => {
