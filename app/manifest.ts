@@ -5,8 +5,9 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Stats for Spotify',
     short_name: 'Spotify Stats',
     description: 'Track your Spotify listening history and see how your music taste evolves over time',
-    start_url: '/',
+    start_url: '/?source=pwa',
     display: 'standalone',
+    scope: '/',
     background_color: '#191414',
     theme_color: '#1DB954',
     icons: [

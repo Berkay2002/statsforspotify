@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
 import { SpotifyLogo, SpotifyAttribution } from "@/components/spotify-stats-logo";
@@ -6,6 +5,7 @@ import { BarChart3, Clock, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { PublicLayout } from "@/components/public-layout";
+import { AuthRedirect } from "@/components/auth-redirect";
 
 export default async function HomePage({
   searchParams,
@@ -17,6 +17,9 @@ export default async function HomePage({
 
   return (
     <PublicLayout>
+      {/* Auth redirect for authenticated users */}
+      <AuthRedirect />
+
       {/* Hero Section */}
         <section className="container mx-auto px-4 py-24 text-center">
           {needsReauth && (

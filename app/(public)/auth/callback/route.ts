@@ -66,6 +66,11 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
     }
 
+    // If no session, redirect to home with error
+    if (!session) {
+      return NextResponse.redirect(`${origin}/?error=${encodeURIComponent("Failed to create session")}`);
+    }
+
     // Sync display name and avatar from Spotify on login
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -169,8 +174,10 @@ export async function GET(request: Request) {
       console.error('Failed to sync profile from Spotify:', syncError);
     }
 
+    // After successful profile sync, redirect to dashboard or next URL
     const forwardedHost = request.headers.get("x-forwarded-host");
     const isLocalEnv = process.env.NODE_ENV === "development";
+    const next = searchParams.get("next") || "/dashboard";
 
     if (isLocalEnv) {
       return NextResponse.redirect(`${origin}${next}`);
