@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Development
 bun dev          # Start development server (uses Turbopack)
-bun build        # Build for production (verify before committing)
+bun run build    # Build for production (verify before committing)
 bun lint         # Run ESLint
 bun start        # Start production server
 

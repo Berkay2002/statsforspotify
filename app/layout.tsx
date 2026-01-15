@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { CookieConsent } from "@/components/ui/cookies"
 import { AnalyticsWrapper } from "@/components/analytics-wrapper"
+import { SpotifyPlayerProvider } from "@/lib/spotify/player-context"
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -82,8 +83,10 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <QueryProvider>
-              {children}
-              <CookieConsent />
+              <SpotifyPlayerProvider>
+                {children}
+                <CookieConsent />
+              </SpotifyPlayerProvider>
             </QueryProvider>
             <AnalyticsWrapper />
           </ThemeProvider>

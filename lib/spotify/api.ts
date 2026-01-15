@@ -26,7 +26,7 @@ export class SpotifyAPIError extends Error {
   }
 }
 
-async function getAccessToken(): Promise<string> {
+export async function getAccessToken(): Promise<string> {
   const supabase = await createClient();
   const { data: { session }, error } = await supabase.auth.getSession();
 

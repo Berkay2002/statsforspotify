@@ -1,54 +1,96 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getAlbumDetails, getTopAlbums, getTopTracks } from "@/lib/spotify/api";
+import { notFound, useParams, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { parseTimeRange } from "@/lib/spotify/time-range";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
 import { TopTracksSection } from "@/components/detail/top-tracks-section";
 import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
+import { useSpotifyPlayer } from "@/lib/spotify/player-context";
 import { ArrowLeft, Play } from "lucide-react";
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-  searchParams?: Promise<{ time_range?: string | string[] }>;
-}
+export default function AlbumDetailPage() {
+  const params = useParams();
+  const searchParameters = useSearchParams();
+  const albumId = params?.id as string;
+  const timeRange = parseTimeRange(searchParameters.get("time_range"), "medium_term");
+  const { play, playerState } = useSpotifyPlayer();
 
-export default async function AlbumDetailPage({ params, searchParams }: PageProps) {
-  const { id: albumId } = await params;
-  const { time_range: rawTimeRange } = (await searchParams) ?? {};
-  const timeRange = parseTimeRange(
-    Array.isArray(rawTimeRange) ? rawTimeRange[0] : rawTimeRange,
-    "medium_term"
-  );
+  const [album, setAlbum] = useState<any>(null);
+  const [albumTracks, setAlbumTracks] = useState<any[]>([]);
+  const [rankedAlbum, setRankedAlbum] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [album, tracks] = await Promise.all([
-    getAlbumDetails(albumId),
-    getTopTracks(timeRange, 50),
-  ]);
+  useEffect(() => {
+    async function loadAlbumData() {
+      try {
+        setLoading(true);
+        const [albumResponse, tracksResponse] = await Promise.all([
+          fetch(`/api/spotify/albums/${albumId}`),
+          fetch(`/api/rankings/history?type=track&time_range=${timeRange}&limit=50`),
+        ]);
 
-  const rankedAlbums = await getTopAlbums(timeRange, 50, tracks);
-  const rankedAlbum = rankedAlbums.find((albumItem) => albumItem.id === albumId) ?? null;
+        if (!albumResponse.ok) {
+          notFound();
+          return;
+        }
 
-  const albumTracks = tracks
-    .filter((track) => track.albumId === albumId)
-    .map((track) => ({
-      rank: track.rank,
-      id: track.id,
-      name: track.name,
-      imageUrl: track.imageUrl,
-      subtitle: track.artistName,
-      durationMs: track.durationMs,
-      popularity: track.popularity,
-    }));
+        const albumData = await albumResponse.json();
+        setAlbum(albumData);
+
+        if (tracksResponse.ok) {
+          const tracksData = await tracksResponse.json();
+          const albumTracksList = tracksData
+            .filter((t: any) => t.albumId === albumId)
+            .map((t: any) => ({
+              rank: t.rank,
+              id: t.id,
+              name: t.name,
+              imageUrl: t.imageUrl,
+              subtitle: t.artistName,
+              durationMs: t.durationMs,
+              popularity: t.popularity,
+            }));
+          setAlbumTracks(albumTracksList);
+          
+          // Calculate ranked album info
+          if (albumTracksList.length > 0) {
+            setRankedAlbum({ trackCount: albumTracksList.length });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading album:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (albumId) {
+      loadAlbumData();
+    }
+  }, [albumId, timeRange]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!album) {
+    notFound();
+    return null;
+  }
 
   const imageUrl = album.images[1]?.url ?? album.images[0]?.url ?? null;
-  const artistName = album.artists.map((artist) => artist.name).join(", ");
+  const artistName = album.artists.map((artist: any) => artist.name).join(", ");
   const primaryArtistId = album.artists[0]?.id;
-
-  if (!primaryArtistId) {
-    notFound();
-  }
 
   return (
     <div className="space-y-0 -mt-6 -mx-6 pb-6">
@@ -109,15 +151,14 @@ export default async function AlbumDetailPage({ params, searchParams }: PageProp
 
       <div className="px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
-            <a
-              href={album.external_urls.spotify}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Play on Spotify"
-            >
-              <Play className="h-6 w-6 fill-current" />
-            </a>
+          <Button
+            size="lg"
+            className="rounded-full h-14 w-14 p-0"
+            onClick={() => play(undefined, `spotify:album:${album.id}`)}
+            disabled={!playerState.isReady}
+            aria-label="Play Album"
+          >
+            <Play className="h-6 w-6 fill-current" />
           </Button>
           <Button
             variant="outline"

@@ -73,7 +73,7 @@ bun install
 4. Go to **Authentication > Providers > Spotify** and configure:
    - Client ID and Secret from your [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
    - Callback URL: `https://<your-project>.supabase.co/auth/v1/callback`
-   - Add required scopes: `user-read-email`, `user-top-read`, `user-follow-read`, `user-follow-modify`
+   - Add required scopes: `user-read-email`, `user-top-read`, `user-follow-read`, `user-follow-modify`, `streaming`, `user-modify-playback-state`, `user-read-playback-state`
 
 **Note**: The database schema is automatically synchronized from Supabase to this repository via GitHub Actions. See [SCHEMA_SYNC.md](SCHEMA_SYNC.md) for details.
 

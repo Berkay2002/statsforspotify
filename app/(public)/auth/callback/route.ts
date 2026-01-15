@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       provider: "spotify",
       options: {
         redirectTo,
-        scopes: "user-read-email user-top-read user-follow-read user-follow-modify",
+        scopes: "user-read-email user-top-read user-follow-read user-follow-modify streaming user-modify-playback-state user-read-playback-state",
       },
     });
 
@@ -145,7 +145,7 @@ export async function GET(request: Request) {
                 {
                   user_id: user.id,
                   refresh_token: refreshToken,
-                  scope_version: 1, // Increment when requesting new scopes
+                  scope_version: 2, // Incremented to 2 for Web Playback SDK scopes (streaming, user-modify-playback-state, user-read-playback-state)
                   status: 'connected',
                   connected_at: new Date().toISOString(),
                 },

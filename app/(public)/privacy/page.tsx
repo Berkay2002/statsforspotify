@@ -101,16 +101,19 @@ export default function PrivacyPage() {
           <section className="mt-8">
             <h2 className="text-2xl font-semibold">7. Spotify API Usage</h2>
             <p className="mt-4 text-muted-foreground">
-              Stats for Spotify uses Spotify&apos;s Web API to access your listening data. We request only the minimum permissions necessary:
+              Stats for Spotify uses Spotify&apos;s Web API and Web Playback SDK to access your listening data and control playback. We request only the minimum permissions necessary:
             </p>
             <ul className="mt-4 list-disc pl-6 text-muted-foreground space-y-2">
               <li><code className="bg-muted px-1 rounded">user-read-email</code>: To identify your account</li>
               <li><code className="bg-muted px-1 rounded">user-top-read</code>: To access your top artists and tracks</li>
               <li><code className="bg-muted px-1 rounded">user-follow-read</code>: To see who you follow on Spotify (for friend features)</li>
               <li><code className="bg-muted px-1 rounded">user-follow-modify</code>: To enable following friends from within the app</li>
+              <li><code className="bg-muted px-1 rounded">streaming</code>: To play music directly in the app (Spotify Premium only)</li>
+              <li><code className="bg-muted px-1 rounded">user-modify-playback-state</code>: To control playback (play/pause/skip)</li>
+              <li><code className="bg-muted px-1 rounded">user-read-playback-state</code>: To show what&apos;s currently playing</li>
             </ul>
             <p className="mt-4 text-muted-foreground">
-              We do not access your playlists, playback controls, or any other Spotify features beyond what&apos;s listed above.
+              We do not access your playlists, saved tracks, or any other Spotify features beyond what&apos;s listed above. Playback features require a Spotify Premium subscription.
             </p>
           </section>
 

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RankingHistoryLoader } from "@/components/charts/ranking-history-loader";
 import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
 import { parseTimeRange } from "@/lib/spotify/time-range";
+import { useSpotifyPlayer } from "@/lib/spotify/player-context";
 import { ArrowLeft, Play, UserPlus } from "lucide-react";
 import type { TimeRange } from "@/lib/spotify/types";
 
@@ -43,6 +44,7 @@ export default function ArtistDetailPage() {
   const searchParameters = useSearchParams();
   const artistId = params?.id as string;
   const timeRange: TimeRange = parseTimeRange(searchParameters.get("time_range"), "medium_term");
+  const { play, playerState } = useSpotifyPlayer();
   
   const [artist, setArtist] = useState<ArtistDetails | null>(null);
   const [stats, setStats] = useState<ArtistStats | null>(null);
@@ -252,15 +254,14 @@ export default function ArtistDetailPage() {
       {/* Action Buttons + Time Range */}
       <div className="px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <Button size="lg" className="rounded-full h-14 w-14 p-0" asChild>
-            <a
-              href={`https://open.spotify.com/artist/${artist.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Play on Spotify"
-            >
-              <Play className="h-6 w-6 fill-current" />
-            </a>
+          <Button
+            size="lg"
+            className="rounded-full h-14 w-14 p-0"
+            onClick={() => play(undefined, `spotify:artist:${artist.id}`)}
+            disabled={!playerState.isReady}
+            aria-label="Play Artist"
+          >
+            <Play className="h-6 w-6 fill-current" />
           </Button>
           <Button
             variant={isFollowing ? "secondary" : "outline"}

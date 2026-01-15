@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
+    "@radix-ui/react-slot": "^1.2.4",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.0",
     "@tanstack/react-query": "^5.90.16",
@@ -21,7 +22,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
-    "framer-motion": "^12.24.12",
+    "framer-motion": "^12.26.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.562.0",
     "motion": "^12.24.12",
