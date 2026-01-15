@@ -40,10 +40,10 @@ function ItemRow(props: {
   const { item } = props;
 
   return (
-    <div className="flex items-center gap-3 rounded-md border px-3 py-2">
+    <div className="flex items-center gap-3 rounded-md border px-3 py-2 min-w-0">
       <span className="w-6 text-sm font-semibold text-muted-foreground">{item.rank}</span>
-      <RecapItemImage imageUrl={item.image_url} alt={item.name} size={28} className="rounded-md" />
-      <p className="truncate text-sm font-medium">{item.name}</p>
+      <RecapItemImage imageUrl={item.image_url} alt={item.name} size={28} className="rounded-md shrink-0" />
+      <p className="truncate text-sm font-medium min-w-0">{item.name}</p>
     </div>
   );
 }
@@ -54,9 +54,9 @@ function ShiftRow(props: { shift: RankedShiftItem }) {
   const magnitude = Math.abs(shift.delta);
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 min-w-0">
       <div className="flex items-center gap-3 min-w-0">
-        <RecapItemImage imageUrl={shift.image_url} alt={shift.name} size={28} className="rounded-md" />
+        <RecapItemImage imageUrl={shift.image_url} alt={shift.name} size={28} className="rounded-md shrink-0" />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{shift.name}</p>
           <p className="text-xs text-muted-foreground">

@@ -65,9 +65,9 @@ function EventRow(props: { event: PlotTwistEvent }) {
   const rankLabel = typeof event.rank === "number" ? `#${event.rank}` : "—";
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 min-w-0">
       <div className="flex items-center gap-3 min-w-0">
-        <RecapItemImage imageUrl={event.item_image_url} alt={event.item_name} size={28} className="rounded-md" />
+        <RecapItemImage imageUrl={event.item_image_url} alt={event.item_name} size={28} className="rounded-md shrink-0" />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{event.item_name}</p>
           <p className="text-xs text-muted-foreground">

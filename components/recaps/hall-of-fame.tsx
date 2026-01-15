@@ -54,10 +54,10 @@ function MostDaysList(props: { items: MostDaysCharted[] }) {
   return (
     <div className="space-y-2">
       {items.slice(0, 3).map((item) => (
-        <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+        <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 min-w-0">
           <div className="flex items-center gap-3 min-w-0">
-            <RecapItemImage imageUrl={item.image_url} alt={item.name} size={28} className="rounded-md" />
-            <p className="truncate text-sm font-medium">{item.name}</p>
+            <RecapItemImage imageUrl={item.image_url} alt={item.name} size={28} className="rounded-md shrink-0" />
+            <p className="truncate text-sm font-medium min-w-0">{item.name}</p>
           </div>
           <Badge variant="secondary">{item.days_charted} days</Badge>
         </div>
@@ -83,10 +83,10 @@ function SingleHighlight(props: {
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 min-w-0">
       <div className="flex items-center gap-3 min-w-0">
-        <RecapItemImage imageUrl={item.image_url} alt={item.name} size={28} className="rounded-md" />
-        <p className="truncate text-sm font-medium">{item.name}</p>
+        <RecapItemImage imageUrl={item.image_url} alt={item.name} size={28} className="rounded-md shrink-0" />
+        <p className="truncate text-sm font-medium min-w-0">{item.name}</p>
       </div>
       <Badge variant="outline">{value}</Badge>
     </div>

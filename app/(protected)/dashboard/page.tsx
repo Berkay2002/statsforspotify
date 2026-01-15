@@ -1,5 +1,4 @@
-import { getTopGenres } from "@/lib/spotify/api";
-import { fetchArtistsByTimeRange, fetchTracksByTimeRange } from "@/lib/spotify/helpers";
+import { fetchAlbumsByTimeRange, fetchArtistsByTimeRange, fetchTracksByTimeRange } from "@/lib/spotify/helpers";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
@@ -66,16 +65,10 @@ export default async function DashboardPage() {
 
   try {
     // Use helper functions that include previous_rank for rank change tracking
-    const [artistsByTimeRange, tracksByTimeRange] = await Promise.all([
-      fetchArtistsByTimeRange(50), // Fetch 50 for accurate genre extraction
-      fetchTracksByTimeRange(50), // Fetch more tracks to show top 5 properly
-    ]);
-
-    // Extract genres from already-fetched artists (no additional API calls)
-    const [shortTermGenres, mediumTermGenres, longTermGenres] = await Promise.all([
-      getTopGenres("short_term", 5, artistsByTimeRange.short_term),
-      getTopGenres("medium_term", 5, artistsByTimeRange.medium_term),
-      getTopGenres("long_term", 5, artistsByTimeRange.long_term),
+    const [artistsByTimeRange, tracksByTimeRange, albumsByTimeRange] = await Promise.all([
+      fetchArtistsByTimeRange(50),
+      fetchTracksByTimeRange(50),
+      fetchAlbumsByTimeRange(50), // Fetch albums instead of genres
     ]);
 
     // Store data for rendering outside try/catch (top 5 for overview display)
@@ -83,17 +76,17 @@ export default async function DashboardPage() {
       short_term: {
         artists: artistsByTimeRange.short_term.slice(0, 5),
         tracks: tracksByTimeRange.short_term.slice(0, 5),
-        genres: shortTermGenres,
+        albums: albumsByTimeRange.short_term.slice(0, 5),
       },
       medium_term: {
         artists: artistsByTimeRange.medium_term.slice(0, 5),
         tracks: tracksByTimeRange.medium_term.slice(0, 5),
-        genres: mediumTermGenres,
+        albums: albumsByTimeRange.medium_term.slice(0, 5),
       },
       long_term: {
         artists: artistsByTimeRange.long_term.slice(0, 5),
         tracks: tracksByTimeRange.long_term.slice(0, 5),
-        genres: longTermGenres,
+        albums: albumsByTimeRange.long_term.slice(0, 5),
       },
     };
   } catch (e) {

@@ -69,7 +69,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                         <p className="truncate font-semibold text-lg flex-1 min-w-0">
                           {artist.name}
                         </p>
-                        <div className="shrink-0">
+                        <div className="hidden sm:block shrink-0">
                           <InlineSparkline itemId={artist.id} sparklinesByItemId={sparklines} isLoading={loading} />
                         </div>
                       </div>

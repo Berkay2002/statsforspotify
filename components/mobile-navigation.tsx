@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Disc3, LayoutDashboard, Mic2, Music, UserPlus, Waves } from "lucide-react";
+import { Disc3, LayoutDashboard, Mic2, Music, Settings, UserPlus } from "lucide-react";
 import { ExpandableTabs } from "@/components/ui/expandable-tabs";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,14 +38,14 @@ const navigationTabs: NavigationTab[] = [
     href: "/dashboard/albums",
   },
   {
-    title: "Genres",
-    icon: Waves,
-    href: "/dashboard/genres",
-  },
-  {
     title: "Friends",
     icon: UserPlus,
     href: "/dashboard/friends",
+  },
+  {
+    title: "Settings",
+    icon: Settings,
+    href: "/dashboard/profile",
   },
 ];
 
