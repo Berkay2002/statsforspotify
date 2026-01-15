@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PlaybackPreferenceDialog } from "@/components/playback-preference-dialog";
 
 const formatTime = (ms: number = 0) => {
   const seconds = Math.floor(ms / 1000);
@@ -38,8 +40,12 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     previousTrack,
     seek,
     setVolume,
+    isPWA,
+    playbackPreference,
+    openInSpotifyApp,
   } = useSpotifyPlayer();
 
+  const isMobile = useIsMobile();
   const [isMinimized, setIsMinimized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [playerPosition, setPlayerPosition] = useState({ x: 20, y: 20 });
@@ -47,6 +53,8 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   const [isMuted, setIsMuted] = useState(false);
   const [savedVolume, setSavedVolume] = useState(0.5);
   const [isManuallyHidden, setIsManuallyHidden] = useState(false);
+  const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
+  const [pendingTrackUri, setPendingTrackUri] = useState<string>("");
   const playerRef = useRef<HTMLDivElement>(null);
 
   const { track, isPlaying, position, duration, volume } = playerState;
@@ -54,8 +62,23 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   // Derive visibility from track state and manual hide state
   const isVisible = track !== null && !isManuallyHidden;
 
-  // Handle drag
+  // Handle play button click - show preference dialog for PWA users on mobile
+  const handlePlayClick = () => {
+    if (isPWA && isMobile && playbackPreference === null && track) {
+      setPendingTrackUri(track.uri);
+      setShowPreferenceDialog(true);
+    } else if (playbackPreference === 'spotify-app' && track) {
+      // User prefers Spotify app - redirect directly
+      openInSpotifyApp(track.uri);
+    } else {
+      // Play in-app (default behavior)
+      togglePlay();
+    }
+  };
+
+  // Handle drag (desktop only)
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMobile) return; // Disable dragging on mobile
     setIsDragging(true);
     setDragStart({
       x: e.clientX - playerPosition.x,
@@ -128,21 +151,29 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
       <motion.div
         ref={playerRef}
         className={cn(
-          "fixed z-50 bg-[#111111] border border-white/10 rounded-2xl shadow-2xl backdrop-blur-sm",
+          "fixed z-50 bg-[#111111] border border-white/10 shadow-2xl backdrop-blur-sm",
           isDragging && "cursor-grabbing",
+          isMobile ? "left-0 right-0 bottom-0 rounded-t-2xl" : "rounded-2xl",
           className
         )}
-        style={{ left: playerPosition.x, top: playerPosition.y }}
-        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+        style={isMobile ? { 
+          paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' 
+        } : { 
+          left: playerPosition.x, 
+          top: playerPosition.y 
+        }}
+        initial={{ opacity: 0, scale: isMobile ? 1 : 0.8, y: isMobile ? 100 : 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+        exit={{ opacity: 0, scale: isMobile ? 1 : 0.8, y: isMobile ? 100 : 20 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {/* Drag handle */}
-        <div
-          className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-        />
+        {/* Drag handle (desktop only) */}
+        {!isMobile && (
+          <div
+            className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing"
+            onMouseDown={handleMouseDown}
+          />
+        )}
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
@@ -237,7 +268,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                 <Button
                   size="icon"
                   className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                  onClick={togglePlay}
+                  onClick={handlePlayClick}
                 >
                   {isPlaying ? (
                     <Pause className="h-5 w-5" />
@@ -290,7 +321,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
               <Button
                 size="icon"
                 className="h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                onClick={togglePlay}
+                onClick={handlePlayClick}
               >
                 {isPlaying ? (
                   <Pause className="h-4 w-4" />
@@ -305,6 +336,14 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
             </div>
           )}
         </motion.div>
+
+        {/* Playback Preference Dialog for PWA users */}
+        <PlaybackPreferenceDialog
+          open={showPreferenceDialog}
+          onClose={() => setShowPreferenceDialog(false)}
+          trackUri={pendingTrackUri}
+          onPlayInApp={togglePlay}
+        />
       </motion.div>
     </AnimatePresence>
   );

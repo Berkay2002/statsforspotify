@@ -36,6 +36,8 @@ interface SpotifyPlayerContextType {
   playerState: PlayerState;
   isLoading: boolean;
   isPremium: boolean;
+  isPWA: boolean;
+  playbackPreference: 'in-app' | 'spotify-app' | null;
 
   // Actions
   initializePlayer: () => Promise<void>;
@@ -49,6 +51,8 @@ interface SpotifyPlayerContextType {
   transferPlayback: (deviceId: string) => Promise<void>;
   getDevices: () => Promise<Spotify.Device[]>;
   addToQueue: (uri: string) => Promise<void>;
+  setPlaybackPreference: (preference: 'in-app' | 'spotify-app') => void;
+  openInSpotifyApp: (uri: string) => void;
 }
 
 const SpotifyPlayerContext = createContext<SpotifyPlayerContextType | undefined>(undefined);
@@ -71,6 +75,8 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
   const [player, setPlayer] = useState<Spotify.PlayerInstance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(true);
+  const [isPWA, setIsPWA] = useState(false);
+  const [playbackPreference, setPlaybackPreferenceState] = useState<'in-app' | 'spotify-app' | null>(null);
   const [playerState, setPlayerState] = useState<PlayerState>({
     isPlaying: false,
     isPaused: true,
@@ -89,6 +95,20 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
+
+    // Detect PWA mode
+    const checkPWA = () => {
+      const isPWAMode = window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true;
+      setIsPWA(isPWAMode);
+    };
+    checkPWA();
+
+    // Load playback preference from localStorage
+    const savedPreference = localStorage.getItem('spotify-playback-preference') as 'in-app' | 'spotify-app' | null;
+    if (savedPreference) {
+      setPlaybackPreferenceState(savedPreference);
+    }
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -399,6 +419,33 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     }
   }, [session?.provider_token]);
 
+  const setPlaybackPreference = useCallback((preference: 'in-app' | 'spotify-app') => {
+    setPlaybackPreferenceState(preference);
+    localStorage.setItem('spotify-playback-preference', preference);
+  }, []);
+
+  const openInSpotifyApp = useCallback((uri: string) => {
+    // Try to open in Spotify app using deep link
+    // Format: spotify:track:ID or spotify:album:ID or spotify:artist:ID
+    const spotifyDeepLink = uri.startsWith('spotify:') ? uri : uri.replace('https://open.spotify.com/', 'spotify:').replace(/\//g, ':');
+    
+    // Create a hidden link and click it
+    const link = document.createElement('a');
+    link.href = spotifyDeepLink;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Fallback to web player after a delay if app doesn't open
+    setTimeout(() => {
+      const webUrl = uri.startsWith('spotify:') 
+        ? `https://open.spotify.com/${uri.split(':').slice(1).join('/')}`
+        : uri;
+      window.open(webUrl, '_blank');
+    }, 1500);
+  }, []);
+
   // Auto-initialize player on mount
   useEffect(() => {
     if (session?.provider_token && !player) {
@@ -420,6 +467,8 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     playerState,
     isLoading,
     isPremium,
+    isPWA,
+    playbackPreference,
     initializePlayer,
     play,
     pause,
@@ -431,6 +480,8 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     transferPlayback,
     getDevices,
     addToQueue,
+    setPlaybackPreference,
+    openInSpotifyApp,
   };
 
   return (
