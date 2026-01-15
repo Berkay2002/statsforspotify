@@ -13,7 +13,6 @@ import {
   VolumeX,
   Minimize2,
   Maximize2,
-  X,
   Music,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,13 +49,25 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isMuted, setIsMuted] = useState(false);
   const [savedVolume, setSavedVolume] = useState(0.5);
-  const [isManuallyHidden, setIsManuallyHidden] = useState(false);
   const playerRef = useRef<HTMLDivElement>(null);
 
   const { track, isPlaying, position, duration, volume } = playerState;
 
-  // Derive visibility from track state and manual hide state
-  const isVisible = track !== null && !isManuallyHidden;
+  // Derive visibility from track state
+  const isVisible = track !== null;
+
+  // Load minimized state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('floating-player-minimized');
+    if (savedState !== null) {
+      setIsMinimized(savedState === 'true');
+    }
+  }, []);
+
+  // Save minimized state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('floating-player-minimized', String(isMinimized));
+  }, [isMinimized]);
 
   // Trigger playback check when component mounts on mobile/PWA
   useEffect(() => {
@@ -170,28 +181,18 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
             <Music className="h-4 w-4 text-green-500" />
             <span className="text-xs font-medium text-white/60">Now Playing</span>
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-white/60 hover:text-white"
-              onClick={() => setIsMinimized(!isMinimized)}
-            >
-              {isMinimized ? (
-                <Maximize2 className="h-3 w-3" />
-              ) : (
-                <Minimize2 className="h-3 w-3" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-white/60 hover:text-white"
-              onClick={() => setIsManuallyHidden(true)}
-            >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-white/60 hover:text-white"
+            onClick={() => setIsMinimized(!isMinimized)}
+          >
+            {isMinimized ? (
+              <Maximize2 className="h-3 w-3" />
+            ) : (
+              <Minimize2 className="h-3 w-3" />
+            )}
+          </Button>
         </div>
 
         <motion.div
@@ -199,10 +200,10 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
           initial={false}
           animate={{ height: isMinimized ? "auto" : "auto" }}
         >
-          {!isMinimized ? (
-            <div className="flex flex-col gap-4">
-              {/* Track Info */}
-              <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4">
+            {/* Track Info */}
+            <div className="flex items-center gap-3">
+              {!isMinimized && (
                 <div className="relative h-14 w-14 rounded-lg overflow-hidden bg-white/10">
                   {track.album.images[0]?.url ? (
                     <Image
@@ -218,112 +219,93 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                     </div>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{track.name}</p>
-                  <p className="text-xs text-white/60 truncate">{track.artists.map(a => a.name).join(", ")}</p>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-1">
-                <div
-                  className="h-1 bg-white/20 rounded-full cursor-pointer relative overflow-hidden"
-                  onClick={handleSeek}
-                >
-                  <motion.div
-                    className="absolute top-0 left-0 h-full bg-green-500 rounded-full"
-                    style={{ width: `${progressPercentage}%` }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progressPercentage}%` }}
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-xs text-white/60">
-                  <span>{formatTime(position)}</span>
-                  <span>{formatTime(duration)}</span>
-                </div>
-              </div>
-
-              {/* Controls */}
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-white/80 hover:text-white"
-                  onClick={previousTrack}
-                >
-                  <SkipBack className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                  onClick={togglePlay}
-                >
-                  {isPlaying ? (
-                    <Pause className="h-5 w-5" />
-                  ) : (
-                    <Play className="h-5 w-5 fill-current" />
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-white/80 hover:text-white"
-                  onClick={nextTrack}
-                >
-                  <SkipForward className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Volume */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-white/60 hover:text-white"
-                  onClick={toggleMute}
-                >
-                  {isMuted || volume === 0 ? (
-                    <VolumeX className="h-3 w-3" />
-                  ) : (
-                    <Volume2 className="h-3 w-3" />
-                  )}
-                </Button>
-                <div className="flex-1 h-1 bg-white/20 rounded-full cursor-pointer relative"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-                    handleVolumeChange(percentage / 100);
-                  }}
-                >
-                  <div
-                    className="absolute top-0 left-0 h-full bg-white/60 rounded-full"
-                    style={{ width: `${isMuted ? 0 : volume * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Minimized view */
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                className="h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                onClick={togglePlay}
-              >
-                {isPlaying ? (
-                  <Pause className="h-4 w-4" />
-                ) : (
-                  <Play className="h-4 w-4 fill-current" />
-                )}
-              </Button>
+              )}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate">{track.name}</p>
+                <p className="text-sm font-medium text-white truncate">{track.name}</p>
                 <p className="text-xs text-white/60 truncate">{track.artists.map(a => a.name).join(", ")}</p>
               </div>
             </div>
-          )}
+
+            {/* Progress Bar */}
+            <div className="space-y-1">
+              <div
+                className="h-1 bg-white/20 rounded-full cursor-pointer relative overflow-hidden"
+                onClick={handleSeek}
+              >
+                <motion.div
+                  className="absolute top-0 left-0 h-full bg-green-500 rounded-full"
+                  style={{ width: `${progressPercentage}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercentage}%` }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs text-white/60">
+                <span>{formatTime(position)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/80 hover:text-white"
+                onClick={previousTrack}
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-black"
+                onClick={togglePlay}
+              >
+                {isPlaying ? (
+                  <Pause className="h-5 w-5" />
+                ) : (
+                  <Play className="h-5 w-5 fill-current" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/80 hover:text-white"
+                onClick={nextTrack}
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Volume */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white/60 hover:text-white"
+                onClick={toggleMute}
+              >
+                {isMuted || volume === 0 ? (
+                  <VolumeX className="h-3 w-3" />
+                ) : (
+                  <Volume2 className="h-3 w-3" />
+                )}
+              </Button>
+              <div className="flex-1 h-1 bg-white/20 rounded-full cursor-pointer relative"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+                  handleVolumeChange(percentage / 100);
+                }}
+              >
+                <div
+                  className="absolute top-0 left-0 h-full bg-white/60 rounded-full"
+                  style={{ width: `${isMuted ? 0 : volume * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
