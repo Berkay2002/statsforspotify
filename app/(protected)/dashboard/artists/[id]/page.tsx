@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -168,6 +168,17 @@ export default function ArtistDetailPage() {
 
   const displayedTracks = showAllTracks ? tracks : tracks.slice(0, 5);
 
+  const handlePlayTopTracks = useCallback(() => {
+    if (!playerState.isReady || tracks.length === 0) return;
+
+    // Get top 5 tracks (or fewer if less available) and convert to Spotify URIs
+    const topTracksToPlay = tracks.slice(0, 5);
+    const trackUris = topTracksToPlay.map(track => `spotify:track:${track.id}`);
+
+    // Play the tracks using the uris parameter
+    play(undefined, undefined, trackUris);
+  }, [tracks, playerState.isReady, play]);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -257,9 +268,16 @@ export default function ArtistDetailPage() {
           <Button
             size="lg"
             className="rounded-full h-14 w-14 p-0"
-            onClick={() => play(undefined, `spotify:artist:${artist.id}`)}
-            disabled={!playerState.isReady}
-            aria-label="Play Artist"
+            onClick={handlePlayTopTracks}
+            disabled={!playerState.isReady || tracks.length === 0 || tracksLoading}
+            aria-label={tracks.length === 0 ? "No tracks available" : `Play Top ${Math.min(tracks.length, 5)} Tracks`}
+            title={
+              !playerState.isReady
+                ? "Player not ready"
+                : tracks.length === 0
+                ? "No tracks from this artist in this time range"
+                : `Play your top ${Math.min(tracks.length, 5)} track${Math.min(tracks.length, 5) === 1 ? "" : "s"} from ${artist.name}`
+            }
           >
             <Play className="h-6 w-6 fill-current" />
           </Button>
