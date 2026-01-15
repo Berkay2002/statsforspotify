@@ -43,24 +43,24 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   } = useSpotifyPlayer();
 
   const isMobile = useIsMobile();
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('floating-player-minimized');
+    return saved === 'true';
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [playerPosition, setPlayerPosition] = useState({ x: 20, y: 20 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isMuted, setIsMuted] = useState(false);
   const [savedVolume, setSavedVolume] = useState(0.5);
-  const [isPlayerHidden, setIsPlayerHidden] = useState(false);
+  const [isPlayerHidden, setIsPlayerHidden] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('floating-player-visible');
+    return saved !== null ? saved === 'false' : false;
+  });
   const playerRef = useRef<HTMLDivElement>(null);
 
   const { track, isPlaying, position, duration, volume } = playerState;
-
-  // Load player visibility preference from localStorage
-  useEffect(() => {
-    const savedVisibility = localStorage.getItem('floating-player-visible');
-    if (savedVisibility !== null) {
-      setIsPlayerHidden(savedVisibility === 'false');
-    }
-  }, []);
 
   // Listen for visibility changes from settings
   useEffect(() => {
@@ -76,14 +76,6 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
 
   // Derive visibility from track state and user preference (mobile only)
   const isVisible = track !== null && !(isMobile && isPlayerHidden);
-
-  // Load minimized state from localStorage on mount
-  useEffect(() => {
-    const savedState = localStorage.getItem('floating-player-minimized');
-    if (savedState !== null) {
-      setIsMinimized(savedState === 'true');
-    }
-  }, []);
 
   // Save minimized state to localStorage when it changes
   useEffect(() => {
@@ -172,7 +164,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
       <motion.div
         ref={playerRef}
         className={cn(
-          "fixed z-50 bg-[#111111] border border-white/10 shadow-2xl backdrop-blur-sm",
+          "fixed z-[100] bg-[#111111] border border-white/10 shadow-2xl backdrop-blur-sm pointer-events-auto",
           isDragging && "cursor-grabbing",
           isMobile ? "left-0 right-0 bottom-0 rounded-t-2xl" : "rounded-2xl",
           className
@@ -232,7 +224,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                     sizes="56px"
                   />
                 ) : (
-                  <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-green-500 to-green-600">
+                  <div className="h-full w-full flex items-center justify-center bg-linear-to-br from-green-500 to-green-600">
                     <Music className="h-6 w-6 text-white" />
                   </div>
                 )}
