@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PageHeaderLoading, TimeRangeTabsLoading } from "@/components/ui/loading-skeletons";
 
 export default function DashboardLoading() {
   return (
@@ -14,11 +15,7 @@ export default function DashboardLoading() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        <Skeleton className="h-10 w-32 rounded-md" />
-        <Skeleton className="h-10 w-32 rounded-md" />
-        <Skeleton className="h-10 w-32 rounded-md" />
-      </div>
+      <TimeRangeTabsLoading />
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-3">

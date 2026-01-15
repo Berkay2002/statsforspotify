@@ -43,6 +43,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     isPWA,
     playbackPreference,
     openInSpotifyApp,
+    getCurrentPlayback,
   } = useSpotifyPlayer();
 
   const isMobile = useIsMobile();
@@ -61,6 +62,13 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
 
   // Derive visibility from track state and manual hide state
   const isVisible = track !== null && !isManuallyHidden;
+
+  // Trigger playback check when component mounts on mobile/PWA
+  useEffect(() => {
+    if (isMobile || isPWA) {
+      getCurrentPlayback();
+    }
+  }, [isMobile, isPWA, getCurrentPlayback]);
 
   // Handle play button click - show preference dialog for PWA users on mobile
   const handlePlayClick = () => {

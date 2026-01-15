@@ -53,6 +53,7 @@ interface SpotifyPlayerContextType {
   addToQueue: (uri: string) => Promise<void>;
   setPlaybackPreference: (preference: 'in-app' | 'spotify-app') => void;
   openInSpotifyApp: (uri: string) => void;
+  getCurrentPlayback: () => Promise<void>;
 }
 
 const SpotifyPlayerContext = createContext<SpotifyPlayerContextType | undefined>(undefined);
@@ -121,6 +122,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
   }, [supabase]);
 
   const deviceIdRef = useRef<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load Spotify SDK script
   useEffect(() => {
@@ -446,6 +448,57 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     }, 1500);
   }, []);
 
+  // Get current playback state from Spotify API (for syncing with external playback)
+  const getCurrentPlayback = useCallback(async () => {
+    if (!session?.provider_token) return;
+
+    try {
+      const response = await fetch('/api/spotify/player/currently-playing');
+      
+      if (!response.ok) {
+        console.warn('Failed to get current playback:', response.statusText);
+        return;
+      }
+
+      const data = await response.json();
+
+      // If nothing is playing, clear the track
+      if (!data.is_playing || !data.item) {
+        setPlayerState(prev => ({
+          ...prev,
+          track: null,
+          isPlaying: false,
+          isPaused: true,
+        }));
+        return;
+      }
+
+      // Update player state with external playback info
+      const track: Track = {
+        id: data.item.id,
+        name: data.item.name,
+        artists: data.item.artists,
+        album: {
+          name: data.item.album.name,
+          images: data.item.album.images,
+        },
+        duration_ms: data.item.duration_ms,
+        uri: data.item.uri,
+      };
+
+      setPlayerState(prev => ({
+        ...prev,
+        track,
+        isPlaying: data.is_playing,
+        isPaused: !data.is_playing,
+        position: data.progress_ms || 0,
+        duration: data.item.duration_ms,
+      }));
+    } catch (error) {
+      console.error('Error fetching current playback:', error);
+    }
+  }, [session?.provider_token]);
+
   // Auto-initialize player on mount
   useEffect(() => {
     if (session?.provider_token && !player) {
@@ -453,11 +506,39 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     }
   }, [session?.provider_token, player, initializePlayer]);
 
+  // Poll for external playback state on mobile/PWA
+  useEffect(() => {
+    // Only poll for mobile and PWA users to sync with external Spotify playback
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const shouldPoll = (isMobileDevice || isPWA) && session?.provider_token;
+
+    if (!shouldPoll) return;
+
+    // Initial fetch
+    getCurrentPlayback();
+
+    // Poll every 3 seconds
+    pollingIntervalRef.current = setInterval(() => {
+      getCurrentPlayback();
+    }, 3000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [isPWA, session?.provider_token, getCurrentPlayback]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (player) {
         player.disconnect();
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     };
   }, [player]);
@@ -482,6 +563,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     addToQueue,
     setPlaybackPreference,
     openInSpotifyApp,
+    getCurrentPlayback,
   };
 
   return (
