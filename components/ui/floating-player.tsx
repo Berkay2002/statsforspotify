@@ -19,7 +19,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { PlaybackPreferenceDialog } from "@/components/playback-preference-dialog";
 
 const formatTime = (ms: number = 0) => {
   const seconds = Math.floor(ms / 1000);
@@ -41,8 +40,6 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     seek,
     setVolume,
     isPWA,
-    playbackPreference,
-    openInSpotifyApp,
     getCurrentPlayback,
   } = useSpotifyPlayer();
 
@@ -54,8 +51,6 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   const [isMuted, setIsMuted] = useState(false);
   const [savedVolume, setSavedVolume] = useState(0.5);
   const [isManuallyHidden, setIsManuallyHidden] = useState(false);
-  const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
-  const [pendingTrackUri, setPendingTrackUri] = useState<string>("");
   const playerRef = useRef<HTMLDivElement>(null);
 
   const { track, isPlaying, position, duration, volume } = playerState;
@@ -69,20 +64,6 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
       getCurrentPlayback();
     }
   }, [isMobile, isPWA, getCurrentPlayback]);
-
-  // Handle play button click - show preference dialog for PWA users on mobile
-  const handlePlayClick = () => {
-    if (isPWA && isMobile && playbackPreference === null && track) {
-      setPendingTrackUri(track.uri);
-      setShowPreferenceDialog(true);
-    } else if (playbackPreference === 'spotify-app' && track) {
-      // User prefers Spotify app - redirect directly
-      openInSpotifyApp(track.uri);
-    } else {
-      // Play in-app (default behavior)
-      togglePlay();
-    }
-  };
 
   // Handle drag (desktop only)
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -276,7 +257,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                 <Button
                   size="icon"
                   className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                  onClick={handlePlayClick}
+                  onClick={togglePlay}
                 >
                   {isPlaying ? (
                     <Pause className="h-5 w-5" />
@@ -329,7 +310,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
               <Button
                 size="icon"
                 className="h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-black"
-                onClick={handlePlayClick}
+                onClick={togglePlay}
               >
                 {isPlaying ? (
                   <Pause className="h-4 w-4" />
@@ -344,14 +325,6 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
             </div>
           )}
         </motion.div>
-
-        {/* Playback Preference Dialog for PWA users */}
-        <PlaybackPreferenceDialog
-          open={showPreferenceDialog}
-          onClose={() => setShowPreferenceDialog(false)}
-          trackUri={pendingTrackUri}
-          onPlayInApp={togglePlay}
-        />
       </motion.div>
     </AnimatePresence>
   );
