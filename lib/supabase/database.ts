@@ -498,8 +498,6 @@ export type Database = {
         Returns: Json
       }
       is_valid_spotify_user_id: { Args: { user_id: string }; Returns: boolean }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       update_artist_listening_stats: { Args: never; Returns: undefined }
     }
     Enums: {

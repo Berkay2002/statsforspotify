@@ -45,7 +45,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
 
 
 
-CREATE EXTENSION IF NOT EXISTS "pg_trgm" WITH SCHEMA "public";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm" WITH SCHEMA "extensions";
 
 
 
@@ -1892,7 +1892,7 @@ COMMENT ON COLUMN "public"."user_profiles"."spotify_user_name" IS 'Spotify usern
 
 
 
-CREATE OR REPLACE VIEW "public"."profiles_needing_real_user_id" AS
+CREATE OR REPLACE VIEW "public"."profiles_needing_real_user_id" WITH ("security_invoker"='true') AS
  SELECT "id",
     "user_id",
     "display_name",
@@ -2149,7 +2149,7 @@ CREATE INDEX "idx_track_rankings_user_track" ON "public"."track_rankings" USING 
 
 
 
-CREATE INDEX "idx_user_profiles_display_name_gin" ON "public"."user_profiles" USING "gin" ("display_name" "public"."gin_trgm_ops");
+CREATE INDEX "idx_user_profiles_display_name_gin" ON "public"."user_profiles" USING "gin" ("display_name" "extensions"."gin_trgm_ops");
 
 
 
@@ -2395,17 +2395,96 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."gtrgm_in"("cstring") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_in"("cstring") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_in"("cstring") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_in"("cstring") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."gtrgm_out"("public"."gtrgm") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_out"("public"."gtrgm") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_out"("public"."gtrgm") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_out"("public"."gtrgm") TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2694,183 +2773,15 @@ GRANT ALL ON FUNCTION "public"."get_three_versions_of_you"("p_target_user_id" "u
 
 
 
-GRANT ALL ON FUNCTION "public"."gin_extract_query_trgm"("text", "internal", smallint, "internal", "internal", "internal", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gin_extract_query_trgm"("text", "internal", smallint, "internal", "internal", "internal", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gin_extract_query_trgm"("text", "internal", smallint, "internal", "internal", "internal", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gin_extract_query_trgm"("text", "internal", smallint, "internal", "internal", "internal", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gin_extract_value_trgm"("text", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gin_extract_value_trgm"("text", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gin_extract_value_trgm"("text", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gin_extract_value_trgm"("text", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gin_trgm_consistent"("internal", smallint, "text", integer, "internal", "internal", "internal", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gin_trgm_consistent"("internal", smallint, "text", integer, "internal", "internal", "internal", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gin_trgm_consistent"("internal", smallint, "text", integer, "internal", "internal", "internal", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gin_trgm_consistent"("internal", smallint, "text", integer, "internal", "internal", "internal", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gin_trgm_triconsistent"("internal", smallint, "text", integer, "internal", "internal", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gin_trgm_triconsistent"("internal", smallint, "text", integer, "internal", "internal", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gin_trgm_triconsistent"("internal", smallint, "text", integer, "internal", "internal", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gin_trgm_triconsistent"("internal", smallint, "text", integer, "internal", "internal", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_compress"("internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_compress"("internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_compress"("internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_compress"("internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_consistent"("internal", "text", smallint, "oid", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_consistent"("internal", "text", smallint, "oid", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_consistent"("internal", "text", smallint, "oid", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_consistent"("internal", "text", smallint, "oid", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_decompress"("internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_decompress"("internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_decompress"("internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_decompress"("internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_distance"("internal", "text", smallint, "oid", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_distance"("internal", "text", smallint, "oid", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_distance"("internal", "text", smallint, "oid", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_distance"("internal", "text", smallint, "oid", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_options"("internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_options"("internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_options"("internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_options"("internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_penalty"("internal", "internal", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_penalty"("internal", "internal", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_penalty"("internal", "internal", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_penalty"("internal", "internal", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_picksplit"("internal", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_picksplit"("internal", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_picksplit"("internal", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_picksplit"("internal", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_same"("public"."gtrgm", "public"."gtrgm", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_same"("public"."gtrgm", "public"."gtrgm", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_same"("public"."gtrgm", "public"."gtrgm", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_same"("public"."gtrgm", "public"."gtrgm", "internal") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."gtrgm_union"("internal", "internal") TO "postgres";
-GRANT ALL ON FUNCTION "public"."gtrgm_union"("internal", "internal") TO "anon";
-GRANT ALL ON FUNCTION "public"."gtrgm_union"("internal", "internal") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."gtrgm_union"("internal", "internal") TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."is_valid_spotify_user_id"("user_id" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."is_valid_spotify_user_id"("user_id" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_valid_spotify_user_id"("user_id" "text") TO "service_role";
 
 
 
-GRANT ALL ON FUNCTION "public"."set_limit"(real) TO "postgres";
-GRANT ALL ON FUNCTION "public"."set_limit"(real) TO "anon";
-GRANT ALL ON FUNCTION "public"."set_limit"(real) TO "authenticated";
-GRANT ALL ON FUNCTION "public"."set_limit"(real) TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_updated_at"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."show_limit"() TO "postgres";
-GRANT ALL ON FUNCTION "public"."show_limit"() TO "anon";
-GRANT ALL ON FUNCTION "public"."show_limit"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."show_limit"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."show_trgm"("text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."show_trgm"("text") TO "anon";
-GRANT ALL ON FUNCTION "public"."show_trgm"("text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."show_trgm"("text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."similarity"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."similarity"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."similarity"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."similarity"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."similarity_dist"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."similarity_dist"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."similarity_dist"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."similarity_dist"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."similarity_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."similarity_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."similarity_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."similarity_op"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."strict_word_similarity"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_commutator_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_commutator_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_commutator_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_commutator_op"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_commutator_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_commutator_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_commutator_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_commutator_op"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_dist_op"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."strict_word_similarity_op"("text", "text") TO "service_role";
 
 
 
@@ -2883,41 +2794,6 @@ GRANT ALL ON FUNCTION "public"."update_artist_listening_stats"() TO "service_rol
 GRANT ALL ON FUNCTION "public"."update_spotify_connections_updated_at"() TO "anon";
 GRANT ALL ON FUNCTION "public"."update_spotify_connections_updated_at"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."update_spotify_connections_updated_at"() TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."word_similarity"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."word_similarity"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."word_similarity"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."word_similarity"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."word_similarity_commutator_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."word_similarity_commutator_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."word_similarity_commutator_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."word_similarity_commutator_op"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_commutator_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_commutator_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_commutator_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_commutator_op"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."word_similarity_dist_op"("text", "text") TO "service_role";
-
-
-
-GRANT ALL ON FUNCTION "public"."word_similarity_op"("text", "text") TO "postgres";
-GRANT ALL ON FUNCTION "public"."word_similarity_op"("text", "text") TO "anon";
-GRANT ALL ON FUNCTION "public"."word_similarity_op"("text", "text") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."word_similarity_op"("text", "text") TO "service_role";
 
 
 
