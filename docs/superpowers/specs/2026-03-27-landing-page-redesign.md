@@ -2,11 +2,11 @@
 
 ## Overview
 
-Redesign `app/(public)/page.tsx` from a basic hero + 3 feature cards into a visually striking, dark Spotify-native landing page with clean SaaS-style structure. Single-file approach with inline sub-components and one client component for framer-motion animations.
+Redesign `app/(public)/page.tsx` from a basic hero + 3 feature cards into a visually striking, dark Spotify-native landing page with clean SaaS-style structure. Primary server component file (`page.tsx`) with inline sub-components, plus two small client components: one for framer-motion entrance animations, one for the mock dashboard card (needs `onError` handler on images).
 
 ## Design Direction
 
-**Vibe**: Dark & immersive Spotify aesthetic + clean SaaS structure (Spotify meets Linear). Deep dark backgrounds (`#09090b`), Spotify green accents (`#1DB954`), bold Montserrat typography, subtle green glow effects, glassmorphism cards with `rgba(255,255,255,0.03-0.06)` backgrounds and fine borders.
+**Vibe**: Dark & immersive Spotify aesthetic + clean SaaS structure (Spotify meets Linear). Deep dark backgrounds, Spotify green accents (use `text-primary`/`bg-primary` where possible, fall back to `#1DB954` for custom elements), bold typography (project's configured `--font-sans`), subtle green glow effects, glassmorphism cards with `bg-white/[0.03-0.06]` backgrounds and fine borders.
 
 ## Page Sections (top to bottom)
 
@@ -15,6 +15,8 @@ Redesign `app/(public)/page.tsx` from a basic hero + 3 feature cards into a visu
 Handled by `PublicLayout` wrapper. Logo left, "Go to Dashboard" button right.
 
 ### 2. Hero Section — Split Layout
+
+**Reauth alert**: Preserve existing `?reauth=spotify` query param handling. When present, render the destructive `Alert` at the top of the hero section (above the badge), same as current behavior.
 
 **Left side:**
 - Badge pill: "Your Music. Your Data." — green text, green-tinted background, rounded pill
@@ -31,7 +33,7 @@ Handled by `PublicLayout` wrapper. Logo left, "Go to Dashboard" button right.
   - Artist avatar: **hardcoded Spotify CDN image URLs** with `next/image`, `onError` fallback to gradient-filled div
   - Artist name (bold) + genre (muted, small)
   - Horizontal bar showing relative ranking (green gradient fill)
-- Sample artists: 4 well-known artists with real Spotify CDN images
+- Sample artists (implementer picks 4 well-known artists, provides name/genre/CDN URL for each)
 - Below the card: 3 stat boxes in a row — "50+ Artists", "50+ Tracks", "3 Time Ranges"
 - Subtle radial green glow behind the entire visual (CSS pseudo-element)
 
@@ -39,10 +41,10 @@ Handled by `PublicLayout` wrapper. Logo left, "Go to Dashboard" button right.
 
 - Section label: "FEATURES" (green, uppercase, letter-spaced)
 - Section title: "Everything you need to know about your music taste"
-- Asymmetric CSS grid (3 columns):
-  - **Wide card (2 cols)**: "Detailed Analytics" — mini ranking list visual with colored dots and fill bars
-  - **Tall card (2 rows, 1 col)**: "Historical Tracking" — snapshot timeline with dated entries, green accent on most recent
-  - **Wide card (2 cols)**: "Trend Visualization" — mini bar chart with varying heights and green gradient
+- Asymmetric CSS grid (3 columns, use explicit `grid-column`/`grid-row` placement — auto-flow will not produce correct layout):
+  - **Wide card (cols 1-2, row 1)**: "Detailed Analytics" — mini ranking list visual with colored dots and fill bars
+  - **Tall card (col 3, rows 1-2)**: "Historical Tracking" — snapshot timeline with dated entries, green accent on most recent
+  - **Wide card (cols 1-2, row 2)**: "Trend Visualization" — mini bar chart with varying heights and green gradient
 - Each card: label (green uppercase), title, description, visual mockup
 - Hover effect: border color transitions to green-tinted
 
@@ -70,15 +72,16 @@ Handled by `PublicLayout` wrapper.
 
 ### File Structure
 
-- `app/(public)/page.tsx` — main page, server component. Contains all section markup and inline sub-components (`FeatureCard` → replaced by new section components)
-- New client component for framer-motion entrance animations — wraps sections that need scroll-triggered fade-in/slide-up
+- `app/(public)/page.tsx` — main page, server component. Contains all section markup and inline sub-components
+- `components/animated-section.tsx` — `"use client"` wrapper for framer-motion scroll-triggered entrance animations
+- `components/mock-dashboard-card.tsx` — `"use client"` component for the hero's mock dashboard preview (needs `onError` handler on `next/image` for artist photo fallbacks)
 
 ### Existing Components Retained
 
 - `PublicLayout` — page wrapper (no changes)
 - `LoginDialog` — wraps both CTA buttons (hero + bottom)
 - `SpotifyLogo` — used in hero CTA button
-- `SpotifyAttribution` — replaced by inline social proof row (Spotify attribution still present)
+- `SpotifyAttribution` — no longer imported; replaced by inline social proof row (Spotify attribution text still present in the new section)
 - `AuthRedirect` — kept for authenticated user redirect
 - `Alert` components — kept for reauth warning
 
