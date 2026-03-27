@@ -143,11 +143,9 @@ function AnimatedLine({
 
 function AnnotationDot({
   annotation,
-  index,
   reducedMotion,
 }: {
   annotation: ChartAnnotation;
-  index: number;
   reducedMotion: boolean;
 }) {
   const { point, label, color, delay } = annotation;
@@ -414,20 +412,11 @@ export function RankingChart({
     return () => ro.disconnect();
   }, []);
 
-  // Empty state
-  if (data.length === 0) {
-    return (
-      <div className="flex h-[420px] items-center justify-center text-muted-foreground">
-        No historical data available yet. Check back after your next snapshot.
-      </div>
-    );
-  }
-
   const margin = CHART_MARGINS;
 
-  // Fix #1: Store yScale in chartData useMemo — compute once, reuse everywhere
+  // Hooks must be called unconditionally — compute chart data even for empty state
   const chartData = useMemo(() => {
-    if (!dimensions) return null;
+    if (!dimensions || data.length === 0) return null;
 
     const chartWidth = dimensions.width - margin.left - margin.right;
     const chartHeight = dimensions.height - margin.top - margin.bottom;
@@ -461,8 +450,16 @@ export function RankingChart({
     };
   }, [data, metadata, dimensions, margin]);
 
-  // Single point edge case
   const isSinglePoint = data.length === 1;
+
+  // Empty state
+  if (data.length === 0) {
+    return (
+      <div className="flex h-[420px] items-center justify-center text-muted-foreground">
+        No historical data available yet. Check back after your next snapshot.
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="h-[420px] w-full">
@@ -696,7 +693,6 @@ export function RankingChart({
             <AnnotationDot
               key={i}
               annotation={a}
-              index={i}
               reducedMotion={reducedMotion}
             />
           ))}
