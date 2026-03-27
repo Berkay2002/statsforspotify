@@ -1,0 +1,82 @@
+<h2>Stats Ribbon — Alternative Treatments</h2>
+<p class="subtitle">Same data, different visual weight. Which feels right?</p>
+
+<div class="cards">
+  <!-- Option A: Inline minimal -->
+  <div class="card" data-choice="inline" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a; padding:24px 20px;">
+      <div style="font-size:11px; letter-spacing:2px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:16px;">A — Inline Minimal</div>
+      <div style="display:flex; align-items:baseline; gap:24px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:baseline; gap:6px;">
+          <span style="font-size:28px; font-weight:700; color:#fff; letter-spacing:-0.5px;">42.5</span>
+          <span style="font-size:12px; color:rgba(255,255,255,0.35);">hours listened</span>
+        </div>
+        <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
+        <div style="display:flex; align-items:baseline; gap:6px;">
+          <span style="font-size:28px; font-weight:700; color:#fff; letter-spacing:-0.5px;">18</span>
+          <span style="font-size:12px; color:rgba(255,255,255,0.35);">unique tracks</span>
+        </div>
+        <div style="width:1px; height:20px; background:rgba(255,255,255,0.1);"></div>
+        <div style="display:flex; align-items:baseline; gap:6px;">
+          <span style="font-size:28px; font-weight:700; color:#fff; letter-spacing:-0.5px;">247</span>
+          <span style="font-size:12px; color:rgba(255,255,255,0.35);">total plays</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Inline Minimal</h3>
+      <p>Numbers lead, labels trail. No cards, no borders, no color. Clean horizontal flow with thin dividers.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Embedded in hero -->
+  <div class="card" data-choice="hero-embedded" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a; padding:0; overflow:hidden;">
+      <div style="position:relative; height:160px;">
+        <div style="position:absolute; inset:0; background:linear-gradient(to bottom, #333 0%, #0a0a0a 100%); opacity:0.6;"></div>
+        <div style="position:absolute; inset:0; background:linear-gradient(to top, #0a0a0a 0%, transparent 60%);"></div>
+        <div style="position:absolute; bottom:16px; left:20px; right:20px;">
+          <div style="font-size:32px; font-weight:800; color:#fff; letter-spacing:-0.5px; line-height:1;">Kendrick Lamar</div>
+          <div style="display:flex; align-items:center; gap:16px; margin-top:12px;">
+            <span style="font-size:13px; color:rgba(255,255,255,0.7);"><strong style="color:#fff;">42.5</strong> hrs</span>
+            <span style="font-size:13px; color:rgba(255,255,255,0.3);">·</span>
+            <span style="font-size:13px; color:rgba(255,255,255,0.7);"><strong style="color:#fff;">18</strong> tracks</span>
+            <span style="font-size:13px; color:rgba(255,255,255,0.3);">·</span>
+            <span style="font-size:13px; color:rgba(255,255,255,0.7);"><strong style="color:#fff;">247</strong> plays</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Embedded in Hero</h3>
+      <p>Stats live directly under the artist name in the hero. No separate section — keeps the page tighter and the hero more informative.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Ghost cards -->
+  <div class="card" data-choice="ghost" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a; padding:24px 20px;">
+      <div style="font-size:11px; letter-spacing:2px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:16px;">C — Ghost Cards</div>
+      <div style="display:flex; gap:12px;">
+        <div style="flex:1; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px 16px;">
+          <div style="font-size:26px; font-weight:700; color:#fff; letter-spacing:-0.5px;">42.5</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.3); margin-top:4px;">hours listened</div>
+        </div>
+        <div style="flex:1; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px 16px;">
+          <div style="font-size:26px; font-weight:700; color:#fff; letter-spacing:-0.5px;">18</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.3); margin-top:4px;">unique tracks</div>
+        </div>
+        <div style="flex:1; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px 16px;">
+          <div style="font-size:26px; font-weight:700; color:#fff; letter-spacing:-0.5px;">247</div>
+          <div style="font-size:11px; color:rgba(255,255,255,0.3); margin-top:4px;">total plays</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Ghost Cards</h3>
+      <p>Same card layout but borderline invisible — just thin borders, no backgrounds, no accent colors. Numbers are white, labels are dim. Structure without weight.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">Click the one that feels right for the page.</p>

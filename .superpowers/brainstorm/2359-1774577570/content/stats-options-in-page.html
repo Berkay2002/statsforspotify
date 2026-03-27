@@ -1,0 +1,198 @@
+<h2>Stats Treatment — In Context</h2>
+<p class="subtitle">Three versions of the full page, only the stats section changes</p>
+
+<div class="cards">
+  <!-- Option A: Inline Minimal -->
+  <div class="card" data-choice="inline" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a; color:#fff; padding:0; overflow:hidden; min-height:520px;">
+      <!-- Hero -->
+      <div style="position:relative; height:220px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:url('https://i.scdn.co/image/ab6761610000e5eb6be070445b03e0b63147c2c1') center/cover;"></div>
+        <div style="position:absolute; inset:0; background:linear-gradient(to bottom, transparent 10%, rgba(10,10,10,0.6) 50%, #0a0a0a 100%);"></div>
+        <div style="position:absolute; bottom:20px; left:20px; right:20px;">
+          <div style="font-size:10px; letter-spacing:3px; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Your #4 Artist</div>
+          <div style="font-size:32px; font-weight:800; letter-spacing:-1px;">Kendrick Lamar</div>
+        </div>
+      </div>
+      <!-- Stats: Inline Minimal -->
+      <div style="padding:16px 20px; display:flex; align-items:baseline; gap:20px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span style="font-size:24px; font-weight:700; color:#fff;">42.5</span>
+          <span style="font-size:11px; color:rgba(255,255,255,0.35);">hours listened</span>
+        </div>
+        <div style="width:1px; height:18px; background:rgba(255,255,255,0.1);"></div>
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span style="font-size:24px; font-weight:700; color:#fff;">18</span>
+          <span style="font-size:11px; color:rgba(255,255,255,0.35);">unique tracks</span>
+        </div>
+        <div style="width:1px; height:18px; background:rgba(255,255,255,0.1);"></div>
+        <div style="display:flex; align-items:baseline; gap:5px;">
+          <span style="font-size:24px; font-weight:700; color:#fff;">247</span>
+          <span style="font-size:11px; color:rgba(255,255,255,0.35);">total plays</span>
+        </div>
+      </div>
+      <!-- Actions -->
+      <div style="padding:4px 20px 16px; display:flex; align-items:center; gap:10px;">
+        <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#1DB954,#1ed760); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(29,185,84,0.35);"><span style="font-size:16px; margin-left:2px;">▶</span></div>
+        <div style="padding:7px 18px; border:1px solid rgba(255,255,255,0.15); border-radius:20px; font-size:11px; color:rgba(255,255,255,0.7);">Follow</div>
+        <div style="margin-left:auto; display:flex; gap:2px; background:rgba(255,255,255,0.06); border-radius:7px; padding:2px;">
+          <span style="padding:5px 10px; border-radius:5px; font-size:10px; color:rgba(255,255,255,0.4);">4W</span>
+          <span style="padding:5px 10px; background:rgba(255,255,255,0.1); border-radius:5px; font-size:10px; color:#fff;">6M</span>
+          <span style="padding:5px 10px; border-radius:5px; font-size:10px; color:rgba(255,255,255,0.4);">All</span>
+        </div>
+      </div>
+      <!-- Genres -->
+      <div style="padding:0 20px 12px; display:flex; gap:5px; flex-wrap:wrap;">
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">hip hop</span>
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">conscious hip hop</span>
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">west coast rap</span>
+      </div>
+      <!-- Tracks -->
+      <div style="padding:4px 20px;">
+        <div style="font-size:10px; letter-spacing:2px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:10px;">Your Top Tracks</div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; background:rgba(255,255,255,0.03);">
+          <span style="width:18px; text-align:right; font-size:12px; font-weight:600; color:rgba(255,255,255,0.25);">01</span>
+          <div style="width:38px; height:38px; background:#333; border-radius:5px;"></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">HUMBLE.</div><div style="font-size:11px; color:rgba(255,255,255,0.4);">DAMN.</div></div>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">2:57</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px;">
+          <span style="width:18px; text-align:right; font-size:12px; font-weight:600; color:rgba(255,255,255,0.25);">02</span>
+          <div style="width:38px; height:38px; background:#333; border-radius:5px;"></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">Money Trees</div><div style="font-size:11px; color:rgba(255,255,255,0.4);">good kid, m.A.A.d city</div></div>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">6:26</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Inline Minimal</h3>
+      <p>Stats as a single flowing line between hero and actions. No cards, no borders.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Embedded in Hero -->
+  <div class="card" data-choice="hero-embedded" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a; color:#fff; padding:0; overflow:hidden; min-height:520px;">
+      <!-- Hero with embedded stats -->
+      <div style="position:relative; height:250px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:url('https://i.scdn.co/image/ab6761610000e5eb6be070445b03e0b63147c2c1') center/cover;"></div>
+        <div style="position:absolute; inset:0; background:linear-gradient(to bottom, transparent 10%, rgba(10,10,10,0.6) 50%, #0a0a0a 100%);"></div>
+        <div style="position:absolute; bottom:20px; left:20px; right:20px;">
+          <div style="font-size:10px; letter-spacing:3px; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Your #4 Artist</div>
+          <div style="font-size:32px; font-weight:800; letter-spacing:-1px;">Kendrick Lamar</div>
+          <div style="display:flex; align-items:center; gap:14px; margin-top:12px;">
+            <span style="font-size:13px; color:rgba(255,255,255,0.7);"><strong style="color:#fff; font-size:15px;">42.5</strong> hrs</span>
+            <span style="color:rgba(255,255,255,0.2);">·</span>
+            <span style="font-size:13px; color:rgba(255,255,255,0.7);"><strong style="color:#fff; font-size:15px;">18</strong> tracks</span>
+            <span style="color:rgba(255,255,255,0.2);">·</span>
+            <span style="font-size:13px; color:rgba(255,255,255,0.7);"><strong style="color:#fff; font-size:15px;">247</strong> plays</span>
+          </div>
+        </div>
+      </div>
+      <!-- Actions (no stats section needed) -->
+      <div style="padding:16px 20px; display:flex; align-items:center; gap:10px;">
+        <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#1DB954,#1ed760); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(29,185,84,0.35);"><span style="font-size:16px; margin-left:2px;">▶</span></div>
+        <div style="padding:7px 18px; border:1px solid rgba(255,255,255,0.15); border-radius:20px; font-size:11px; color:rgba(255,255,255,0.7);">Follow</div>
+        <div style="margin-left:auto; display:flex; gap:2px; background:rgba(255,255,255,0.06); border-radius:7px; padding:2px;">
+          <span style="padding:5px 10px; border-radius:5px; font-size:10px; color:rgba(255,255,255,0.4);">4W</span>
+          <span style="padding:5px 10px; background:rgba(255,255,255,0.1); border-radius:5px; font-size:10px; color:#fff;">6M</span>
+          <span style="padding:5px 10px; border-radius:5px; font-size:10px; color:rgba(255,255,255,0.4);">All</span>
+        </div>
+      </div>
+      <!-- Genres -->
+      <div style="padding:0 20px 12px; display:flex; gap:5px; flex-wrap:wrap;">
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">hip hop</span>
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">conscious hip hop</span>
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">west coast rap</span>
+      </div>
+      <!-- Tracks -->
+      <div style="padding:4px 20px;">
+        <div style="font-size:10px; letter-spacing:2px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:10px;">Your Top Tracks</div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; background:rgba(255,255,255,0.03);">
+          <span style="width:18px; text-align:right; font-size:12px; font-weight:600; color:rgba(255,255,255,0.25);">01</span>
+          <div style="width:38px; height:38px; background:#333; border-radius:5px;"></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">HUMBLE.</div><div style="font-size:11px; color:rgba(255,255,255,0.4);">DAMN.</div></div>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">2:57</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px;">
+          <span style="width:18px; text-align:right; font-size:12px; font-weight:600; color:rgba(255,255,255,0.25);">02</span>
+          <div style="width:38px; height:38px; background:#333; border-radius:5px;"></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">Money Trees</div><div style="font-size:11px; color:rgba(255,255,255,0.4);">good kid, m.A.A.d city</div></div>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">6:26</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Embedded in Hero</h3>
+      <p>Stats live under the name inside the hero. Tighter page, no separate stats section at all.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Ghost Cards -->
+  <div class="card" data-choice="ghost" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a; color:#fff; padding:0; overflow:hidden; min-height:520px;">
+      <!-- Hero -->
+      <div style="position:relative; height:220px; overflow:hidden;">
+        <div style="position:absolute; inset:0; background:url('https://i.scdn.co/image/ab6761610000e5eb6be070445b03e0b63147c2c1') center/cover;"></div>
+        <div style="position:absolute; inset:0; background:linear-gradient(to bottom, transparent 10%, rgba(10,10,10,0.6) 50%, #0a0a0a 100%);"></div>
+        <div style="position:absolute; bottom:20px; left:20px; right:20px;">
+          <div style="font-size:10px; letter-spacing:3px; color:rgba(255,255,255,0.5); text-transform:uppercase; margin-bottom:6px;">Your #4 Artist</div>
+          <div style="font-size:32px; font-weight:800; letter-spacing:-1px;">Kendrick Lamar</div>
+        </div>
+      </div>
+      <!-- Stats: Ghost Cards -->
+      <div style="padding:16px 20px; display:flex; gap:10px;">
+        <div style="flex:1; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px;">
+          <div style="font-size:22px; font-weight:700; color:#fff;">42.5</div>
+          <div style="font-size:10px; color:rgba(255,255,255,0.3); margin-top:3px;">hours listened</div>
+        </div>
+        <div style="flex:1; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px;">
+          <div style="font-size:22px; font-weight:700; color:#fff;">18</div>
+          <div style="font-size:10px; color:rgba(255,255,255,0.3); margin-top:3px;">unique tracks</div>
+        </div>
+        <div style="flex:1; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px 14px;">
+          <div style="font-size:22px; font-weight:700; color:#fff;">247</div>
+          <div style="font-size:10px; color:rgba(255,255,255,0.3); margin-top:3px;">total plays</div>
+        </div>
+      </div>
+      <!-- Actions -->
+      <div style="padding:4px 20px 16px; display:flex; align-items:center; gap:10px;">
+        <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,#1DB954,#1ed760); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(29,185,84,0.35);"><span style="font-size:16px; margin-left:2px;">▶</span></div>
+        <div style="padding:7px 18px; border:1px solid rgba(255,255,255,0.15); border-radius:20px; font-size:11px; color:rgba(255,255,255,0.7);">Follow</div>
+        <div style="margin-left:auto; display:flex; gap:2px; background:rgba(255,255,255,0.06); border-radius:7px; padding:2px;">
+          <span style="padding:5px 10px; border-radius:5px; font-size:10px; color:rgba(255,255,255,0.4);">4W</span>
+          <span style="padding:5px 10px; background:rgba(255,255,255,0.1); border-radius:5px; font-size:10px; color:#fff;">6M</span>
+          <span style="padding:5px 10px; border-radius:5px; font-size:10px; color:rgba(255,255,255,0.4);">All</span>
+        </div>
+      </div>
+      <!-- Genres -->
+      <div style="padding:0 20px 12px; display:flex; gap:5px; flex-wrap:wrap;">
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">hip hop</span>
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">conscious hip hop</span>
+        <span style="padding:3px 10px; background:rgba(255,255,255,0.06); border-radius:20px; font-size:10px; color:rgba(255,255,255,0.5);">west coast rap</span>
+      </div>
+      <!-- Tracks -->
+      <div style="padding:4px 20px;">
+        <div style="font-size:10px; letter-spacing:2px; color:rgba(255,255,255,0.3); text-transform:uppercase; margin-bottom:10px;">Your Top Tracks</div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; background:rgba(255,255,255,0.03);">
+          <span style="width:18px; text-align:right; font-size:12px; font-weight:600; color:rgba(255,255,255,0.25);">01</span>
+          <div style="width:38px; height:38px; background:#333; border-radius:5px;"></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">HUMBLE.</div><div style="font-size:11px; color:rgba(255,255,255,0.4);">DAMN.</div></div>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">2:57</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; padding:10px;">
+          <span style="width:18px; text-align:right; font-size:12px; font-weight:600; color:rgba(255,255,255,0.25);">02</span>
+          <div style="width:38px; height:38px; background:#333; border-radius:5px;"></div>
+          <div style="flex:1;"><div style="font-size:13px; font-weight:600;">Money Trees</div><div style="font-size:11px; color:rgba(255,255,255,0.4);">good kid, m.A.A.d city</div></div>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">6:26</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Ghost Cards</h3>
+      <p>Card structure but stripped to just thin borders. No backgrounds, no accent colors. All white numbers.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle">Click the version that feels best in context.</p>
