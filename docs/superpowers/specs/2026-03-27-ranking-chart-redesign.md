@@ -41,14 +41,27 @@ No API changes. The component receives the same props:
 - `data: RankingHistory[]` — from `/api/rankings/history`
 - `metadata: RankingHistoryMetadata` — peak, current rank, total snapshots, dates
 
-All annotations and streaks are computed from existing data fields (`isNewEntry`, `isReentry`, `rank`, `rankChange`).
+All annotations and streaks are computed from existing data fields (`isNewEntry`, `isReentry`, `rank`). Note: `rankChange` is NOT on the `RankingHistory` type — it must be derived inside the component by comparing adjacent entries via `getRankDelta()` from `lib/rank-change.ts`, same as the current implementation.
+
+### New Component Interface
+
+```typescript
+interface RankingChartProps {
+  data: RankingHistory[];
+  metadata: RankingHistoryMetadata;
+  onAnimationComplete?: () => void;
+}
+```
+
+This replaces the current props (`data`, `color`, `peakPosition`, `showPeakLabel`). The `metadata` prop replaces `peakPosition` — the chart reads `metadata.peakRank` directly. The `onAnimationComplete` callback lets the loader coordinate stats row animation.
 
 ### Files Changed
 
 | File | Action | Description |
 |------|--------|-------------|
 | `components/charts/ranking-chart.tsx` | Replace | New custom SVG + Motion implementation |
-| `components/charts/ranking-history-loader.tsx` | Minor edit | Point at updated chart, add legend to header |
+| `components/charts/ranking-history-loader.tsx` | Edit | Pass `metadata` prop, animate stats row via `onAnimationComplete`, add legend |
+| `app/globals.css` | Edit | Add `--chart-amber` variable to both light/dark themes |
 | `app/demo/page.tsx` | Delete | Remove demo page after implementation |
 
 ### Files Unchanged
@@ -68,7 +81,7 @@ All annotations and streaks are computed from existing data fields (`isNewEntry`
 - **Gradient stroke**: `--chart-4` (purple) → `--primary` (teal) → `--chart-1` (green) along X
 - **Glow layer**: same path, 6px wide, 15% opacity, gaussian blur filter
 - **Area fill**: gradient from 15% `--primary` at top to transparent at bottom, fades in after line draw
-- **Smooth curves**: cubic bezier interpolation between points (not linear segments)
+- **Smooth curves**: monotone cubic interpolation between points (not linear segments). Requires a `buildSmoothPath(points)` utility (~30-40 lines) that generates SVG cubic bezier `C` commands. Extract to `components/charts/chart-utils.ts`.
 
 ### Axes & Grid
 
@@ -124,6 +137,8 @@ Auto-derived from data, no manual config:
 
 Each annotation: pulsing ring animation (2s infinite loop) + solid dot. Click opens shadcn `Popover` with label + formatted date.
 
+**Priority rules** (max one annotation per data point): Peak > New Entry > Re-entry > Big Jump. If a point matches multiple conditions, show only the highest-priority annotation.
+
 ### On Time Range Change
 
 Component re-keys, full animation sequence replays.
@@ -136,6 +151,8 @@ Component re-keys, full animation sequence replays.
 - Fades in after line draw completes (1.6s delay)
 
 ## Stats Row
+
+**Ownership**: stats row stays in `RankingHistoryLoader`. The chart fires `onAnimationComplete` when the line draw finishes, and the loader uses this signal to trigger the stats row fade-in. This keeps the chart focused on visualization and the loader focused on data/layout.
 
 Same layout as current, animated:
 - **Peak Position** (amber highlight when current === peak)
@@ -154,7 +171,8 @@ Same layout as current, animated:
 ## Dependencies
 
 - **Added**: none (Motion already installed, no d3 needed)
-- **Removed**: Recharts import from this component (Recharts stays in project if used elsewhere)
+- **Removed**: Recharts import from this component (Recharts stays in project — used by `sparkline-chart.tsx`)
+- **Import convention**: use `motion` package (not `framer-motion`) for all new imports, consistent with v12 naming
 
 ## Edge Cases
 
@@ -164,7 +182,10 @@ Same layout as current, animated:
 - **Sparse data (2-3 points)**: show all X-axis labels, wider dot spacing
 - **Dense data (30+ points)**: thin X-axis labels to every 3rd, smaller dots
 - **No peak in view**: skip peak reference line and annotation
-- **Mobile**: ResizeObserver handles responsive width, touch hover via tap
+- **Mobile**: ResizeObserver handles responsive width. Tap on chart area shows crosshair tooltip, tap on annotation dot opens popover, tap elsewhere dismisses both.
+- **Initial render**: before ResizeObserver fires, render the container at `100% width` / `420px height` via CSS but defer SVG content until dimensions are observed (avoids 0x0 flash)
+- **Reduced motion**: respect `prefers-reduced-motion` — skip all animations, render final state immediately. Use Motion's built-in `useReducedMotion()` hook.
+- **Multiple peaks**: if the same peak rank appears on multiple dates, annotate only the first occurrence
 
 ## Out of Scope
 
