@@ -172,7 +172,7 @@ Same layout as current, animated:
 
 - **Added**: none (Motion already installed, no d3 needed)
 - **Removed**: Recharts import from this component (Recharts stays in project — used by `sparkline-chart.tsx`)
-- **Import convention**: use `motion` package (not `framer-motion`) for all new imports, consistent with v12 naming
+- **Import convention**: use `framer-motion` for all imports, matching existing codebase convention
 
 ## Edge Cases
 
