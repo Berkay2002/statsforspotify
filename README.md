@@ -43,7 +43,6 @@ A web app to track your Spotify listening history and visualize how your music t
 - **Charts**: Recharts with custom sparklines
 - **Animations**: Framer Motion
 - **State Management**: TanStack React Query (for social features)
-- **Analytics**: Vercel Analytics + Speed Insights
 - **Auth**: Spotify OAuth via Supabase
 - **Runtime**: Node.js 18+ or Bun
 
