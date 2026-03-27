@@ -1,0 +1,77 @@
+<h2>Tweak 5: Mobile Layout for Three Versions</h2>
+<p class="subtitle">The 3-column panel layout won't fit on mobile — two options</p>
+
+<div class="cards">
+  <div class="card" data-choice="stack" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#09090b;height:260px;padding:16px;display:flex;flex-direction:column;gap:8px;overflow:hidden;">
+      <div style="font-size:0.7em;font-weight:700;color:#fff;">Three Versions of You</div>
+      <!-- Stacked panels -->
+      <div style="background:#161616;border-radius:8px;padding:10px;border:1px solid #222;">
+        <div style="font-size:0.5em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Last 4 Weeks</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+          <div style="width:24px;height:24px;background:#333;border-radius:4px;"></div>
+          <div style="font-size:0.6em;color:#fff;">Artist A</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+          <div style="width:24px;height:24px;background:#333;border-radius:4px;"></div>
+          <div style="font-size:0.6em;color:#fff;">Artist B</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div style="width:24px;height:24px;background:#333;border-radius:4px;"></div>
+          <div style="font-size:0.6em;color:#fff;">Artist C</div>
+        </div>
+      </div>
+      <div style="background:#161616;border-radius:8px;padding:10px;border:1px solid #222;">
+        <div style="font-size:0.5em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Last 6 Months</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+          <div style="width:24px;height:24px;background:#333;border-radius:4px;"></div>
+          <div style="font-size:0.6em;color:#fff;">Artist B</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div style="font-size:0.6em;color:#666;">+ 2 more</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Vertical Stack</h3>
+      <p>Panels stack on top of each other. Simple, scrollable, no interaction needed. Takes up more vertical space but all content is visible.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="swipe" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#09090b;height:260px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:0.7em;font-weight:700;color:#fff;">Three Versions of You</div>
+      <!-- Single panel with dots -->
+      <div style="background:#161616;border-radius:8px;padding:14px;border:1px solid #222;flex:1;">
+        <div style="font-size:0.5em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Last 4 Weeks</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="width:28px;height:28px;background:#333;border-radius:4px;"></div>
+            <div style="font-size:0.65em;color:#fff;">Artist A</div>
+            <div style="font-size:0.5em;color:#22c55e;margin-left:auto;">NEW</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="width:28px;height:28px;background:#333;border-radius:4px;"></div>
+            <div style="font-size:0.65em;color:#fff;">Artist B</div>
+            <div style="font-size:0.5em;color:#888;margin-left:auto;">constant</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div style="width:28px;height:28px;background:#333;border-radius:4px;"></div>
+            <div style="font-size:0.65em;color:#fff;">Artist C</div>
+            <div style="font-size:0.5em;color:#22c55e;margin-left:auto;">NEW</div>
+          </div>
+        </div>
+      </div>
+      <!-- Dot indicators -->
+      <div style="display:flex;justify-content:center;gap:6px;margin-top:4px;">
+        <div style="width:8px;height:8px;background:#fff;border-radius:50%;"></div>
+        <div style="width:8px;height:8px;background:#444;border-radius:50%;"></div>
+        <div style="width:8px;height:8px;background:#444;border-radius:50%;"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Swipeable Carousel</h3>
+      <p>One panel at a time, swipe left/right. Compact, each panel gets full width. More engaging interaction but content is hidden behind swipes.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,145 @@
+<h2>Three Design Approaches</h2>
+<p class="subtitle">Same data, different philosophies. Click to select your favorite.</p>
+
+<!-- Approach A: Hero + Feed -->
+<div class="cards">
+  <div class="card" data-choice="hero-feed" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a;height:280px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+      <!-- Hero section mockup -->
+      <div style="display:flex;gap:16px;align-items:center;flex:1;">
+        <div style="width:120px;height:120px;background:#222;border-radius:8px;flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:2px;">YOUR #1 ARTIST</div>
+          <div style="font-size:1.6em;font-weight:700;color:#fff;margin:4px 0;">Artist Name</div>
+          <div style="font-size:0.75em;color:#666;">Since 3 weeks · up from #4</div>
+        </div>
+      </div>
+      <!-- Mini cards below -->
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;background:#161616;border-radius:8px;padding:10px;border:1px solid #222;">
+          <div style="font-size:0.55em;color:#888;text-transform:uppercase;">Top Track</div>
+          <div style="font-size:0.75em;color:#fff;margin-top:2px;">Track Name</div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:8px;padding:10px;border:1px solid #222;">
+          <div style="font-size:0.55em;color:#888;text-transform:uppercase;">Top Album</div>
+          <div style="font-size:0.75em;color:#fff;margin-top:2px;">Album Name</div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:8px;padding:10px;border:1px solid #222;">
+          <div style="font-size:0.55em;color:#888;text-transform:uppercase;">Biggest Move</div>
+          <div style="font-size:0.75em;color:#1DB954;margin-top:2px;">↑ 12 spots</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Hero + Highlights Feed</h3>
+      <p><strong>Big #1 artist hero</strong> at top with album art, then a row of highlight cards (top track, top album, biggest shift). Below: "Three Versions" and "Hall of Fame" as expandable sections.</p>
+      <div class="pros-cons" style="margin-top:12px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Instant identity — you see your #1 immediately</li><li>Clean hierarchy, no overwhelm</li><li>Very shareable hero section</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less data density on first view</li><li>#1 might not change often — could feel stale</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach B: Triptych -->
+  <div class="card" data-choice="triptych" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a;height:280px;padding:20px;display:flex;flex-direction:column;gap:12px;">
+      <!-- Three panels -->
+      <div style="display:flex;gap:10px;flex:1;">
+        <div style="flex:1;background:#161616;border-radius:10px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid #222;">
+          <div style="font-size:0.55em;color:#888;text-transform:uppercase;letter-spacing:1px;">Last 4 Weeks</div>
+          <div>
+            <div style="width:48px;height:48px;background:#333;border-radius:6px;margin-bottom:6px;"></div>
+            <div style="font-size:0.7em;color:#fff;font-weight:600;">Recent You</div>
+            <div style="font-size:0.55em;color:#666;margin-top:2px;">3 new artists</div>
+          </div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:10px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid rgba(255,255,255,0.1);">
+          <div style="font-size:0.55em;color:#888;text-transform:uppercase;letter-spacing:1px;">Last 6 Months</div>
+          <div>
+            <div style="width:48px;height:48px;background:#333;border-radius:6px;margin-bottom:6px;"></div>
+            <div style="font-size:0.7em;color:#fff;font-weight:600;">Core You</div>
+            <div style="font-size:0.55em;color:#666;margin-top:2px;">Stable favorites</div>
+          </div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:10px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;border:1px solid #222;">
+          <div style="font-size:0.55em;color:#888;text-transform:uppercase;letter-spacing:1px;">All Time</div>
+          <div>
+            <div style="width:48px;height:48px;background:#333;border-radius:6px;margin-bottom:6px;"></div>
+            <div style="font-size:0.7em;color:#fff;font-weight:600;">True You</div>
+            <div style="font-size:0.55em;color:#666;margin-top:2px;">Your DNA</div>
+          </div>
+        </div>
+      </div>
+      <!-- Stats row -->
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;text-align:center;background:#161616;border-radius:6px;padding:8px;border:1px solid #222;">
+          <div style="font-size:1em;font-weight:700;color:#fff;">47</div>
+          <div style="font-size:0.5em;color:#888;">days at #1</div>
+        </div>
+        <div style="flex:1;text-align:center;background:#161616;border-radius:6px;padding:8px;border:1px solid #222;">
+          <div style="font-size:1em;font-weight:700;color:#1DB954;">↑12</div>
+          <div style="font-size:0.5em;color:#888;">biggest climb</div>
+        </div>
+        <div style="flex:1;text-align:center;background:#161616;border-radius:6px;padding:8px;border:1px solid #222;">
+          <div style="font-size:1em;font-weight:700;color:#fff;">23</div>
+          <div style="font-size:0.5em;color:#888;">day streak</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Identity Triptych</h3>
+      <p><strong>"Three Versions of You" as the hero.</strong> Three panels showing your music identity across time ranges, with top artist art in each. Hall of Fame stats as a compact row below. No traditional rankings list on the home page.</p>
+      <div class="pros-cons" style="margin-top:12px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Leads with the strongest concept</li><li>Always feels fresh (3 different views)</li><li>Extremely shareable — tells a story</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Rankings lists move to sub-pages</li><li>Novel layout — users might expect a traditional list</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach C: Curated Cards -->
+  <div class="card" data-choice="curated" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0a0a0a;height:280px;padding:16px;display:flex;flex-direction:column;gap:8px;">
+      <!-- Mixed cards layout -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:8px;flex:1;">
+        <div style="background:#161616;border-radius:10px;padding:14px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid #222;">
+          <div style="width:56px;height:56px;background:#333;border-radius:50%;margin-bottom:8px;"></div>
+          <div style="font-size:0.8em;font-weight:700;color:#fff;">#1 Artist</div>
+          <div style="font-size:0.55em;color:#666;">4 weeks running</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="flex:1;background:#161616;border-radius:10px;padding:10px;border:1px solid #222;">
+            <div style="font-size:0.55em;color:#1DB954;font-weight:600;">NEW THIS WEEK</div>
+            <div style="font-size:0.7em;color:#fff;margin-top:2px;">Track entered top 10</div>
+          </div>
+          <div style="flex:1;background:#161616;border-radius:10px;padding:10px;border:1px solid #222;">
+            <div style="font-size:0.55em;color:#888;">STREAK</div>
+            <div style="font-size:1.1em;font-weight:700;color:#fff;">23 days</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="background:#161616;border-radius:8px;padding:8px;text-align:center;border:1px solid #222;">
+          <div style="width:32px;height:32px;background:#333;border-radius:4px;margin:0 auto 4px;"></div>
+          <div style="font-size:0.55em;color:#fff;">Top Track</div>
+        </div>
+        <div style="background:#161616;border-radius:8px;padding:8px;text-align:center;border:1px solid #222;">
+          <div style="width:32px;height:32px;background:#333;border-radius:4px;margin:0 auto 4px;"></div>
+          <div style="font-size:0.55em;color:#fff;">Top Album</div>
+        </div>
+        <div style="background:#161616;border-radius:8px;padding:8px;text-align:center;border:1px solid #222;">
+          <div style="font-size:0.9em;font-weight:700;color:#fff;">47</div>
+          <div style="font-size:0.55em;color:#888;">#1 days</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Curated Bento</h3>
+      <p><strong>Mixed-size cards</strong> blending rankings, insights, and stats into one visual grid. Largest card is your #1 artist, smaller cards for highlights, streaks, and movements. Everything on one scrollable page.</p>
+      <div class="pros-cons" style="margin-top:12px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Visually dynamic — no two cards the same</li><li>Everything visible at a glance</li><li>Flexible — easy to add/remove cards later</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Harder to scan for specific info</li><li>Can feel busy if not carefully curated</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

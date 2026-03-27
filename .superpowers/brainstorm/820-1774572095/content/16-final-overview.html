@@ -1,0 +1,174 @@
+<h2>Final Design: Dashboard Redesign</h2>
+<p class="subtitle">Complete page layout — everything we agreed on</p>
+
+<div class="mockup">
+  <div class="mockup-header">Dashboard — Full Page (Desktop)</div>
+  <div class="mockup-body" style="background:#09090b;padding:32px;display:flex;flex-direction:column;gap:28px;">
+
+    <!-- Time range selector -->
+    <div style="display:flex;gap:4px;background:#161616;border-radius:8px;padding:3px;width:fit-content;">
+      <div style="padding:6px 14px;background:#fff;color:#000;border-radius:6px;font-size:0.7em;font-weight:600;">4 Weeks</div>
+      <div style="padding:6px 14px;color:#888;font-size:0.7em;font-weight:500;">6 Months</div>
+      <div style="padding:6px 14px;color:#888;font-size:0.7em;font-weight:500;">All Time</div>
+    </div>
+
+    <!-- HERO: #1 Artist -->
+    <div style="display:flex;gap:20px;align-items:center;">
+      <div style="width:120px;height:120px;background:linear-gradient(135deg,#333,#222);border-radius:8px;flex-shrink:0;"></div>
+      <div>
+        <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:2px;">YOUR #1 ARTIST</div>
+        <div style="font-size:1.6em;font-weight:700;color:#fff;margin:4px 0;">Artist Name</div>
+        <div style="font-size:0.75em;color:#666;">Since 3 weeks · up from #4</div>
+      </div>
+    </div>
+
+    <!-- HIGHLIGHT CARDS (with thumbnails) -->
+    <div style="display:flex;gap:10px;">
+      <div style="flex:1;background:#161616;border-radius:10px;padding:14px;border:1px solid #222;">
+        <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Top Track</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div style="width:36px;height:36px;background:#333;border-radius:4px;flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:0.8em;color:#fff;font-weight:500;">Track Name</div>
+            <div style="font-size:0.65em;color:#666;">by Artist</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;background:#161616;border-radius:10px;padding:14px;border:1px solid #222;">
+        <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Top Album</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div style="width:36px;height:36px;background:#333;border-radius:4px;flex-shrink:0;"></div>
+          <div>
+            <div style="font-size:0.8em;color:#fff;font-weight:500;">Album Name</div>
+            <div style="font-size:0.65em;color:#666;">by Artist</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;background:#161616;border-radius:10px;padding:14px;border:1px solid #222;">
+        <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Biggest Move</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div style="width:36px;height:36px;background:#333;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+            <span style="color:#1DB954;font-weight:700;font-size:0.9em;">↑</span>
+          </div>
+          <div>
+            <div style="font-size:0.8em;color:#1DB954;font-weight:500;">↑ 12 spots</div>
+            <div style="font-size:0.65em;color:#666;">Track Name</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div style="border-top:1px solid #1a1a1a;"></div>
+
+    <!-- THREE VERSIONS OF YOU -->
+    <div>
+      <div style="font-size:1.1em;font-weight:700;color:#fff;margin-bottom:4px;">Three Versions of You</div>
+      <div style="font-size:0.7em;color:#888;margin-bottom:16px;">How your taste shifts across time ranges</div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <div style="flex:1;background:#161616;border-radius:12px;padding:18px;border:1px solid #222;">
+          <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Last 4 Weeks</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div>
+                <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist A</div>
+                <div style="font-size:0.6em;color:#22c55e;">NEW</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div>
+                <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist B</div>
+                <div style="font-size:0.6em;color:#888;">constant</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div>
+                <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist C</div>
+                <div style="font-size:0.6em;color:#22c55e;">NEW</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:12px;padding:18px;border:1px solid #222;">
+          <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Last 6 Months</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist B</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist D</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist E</div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:12px;padding:18px;border:1px solid #222;">
+          <div style="font-size:0.6em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">All Time</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist B</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist F</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>
+              <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist G</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Biggest shift callout -->
+      <div style="padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid #222;border-radius:10px;display:flex;align-items:center;gap:10px;">
+        <div style="font-size:0.7em;color:#888;">Biggest shift:</div>
+        <div style="width:24px;height:24px;background:#333;border-radius:4px;flex-shrink:0;"></div>
+        <div style="font-size:0.75em;color:#fff;font-weight:500;">Artist A</div>
+        <div style="font-size:0.7em;color:#666;">went from</div>
+        <div style="font-size:0.75em;color:#888;font-weight:500;">#47 all-time</div>
+        <div style="font-size:0.7em;color:#666;">to</div>
+        <div style="font-size:0.75em;color:#22c55e;font-weight:600;">#3 recent</div>
+      </div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div style="border-top:1px solid #1a1a1a;"></div>
+
+    <!-- HALL OF FAME -->
+    <div>
+      <div style="font-size:1.1em;font-weight:700;color:#fff;margin-bottom:4px;">Hall of Fame</div>
+      <div style="font-size:0.7em;color:#888;margin-bottom:16px;">Your all-time achievements and streaks</div>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;background:#161616;border-radius:12px;padding:18px;text-align:center;border:1px solid #222;">
+          <div style="font-size:2em;font-weight:800;color:#fff;">47</div>
+          <div style="font-size:0.65em;color:#888;margin-top:4px;">Most Days at #1</div>
+          <div style="font-size:0.75em;color:#fff;margin-top:6px;font-weight:500;">Artist B</div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:12px;padding:18px;text-align:center;border:1px solid #222;">
+          <div style="font-size:2em;font-weight:800;color:#fff;">23</div>
+          <div style="font-size:0.65em;color:#888;margin-top:4px;">Longest Streak</div>
+          <div style="font-size:0.75em;color:#fff;margin-top:6px;font-weight:500;">Artist F</div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:12px;padding:18px;text-align:center;border:1px solid #222;">
+          <div style="font-size:2em;font-weight:800;color:#fff;">#1</div>
+          <div style="font-size:0.65em;color:#888;margin-top:4px;">Best Peak Rank</div>
+          <div style="font-size:0.75em;color:#fff;margin-top:6px;font-weight:500;">Track Name</div>
+        </div>
+        <div style="flex:1;background:#161616;border-radius:12px;padding:18px;text-align:center;border:1px solid #222;">
+          <div style="font-size:2em;font-weight:800;color:#fff;">89</div>
+          <div style="font-size:0.65em;color:#888;margin-top:4px;">Most Days Charted</div>
+          <div style="font-size:0.75em;color:#fff;margin-top:6px;font-weight:500;">Artist B</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

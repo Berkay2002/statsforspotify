@@ -1,0 +1,81 @@
+<h2>Section 1: Hero — Your #1 Artist</h2>
+<p class="subtitle">The first thing you see when you open the dashboard</p>
+
+<div class="mockup">
+  <div class="mockup-header">Dashboard — Hero Section</div>
+  <div class="mockup-body" style="background:#09090b;padding:32px;min-height:300px;">
+
+    <!-- Time range selector -->
+    <div style="display:flex;gap:4px;margin-bottom:24px;background:#161616;border-radius:8px;padding:3px;width:fit-content;">
+      <div style="padding:6px 14px;background:#fff;color:#000;border-radius:6px;font-size:0.7em;font-weight:600;">4 Weeks</div>
+      <div style="padding:6px 14px;color:#888;font-size:0.7em;font-weight:500;">6 Months</div>
+      <div style="padding:6px 14px;color:#888;font-size:0.7em;font-weight:500;">All Time</div>
+    </div>
+
+    <!-- Hero card -->
+    <div style="display:flex;gap:24px;align-items:center;background:linear-gradient(135deg,#161616,#1a1a1a);border-radius:16px;padding:28px;border:1px solid #222;">
+      <!-- Album art -->
+      <div style="width:140px;height:140px;background:linear-gradient(135deg,#333,#222);border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+        <div style="font-size:2em;opacity:0.3;">🎵</div>
+      </div>
+
+      <!-- Info -->
+      <div style="flex:1;">
+        <div style="font-size:0.65em;color:#888;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">Your #1 Artist · Last 4 Weeks</div>
+        <div style="font-size:1.8em;font-weight:700;color:#fff;line-height:1.2;margin-bottom:8px;">Artist Name</div>
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+          <span style="font-size:0.75em;color:#22c55e;font-weight:500;">↑ from #4</span>
+          <span style="font-size:0.7em;color:#666;">·</span>
+          <span style="font-size:0.75em;color:#888;">23 days at #1</span>
+        </div>
+        <!-- Genre tags -->
+        <div style="display:flex;gap:6px;">
+          <span style="font-size:0.6em;padding:3px 10px;background:rgba(255,255,255,0.06);border-radius:12px;color:#aaa;">indie rock</span>
+          <span style="font-size:0.6em;padding:3px 10px;background:rgba(255,255,255,0.06);border-radius:12px;color:#aaa;">alt pop</span>
+        </div>
+      </div>
+
+      <!-- Sparkline area -->
+      <div style="width:120px;flex-shrink:0;">
+        <div style="font-size:0.6em;color:#888;text-align:center;margin-bottom:6px;">Rank over time</div>
+        <div style="height:60px;background:rgba(255,255,255,0.03);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+          <svg width="100" height="40" viewBox="0 0 100 40">
+            <polyline points="0,35 15,30 30,25 45,20 60,10 75,5 90,3 100,2" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>Design Details</h3>
+  <ul>
+    <li><strong>Time range tabs</strong> at the top — switching changes the entire page (hero + highlights + recaps)</li>
+    <li><strong>Large album art</strong> (140px) — the visual anchor</li>
+    <li><strong>Movement indicator</strong> — shows rank change from previous snapshot (green ↑ / red ↓ / grey —)</li>
+    <li><strong>Days at #1</strong> — pulled from Hall of Fame data, gives the hero context</li>
+    <li><strong>Genre tags</strong> — subtle identity markers</li>
+    <li><strong>Sparkline</strong> — rank history mini-chart on the right</li>
+    <li><strong>Subtle gradient background</strong> — could later extract dominant color from album art</li>
+  </ul>
+</div>
+
+<h2 style="margin-top:24px;">Does this hero section feel right?</h2>
+<div class="options">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Looks Good</h3>
+      <p>Move on to the highlights row</p>
+    </div>
+  </div>
+  <div class="option" data-choice="tweak" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Needs Tweaks</h3>
+      <p>Tell me what to change in the terminal</p>
+    </div>
+  </div>
+</div>
