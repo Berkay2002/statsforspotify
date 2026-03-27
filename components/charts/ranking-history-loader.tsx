@@ -153,7 +153,7 @@ export function RankingHistoryLoader({
         <div className="h-[350px] w-full pt-2 pb-4">
           <RankingChart
             data={rankingHistoryResponse.history}
-            peakPosition={rankingHistoryResponse.metadata.peakRank}
+            metadata={rankingHistoryResponse.metadata}
           />
         </div>
 
