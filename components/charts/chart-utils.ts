@@ -9,6 +9,7 @@ export function linearScale(
 ): (value: number) => number {
   const [d0, d1] = domain;
   const [r0, r1] = range;
+  if (d1 === d0) return () => (r0 + r1) / 2;
   const ratio = (r1 - r0) / (d1 - d0);
   return (value: number) => r0 + (value - d0) * ratio;
 }

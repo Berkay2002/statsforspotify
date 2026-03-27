@@ -145,7 +145,7 @@ export function RankingHistoryLoader({
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 pb-4">
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
         <div className="flex items-center gap-3">
           <CardTitle>Ranking History</CardTitle>
           <RankingBadge
@@ -158,11 +158,11 @@ export function RankingHistoryLoader({
           {/* Inline legend — hidden on mobile */}
           <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+              <span className="inline-block size-2 rounded-full bg-chart-amber" />
               Top 5 streak
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+              <span className="inline-block size-2 rounded-full bg-primary" />
               Rank line
             </span>
           </div>
@@ -183,7 +183,7 @@ export function RankingHistoryLoader({
       </CardHeader>
 
       <CardContent>
-        <div className="h-[350px] w-full pt-2 pb-4">
+        <div className="w-full pt-2 pb-4">
           <RankingChart
             key={timeRange}
             data={rankingHistoryResponse.history}
@@ -204,7 +204,7 @@ export function RankingHistoryLoader({
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold">#{rankingHistoryResponse.metadata.peakRank}</span>
               {rankingHistoryResponse.metadata.currentRank === rankingHistoryResponse.metadata.peakRank && (
-                <span className="text-xs font-medium text-amber-500">Current</span>
+                <span className="text-xs font-medium text-chart-amber">Current</span>
               )}
             </div>
           </motion.div>

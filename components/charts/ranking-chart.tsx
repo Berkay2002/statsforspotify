@@ -281,7 +281,6 @@ function HoverCursor({
     (e: React.TouchEvent<SVGRectElement>) => {
       const svg = e.currentTarget.ownerSVGElement;
       if (!svg || !e.touches[0]) return;
-      e.preventDefault();
       findClosestPoint(e.touches[0].clientX, svg);
     },
     [findClosestPoint]
@@ -678,6 +677,7 @@ export function RankingChart({
               initial={reducedMotion ? { scale: 1 } : { scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
+              onAnimationComplete={onAnimationComplete}
             />
           ) : (
             <AnimatedLine
