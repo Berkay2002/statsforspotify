@@ -14,7 +14,7 @@ const SAMPLE_ARTISTS = [
   {
     name: "Tame Impala",
     genre: "Psychedelic Pop",
-    image: "https://i.scdn.co/image/ab6761610000e5eb52e1aa23eb6940f646498814",
+    image: "https://i.scdn.co/image/ab6761610000e5ebe412a782245eb20d9626c601",
     gradient: "from-[#764ba2] to-[#191414]",
     barWidth: "78%",
   },
@@ -28,7 +28,7 @@ const SAMPLE_ARTISTS = [
   {
     name: "Mac DeMarco",
     genre: "Indie Rock",
-    image: "https://i.scdn.co/image/ab6761610000e5eb03e30f70e24e313c31e0e75b",
+    image: "https://i.scdn.co/image/ab6761610000e5ebc9aca5b6d4c528caf75e8a1d",
     gradient: "from-[#f093fb] to-[#191414]",
     barWidth: "51%",
   },

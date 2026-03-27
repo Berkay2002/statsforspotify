@@ -238,30 +238,38 @@ function BentoCard({
 }
 
 function MiniRankingVisual() {
-  const ranks = [
-    { width: "92%", color: "bg-primary" },
-    { width: "78%", color: "bg-primary/80" },
-    { width: "65%", color: "bg-primary/60" },
-    { width: "51%", color: "bg-primary/40" },
+  const artists = [
+    { name: "Arctic Monkeys", plays: "482 plays", width: "95%", image: "https://i.scdn.co/image/ab6761610000e5eb7da39dea0a72f581535fb11f", gradient: "from-[#1DB954] to-[#191414]" },
+    { name: "Tame Impala", plays: "371 plays", width: "78%", image: "https://i.scdn.co/image/ab6761610000e5ebe412a782245eb20d9626c601", gradient: "from-[#764ba2] to-[#191414]" },
+    { name: "Radiohead", plays: "298 plays", width: "63%", image: "https://i.scdn.co/image/ab6761610000e5eba03696716c9ee605006047fd", gradient: "from-[#667eea] to-[#191414]" },
+    { name: "Mac DeMarco", plays: "245 plays", width: "51%", image: "https://i.scdn.co/image/ab6761610000e5ebc9aca5b6d4c528caf75e8a1d", gradient: "from-[#f093fb] to-[#191414]" },
+    { name: "The Strokes", plays: "213 plays", width: "44%", image: "https://i.scdn.co/image/ab6761610000e5eb0e7deab8c0245e6e23e4cef1", gradient: "from-[#43e97b] to-[#191414]" },
   ];
   return (
-    <div className="flex gap-4">
-      {[0, 1].map((col) => (
-        <div key={col} className="flex-1 space-y-2">
-          {ranks.slice(col * 2, col * 2 + 2).map((rank, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="w-4 text-xs font-extrabold text-muted-foreground/50">
-                {col * 2 + i + 1}
-              </span>
-              <div className="h-6 w-6 rounded-full bg-primary/30" />
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                <div
-                  className={`h-full rounded-full ${rank.color}`}
-                  style={{ width: rank.width }}
-                />
-              </div>
+    <div className="space-y-2.5">
+      {artists.map((artist, i) => (
+        <div key={artist.name} className="flex items-center gap-2.5">
+          <span className="w-4 text-right text-xs font-extrabold text-muted-foreground/50">
+            {i + 1}
+          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={artist.image}
+            alt=""
+            className={`h-7 w-7 shrink-0 rounded-full bg-gradient-to-br ${artist.gradient} object-cover`}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="truncate text-xs font-semibold text-foreground/80">{artist.name}</span>
+              <span className="shrink-0 text-[10px] text-muted-foreground/50">{artist.plays}</span>
             </div>
-          ))}
+            <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-primary/40"
+                style={{ width: artist.width }}
+              />
+            </div>
+          </div>
         </div>
       ))}
     </div>
@@ -270,11 +278,11 @@ function MiniRankingVisual() {
 
 function SnapshotTimeline() {
   const snapshots = [
-    { date: "Mar 27", active: true },
-    { date: "Mar 20", active: false },
-    { date: "Mar 13", active: false },
-    { date: "Mar 6", active: false },
-    { date: "Feb 27", active: false },
+    { date: "Mar 27", detail: "Arctic Monkeys → #1", change: "+2", active: true },
+    { date: "Mar 20", detail: "Tame Impala → #2", change: "—", active: false },
+    { date: "Mar 13", detail: "Radiohead → #1", change: "+5", active: false },
+    { date: "Mar 6", detail: "New entry: Mac DeMarco", change: "new", active: false },
+    { date: "Feb 27", detail: "The Strokes → #3", change: "-1", active: false },
   ];
   return (
     <div className="mt-2 space-y-2">
@@ -287,12 +295,25 @@ function SnapshotTimeline() {
               : "border-l-[3px] border-l-white/10 bg-white/[0.03]"
           }`}
         >
-          <div
-            className={`text-[10px] font-semibold ${
-              snap.active ? "text-primary" : "text-muted-foreground"
-            }`}
-          >
-            {snap.date}
+          <div className="flex items-center justify-between">
+            <div
+              className={`text-[10px] font-semibold ${
+                snap.active ? "text-primary" : "text-muted-foreground"
+              }`}
+            >
+              {snap.date}
+            </div>
+            <span
+              className={`text-[9px] font-bold ${
+                snap.change.startsWith("+")
+                  ? "text-primary"
+                  : snap.change === "new"
+                    ? "text-blue-400"
+                    : "text-muted-foreground/40"
+              }`}
+            >
+              {snap.change}
+            </span>
           </div>
           <div
             className={`mt-0.5 text-[11px] ${
@@ -301,7 +322,7 @@ function SnapshotTimeline() {
                 : "text-muted-foreground/60"
             }`}
           >
-            Snapshot captured
+            {snap.detail}
           </div>
         </div>
       ))}
@@ -310,16 +331,40 @@ function SnapshotTimeline() {
 }
 
 function MiniBarChart() {
-  const heights = [25, 35, 20, 45, 30, 55, 40, 60, 50, 45, 58, 52];
+  const weeks = [
+    { label: "W1", values: [30, 45, 25] },
+    { label: "W2", values: [35, 40, 30] },
+    { label: "W3", values: [42, 35, 28] },
+    { label: "W4", values: [50, 32, 35] },
+    { label: "W5", values: [48, 38, 40] },
+    { label: "W6", values: [55, 30, 42] },
+    { label: "W7", values: [52, 35, 45] },
+    { label: "W8", values: [60, 33, 48] },
+  ];
+  const colors = ["bg-primary", "bg-[#764ba2]", "bg-[#667eea]"];
   return (
-    <div className="flex items-end gap-1 h-[60px]">
-      {heights.map((h, i) => (
-        <div
-          key={i}
-          className="w-3 rounded-sm bg-gradient-to-t from-primary to-primary/30"
-          style={{ height: `${h}px`, opacity: 0.3 + (h / 60) * 0.7 }}
-        />
-      ))}
+    <div>
+      <div className="mb-2 flex items-center gap-4 text-[9px] text-muted-foreground/60">
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-primary" /> Artists</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#764ba2]" /> Tracks</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-[#667eea]" /> Albums</span>
+      </div>
+      <div className="flex items-end gap-2 h-[60px]">
+        {weeks.map((week) => (
+          <div key={week.label} className="flex flex-1 flex-col items-center gap-0.5">
+            <div className="flex items-end gap-px h-[48px]">
+              {week.values.map((v, j) => (
+                <div
+                  key={j}
+                  className={`w-1.5 rounded-t-sm ${colors[j]}`}
+                  style={{ height: `${v * 0.8}px`, opacity: 0.5 + (v / 60) * 0.5 }}
+                />
+              ))}
+            </div>
+            <span className="text-[8px] text-muted-foreground/40">{week.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
