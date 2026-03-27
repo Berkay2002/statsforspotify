@@ -562,7 +562,8 @@ export function RankingChart({
               !shouldShowXLabel(
                 i,
                 chartData.points.length,
-                i === chartData.points.length - 1
+                i === chartData.points.length - 1,
+                chartData.chartWidth
               )
             )
               return null;

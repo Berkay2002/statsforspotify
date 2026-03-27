@@ -234,9 +234,17 @@ export function computeYTicks(minRank: number, maxRank: number): number[] {
 export function shouldShowXLabel(
   index: number,
   total: number,
-  isLast: boolean
+  isLast: boolean,
+  chartWidth?: number
 ): boolean {
+  if (total <= 1) return true;
   if (isLast) return true;
-  const showEvery = total > 10 ? 3 : total > 6 ? 2 : 1;
+  if (index === 0) return true;
+
+  // ~45px per label at 11px monospace ("Mar 27")
+  const MIN_LABEL_WIDTH = 45;
+  const pixelsPerPoint = (chartWidth ?? 600) / (total - 1);
+  const showEvery = Math.max(1, Math.ceil(MIN_LABEL_WIDTH / pixelsPerPoint));
+
   return index % showEvery === 0;
 }
