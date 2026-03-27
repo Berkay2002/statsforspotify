@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { HeroBanner } from "@/components/dashboard/hero-banner";
 import { HighlightCards } from "@/components/dashboard/highlight-cards";
 import { ThreeVersionsRedesigned } from "@/components/dashboard/three-versions-redesigned";
@@ -64,11 +65,11 @@ export function DashboardContent({
         hasSnapshots={hasSnapshots}
       />
 
-      <div className="border-t" />
+      <Separator />
 
       <ThreeVersionsRedesigned recap={threeVersions} hasSnapshots={hasSnapshots} />
 
-      <div className="border-t" />
+      <Separator />
 
       <HallOfFameRedesigned recap={hallOfFame} hasSnapshots={hasSnapshots} />
     </div>

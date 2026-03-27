@@ -72,15 +72,15 @@ function TimeRangePanel({
           return (
             <div key={item.id} className="flex items-center gap-3">
               {item.image_url ? (
-                <Image src={item.image_url} alt={item.name} width={36} height={36}
-                  className="rounded-md w-9 h-9 object-cover flex-shrink-0" />
+                <Image src={item.image_url} alt={item.name} width={44} height={44}
+                  className="rounded-md size-11 object-cover flex-shrink-0" />
               ) : (
-                <div className="w-9 h-9 rounded-md bg-muted flex-shrink-0" />
+                <div className="size-11 rounded-md bg-muted flex-shrink-0" />
               )}
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{item.name}</p>
+                <p className="text-base font-medium truncate">{item.name}</p>
                 {label.text && (
-                  <p className={`text-xs ${label.isNew ? "text-green-500" : "text-muted-foreground"}`}>
+                  <p className={`text-xs ${label.isNew ? "text-primary" : "text-muted-foreground"}`}>
                     {label.text}
                   </p>
                 )}
@@ -98,7 +98,7 @@ function BiggestShiftCallout({ shifts }: { shifts: RankedShiftItem[] }) {
   const biggest = shifts[0];
 
   return (
-    <div className="flex items-center gap-2 flex-wrap px-4 py-3 bg-card/50 border rounded-xl text-sm">
+    <div className="flex items-center gap-2 flex-wrap px-4 py-3 bg-muted border rounded-xl text-sm">
       <span className="text-muted-foreground">Biggest shift:</span>
       {biggest.image_url ? (
         <Image src={biggest.image_url} alt={biggest.name} width={24} height={24}
@@ -110,7 +110,7 @@ function BiggestShiftCallout({ shifts }: { shifts: RankedShiftItem[] }) {
       <span className="text-muted-foreground">went from</span>
       <span className="text-muted-foreground font-medium">#{biggest.long_rank} all-time</span>
       <span className="text-muted-foreground">to</span>
-      <span className="text-green-500 font-semibold">#{biggest.short_rank} recent</span>
+      <span className="text-primary font-semibold">#{biggest.short_rank} recent</span>
     </div>
   );
 }

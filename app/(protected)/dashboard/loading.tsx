@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 
 export default function DashboardLoading() {
   return (
@@ -24,20 +25,20 @@ export default function DashboardLoading() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-card rounded-xl border p-4">
+          <div key={i} className="bg-card rounded-xl border p-5">
             <Skeleton className="h-3 w-20 mb-3" />
             <div className="flex items-center gap-3">
-              <Skeleton className="w-9 h-9 rounded" />
+              <Skeleton className="size-12 rounded-md" />
               <div>
-                <Skeleton className="h-4 w-28 mb-1" />
-                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-28 mb-1" />
+                <Skeleton className="h-4 w-20" />
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="border-t" />
+      <Separator />
 
       <div>
         <Skeleton className="h-6 w-44 mb-1" />
@@ -48,8 +49,8 @@ export default function DashboardLoading() {
               <Skeleton className="h-3 w-24 mb-4" />
               {[1, 2, 3].map((j) => (
                 <div key={j} className="flex items-center gap-3 mb-3">
-                  <Skeleton className="w-9 h-9 rounded-md" />
-                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="size-11 rounded-md" />
+                  <Skeleton className="h-5 w-24" />
                 </div>
               ))}
             </div>
@@ -57,7 +58,7 @@ export default function DashboardLoading() {
         </div>
       </div>
 
-      <div className="border-t" />
+      <Separator />
 
       <div>
         <Skeleton className="h-6 w-28 mb-1" />

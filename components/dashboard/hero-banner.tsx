@@ -58,9 +58,9 @@ export function HeroBanner({ artist }: { artist: RankedArtistWithPrevious }) {
             <span
               className={
                 isRise
-                  ? "text-green-500"
+                  ? "text-primary"
                   : isDrop
-                    ? "text-red-500"
+                    ? "text-destructive"
                     : "text-muted-foreground"
               }
             >

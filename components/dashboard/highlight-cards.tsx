@@ -31,11 +31,11 @@ function getBiggestClimb(
 function Thumbnail({ src, alt }: { src: string | null; alt: string }) {
   if (src) {
     return (
-      <Image src={src} alt={alt} width={36} height={36}
-        className="rounded w-9 h-9 object-cover flex-shrink-0" />
+      <Image src={src} alt={alt} width={48} height={48}
+        className="rounded-md size-12 object-cover flex-shrink-0" />
     );
   }
-  return <div className="w-9 h-9 rounded bg-muted flex-shrink-0" />;
+  return <div className="size-12 rounded-md bg-muted flex-shrink-0" />;
 }
 
 export function HighlightCards({
@@ -52,51 +52,42 @@ export function HighlightCards({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       <Link href="/dashboard/tracks"
-        className="bg-card rounded-xl border p-4 hover:bg-accent/50 transition-colors">
+        className="bg-card rounded-xl border p-5 hover:bg-muted/50 transition-colors">
         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Top Track</p>
         <div className="flex items-center gap-3">
           <Thumbnail src={track.imageUrl} alt={track.name} />
           <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{track.name}</p>
-            <p className="text-xs text-muted-foreground truncate">by {track.artistName}</p>
+            <p className="text-base font-medium truncate">{track.name}</p>
+            <p className="text-sm text-muted-foreground truncate">by {track.artistName}</p>
           </div>
         </div>
       </Link>
 
       <Link href="/dashboard/albums"
-        className="bg-card rounded-xl border p-4 hover:bg-accent/50 transition-colors">
+        className="bg-card rounded-xl border p-5 hover:bg-muted/50 transition-colors">
         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Top Album</p>
         <div className="flex items-center gap-3">
           <Thumbnail src={album.imageUrl} alt={album.name} />
           <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{album.name}</p>
-            <p className="text-xs text-muted-foreground truncate">by {album.artistName}</p>
+            <p className="text-base font-medium truncate">{album.name}</p>
+            <p className="text-sm text-muted-foreground truncate">by {album.artistName}</p>
           </div>
         </div>
       </Link>
 
-      <div className="bg-card rounded-xl border p-4">
+      <div className="bg-card rounded-xl border p-5">
         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Biggest Move</p>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded bg-muted flex items-center justify-center flex-shrink-0">
-            {biggestClimb ? (
-              <span className="text-green-500 font-bold text-sm">↑</span>
-            ) : (
-              <span className="text-muted-foreground text-sm">—</span>
-            )}
-          </div>
-          <div className="min-w-0">
-            {biggestClimb ? (
-              <>
-                <p className="text-sm font-medium text-green-500">↑ {biggestClimb.delta} spots</p>
-                <p className="text-xs text-muted-foreground truncate">{biggestClimb.name}</p>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {hasSnapshots ? "No changes this period" : "Collecting data..."}
-              </p>
-            )}
-          </div>
+        <div className="min-w-0">
+          {biggestClimb ? (
+            <>
+              <p className="text-base font-semibold text-primary">↑ {biggestClimb.delta} spots</p>
+              <p className="text-sm text-muted-foreground truncate mt-1">{biggestClimb.name}</p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {hasSnapshots ? "No changes this period" : "Collecting data..."}
+            </p>
+          )}
         </div>
       </div>
     </div>
