@@ -46,7 +46,7 @@ export function TopTracksSection({
   if (tracks.length === 0) return null;
 
   return (
-    <div className={cn("px-6 pt-8", className)}>
+    <div className={cn("px-4 md:px-6 pt-8", className)}>
       <h2 className="text-2xl font-bold mb-6">{title}</h2>
 
       <div className="space-y-1">

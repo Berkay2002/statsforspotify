@@ -118,7 +118,7 @@ export default function TrackDetailPage() {
   };
 
   return (
-    <div className="space-y-0 -mt-6 -mx-6 pb-6">
+    <div className="space-y-0 -mt-4 md:-mt-6 -mx-4 md:-mx-6 pb-6">
       <div className="relative h-[500px] overflow-hidden">
         <div className="absolute inset-0">
           {imageUrl ? (
@@ -137,8 +137,8 @@ export default function TrackDetailPage() {
           )}
         </div>
 
-        <div className="relative h-full flex flex-col justify-end px-6 pb-8">
-          <div className="absolute top-6 left-6">
+        <div className="relative h-full flex flex-col justify-end px-4 md:px-6 pb-8">
+          <div className="absolute top-4 left-4 md:top-6 md:left-6">
             <Button
               variant="ghost"
               size="icon"
@@ -152,7 +152,7 @@ export default function TrackDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <h1 className="text-7xl font-bold text-white tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white tracking-tight break-words">
               {track.name}
             </h1>
 
@@ -169,7 +169,7 @@ export default function TrackDetailPage() {
         </div>
       </div>
 
-      <div className="px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="px-4 md:px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button
             size="lg"
@@ -203,7 +203,7 @@ export default function TrackDetailPage() {
 
       <TopTracksSection title="More from this Album" tracks={relatedTracks} />
 
-      <div className="px-6 pt-8">
+      <div className="px-4 md:px-6 pt-8">
         <RankingHistoryLoader
           itemId={trackId}
           itemType="track"
