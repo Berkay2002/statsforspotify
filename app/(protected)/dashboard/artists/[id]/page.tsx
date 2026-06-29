@@ -221,7 +221,7 @@ export default function ArtistDetailPage() {
   }
 
   return (
-    <div className="space-y-0 -mt-6 -mx-6 pb-6">
+    <div className="space-y-0 -mt-4 md:-mt-6 -mx-4 md:-mx-6 pb-6">
       {/* Hero Section with Background */}
       <div className="relative h-[500px] overflow-hidden">
         {/* Background Image with Gradient Overlay */}
@@ -243,9 +243,9 @@ export default function ArtistDetailPage() {
         </div>
 
         {/* Content Overlay */}
-        <div className="relative h-full flex flex-col justify-end px-6 pb-8">
+        <div className="relative h-full flex flex-col justify-end px-4 md:px-6 pb-8">
           {/* Back Button */}
-          <div className="absolute top-6 left-6">
+          <div className="absolute top-4 left-4 md:top-6 md:left-6">
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
               <Link href="/dashboard/artists">
                 <ArrowLeft className="h-5 w-5" />
@@ -255,7 +255,7 @@ export default function ArtistDetailPage() {
 
           {/* Artist Name and Stats */}
           <div className="space-y-6">
-            <h1 className="text-7xl font-bold text-white tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white tracking-tight break-words">
               {artist.name}
             </h1>
             
@@ -282,7 +282,7 @@ export default function ArtistDetailPage() {
       </div>
 
       {/* Action Buttons + Time Range */}
-      <div className="px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="px-4 md:px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button
             size="lg"
@@ -323,7 +323,7 @@ export default function ArtistDetailPage() {
 
       {/* My Top Tracks Section */}
       {(tracksLoading || tracks.length > 0) && (
-        <div className="px-6 pt-8">
+        <div className="px-4 md:px-6 pt-8">
           <h2 className="text-2xl font-bold mb-6">My Top Tracks</h2>
           
           <div className="space-y-1">
@@ -408,7 +408,7 @@ export default function ArtistDetailPage() {
 
       {/* Genres */}
       {artist.genres.length > 0 && (
-        <div className="px-6 pt-8">
+        <div className="px-4 md:px-6 pt-8">
           <h3 className="text-lg font-semibold mb-3">Genres</h3>
           <div className="flex flex-wrap gap-2">
             {artist.genres.map((genre) => (
@@ -421,7 +421,7 @@ export default function ArtistDetailPage() {
       )}
 
       {/* Ranking History */}
-      <div className="px-6 pt-8">
+      <div className="px-4 md:px-6 pt-8">
         <RankingHistoryLoader
           itemId={artistId}
           itemType="artist"

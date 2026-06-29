@@ -46,7 +46,7 @@ export default async function ProtectedLayout({
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        <SidebarProvider>
+        <SidebarProvider className="overflow-hidden">
           <AppSidebar user={userInfo} />
           <SidebarInset className="h-screen overflow-hidden">
             <main className="h-full overflow-y-auto">
