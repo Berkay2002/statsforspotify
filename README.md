@@ -1,6 +1,6 @@
 # Stats for Spotify
 
-A web app to track your Spotify listening history and visualize how your music taste evolves over time.
+A web app to track your Spotify listening history and visualize how your music taste evolves over time
 
 ## Features
 
