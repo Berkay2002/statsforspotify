@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "brandId": "spotify",
+  "groups": [
+    {
+      "id": "navigation",
+      "label": "Sticky navigation",
+      "present": true,
+      "selectors": [".spotify-nav", ".spotify-brand", ".spotify-nav-link"],
+      "classes": ["spotify-nav", "spotify-brand", "spotify-nav-link"],
+      "elements": ["header", "nav", "a"],
+      "tokenReferences": ["--bg", "--fg", "--muted", "--accent", "--border"]
+    },
+    {
+      "id": "hero",
+      "label": "Asymmetric hero",
+      "present": true,
+      "selectors": [".spotify-hero", ".spotify-copy", ".spotify-plate"],
+      "classes": ["spotify-hero", "spotify-copy", "spotify-plate"],
+      "elements": ["section", "div", "h1", "p"],
+      "tokenReferences": ["--bg", "--surface", "--fg", "--muted", "--accent"]
+    },
+    {
+      "id": "cards",
+      "label": "Music data cards",
+      "present": true,
+      "selectors": [".spotify-card", ".spotify-matrix", ".spotify-row"],
+      "classes": ["spotify-card", "spotify-matrix", "spotify-row", "card"],
+      "elements": ["article", "div"],
+      "tokenReferences": ["--surface", "--surface-raised", "--fg", "--muted", "--accent", "--border"]
+    },
+    {
+      "id": "buttons",
+      "label": "Pill actions",
+      "present": true,
+      "selectors": [".spotify-button"],
+      "classes": ["spotify-button"],
+      "elements": ["a", "button"],
+      "tokenReferences": ["--accent", "--accent-on", "--border"]
+    }
+  ],
+  "tokens": {
+    "declared": ["--bg", "--surface", "--surface-raised", "--fg", "--muted", "--accent", "--accent-on", "--border", "--font-display", "--font-body", "--font-mono", "--motion-fast", "--motion-base", "--ease-standard"],
+    "referenced": ["--bg", "--surface", "--surface-raised", "--fg", "--muted", "--accent", "--accent-on", "--border"],
+    "undeclaredReferenced": []
+  }
+}

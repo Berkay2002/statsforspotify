@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { X, ChevronDown, ChevronUp, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,6 +10,19 @@ type Preferences = {
     necessary: boolean;
     analytics: boolean;
 };
+
+const subscribeToConsent = (onStoreChange: () => void) => {
+    window.addEventListener("cookie-consent-change", onStoreChange);
+    window.addEventListener("storage", onStoreChange);
+
+    return () => {
+        window.removeEventListener("cookie-consent-change", onStoreChange);
+        window.removeEventListener("storage", onStoreChange);
+    };
+};
+
+const getConsentSnapshot = () => !localStorage.getItem("cookie-consent");
+const getServerConsentSnapshot = () => false;
 
 const PrefRow = ({
     title,
@@ -53,30 +66,15 @@ const PrefRow = ({
 );
 
 export function CookieConsent() {
-    const [isVisible, setIsVisible] = useState(() => {
-        if (typeof window !== "undefined") {
-            const hasConsent = localStorage.getItem("cookie-consent");
-            return !hasConsent;
-        }
-        return false;
-    });
+    const isVisible = useSyncExternalStore(
+        subscribeToConsent,
+        getConsentSnapshot,
+        getServerConsentSnapshot,
+    );
     const [showPrefs, setShowPrefs] = useState(false);
-    const [prefs, setPrefs] = useState<Preferences>(() => {
-        if (typeof window !== "undefined") {
-            const storedPrefs = localStorage.getItem("cookie-preferences");
-            if (storedPrefs) {
-                try {
-                    const parsed = JSON.parse(storedPrefs) as Preferences;
-                    return { ...parsed, necessary: true };
-                } catch {
-                    // Ignore parse errors
-                }
-            }
-        }
-        return {
-            necessary: true,
-            analytics: false,
-        };
+    const [prefs, setPrefs] = useState<Preferences>({
+        necessary: true,
+        analytics: false,
     });
 
     const prefsRef = useRef<HTMLDivElement | null>(null);
@@ -99,7 +97,6 @@ export function CookieConsent() {
         localStorage.setItem("cookie-consent", "accepted");
         localStorage.setItem("cookie-preferences", JSON.stringify(acceptedPrefs));
         window.dispatchEvent(new Event("cookie-consent-change"));
-        setIsVisible(false);
     };
 
     const handleDecline = () => {
@@ -110,7 +107,6 @@ export function CookieConsent() {
         localStorage.setItem("cookie-consent", "declined");
         localStorage.setItem("cookie-preferences", JSON.stringify(declinedPrefs));
         window.dispatchEvent(new Event("cookie-consent-change"));
-        setIsVisible(false);
     };
 
     const savePreferences = () => {
@@ -118,11 +114,9 @@ export function CookieConsent() {
         localStorage.setItem("cookie-consent", prefs.analytics ? "accepted" : "declined");
         window.dispatchEvent(new Event("cookie-consent-change"));
         setShowPrefs(false);
-        setIsVisible(false);
     };
 
-    // Only render on client-side to prevent hydration mismatch
-    if (typeof window === "undefined" || !isVisible) return null;
+    if (!isVisible) return null;
 
     return (
         <div className="fixed bottom-4 right-4 z-50 w-80">

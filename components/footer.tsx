@@ -1,88 +1,93 @@
 import Link from "next/link";
 
+import { SpotifyLogo } from "@/components/spotify-stats-logo";
+import { Button } from "@/components/ui/button";
+
+const productLinks = [
+  { href: "/dashboard", label: "Overview" },
+  { href: "/dashboard/artists", label: "Artists" },
+  { href: "/dashboard/tracks", label: "Tracks" },
+  { href: "/dashboard/albums", label: "Albums" },
+  { href: "/dashboard/friends", label: "Friends" },
+];
+
+const proof = [
+  ["Rankings", "Top artists, tracks, and albums"],
+  ["Snapshots", "History your profile can remember"],
+  ["Privacy", "Export and delete controls in profile"],
+];
+
 export function Footer() {
   return (
-    <footer className="relative w-full bg-[oklch(0.1203_0_0)] border-t border-border overflow-hidden">
-      {/* Gradient overlay for depth */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[oklch(0.0803_0_0)] to-transparent pointer-events-none" />
+    <footer className="border-t border-white/[0.08] bg-[#121212]">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-10">
+          <div className="border-b border-white/[0.08] pb-8 lg:border-b-0 lg:border-r lg:pr-10">
+            <Link href="/" className="inline-flex items-center gap-2">
+              <SpotifyLogo
+                className="h-8 w-8 text-primary"
+                showWordmark={false}
+              />
+              <span className="text-lg font-bold">Stats for Spotify</span>
+            </Link>
 
-      {/* Subtle texture pattern */}
-      <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(circle_at_25%_25%,_var(--primary)_0%,_transparent_50%),radial-gradient(circle_at_75%_75%,_var(--primary)_0%,_transparent_50%)] pointer-events-none" />
-
-      <div className="relative z-10 container mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Primary Links - Left Column */}
-          <div className="lg:col-span-3">
-            <nav className="space-y-4">
-              <Link href="/dashboard" className="block text-2xl font-bold text-foreground hover:text-primary transition-colors duration-200">
-                Dashboard
-              </Link>
-              <Link href="#features" className="block text-2xl font-bold text-foreground hover:text-primary transition-colors duration-200">
-                Features
-              </Link>
-              <Link href="#about" className="block text-2xl font-bold text-foreground hover:text-primary transition-colors duration-200">
-                About
-              </Link>
-              <Link href="#contact" className="block text-2xl font-bold text-foreground hover:text-primary transition-colors duration-200">
-                Contact
-              </Link>
+            <nav aria-label="Product" className="mt-6 flex flex-col gap-2">
+              {productLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="flex items-center justify-between rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground"
+                >
+                  <span>{link.label}</span>
+                  <span className="h-1.5 w-10 rounded-full bg-white/15" />
+                </Link>
+              ))}
             </nav>
           </div>
 
-          {/* Link Groups - Right Area */}
-          <div className="lg:col-span-9">
-            <div className="grid grid-cols-1 gap-8 mb-12">
-              {/* Account Group */}
-              <div>
-                <h3 className="text-lg font-bold text-foreground mb-4">Account</h3>
-                <ul className="space-y-3">
-                  <li>
-                    <Link href="/auth/login" className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
-                      Log In
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/auth/signup" className="text-sm text-muted-foreground hover:text-primary transition-colors duration-200">
-                      Sign Up
-                    </Link>
-                  </li>
-                </ul>
+          <div>
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="max-w-xl">
+                <h2 className="text-2xl font-extrabold leading-tight sm:text-3xl">
+                  A quieter way to read your Spotify history.
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  Dark app surfaces, Spotify-powered data, user-controlled
+                  sharing, and no public profile unless you choose it.
+                </p>
               </div>
+              <Button asChild className="w-fit bg-primary text-black">
+                <Link href="/auth/callback?action=login">Connect Spotify</Link>
+              </Button>
             </div>
 
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {proof.map(([title, body]) => (
+                <div
+                  key={title}
+                  className="rounded-lg border border-white/[0.08] bg-white/[0.035] p-4"
+                >
+                  <div className="mb-4 h-2 w-10 rounded-full bg-primary" />
+                  <h3 className="text-sm font-bold">{title}</h3>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    {body}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Large Wordmark */}
-        <div className="mt-16 relative">
-          <div className="text-center lg:text-left">
-            <h2 style={{ fontFamily: 'var(--font-protest-guerrilla)' }} className="text-6xl md:text-8xl lg:text-[12rem] leading-none tracking-tight bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent opacity-20 select-none pointer-events-none">
-              Stats for Spotify
-            </h2>
-          </div>
-        </div>
-
-        {/* Privacy/Terms Links - Now where social links were, with border separator */}
-        <div className="mt-16 pt-8 border-t border-border">
-          <div className="flex flex-wrap justify-center gap-6 text-xs text-muted-foreground">
-            <Link href="/contact" className="hover:text-primary transition-colors duration-200">
-              Media Inquiries
-            </Link>
-            <Link href="/privacy" className="hover:text-primary transition-colors duration-200">
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/[0.08] pt-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>Powered by Spotify. Not affiliated with Spotify AB.</span>
+          <div className="flex gap-4">
+            <Link href="/privacy" className="hover:text-foreground">
               Privacy
             </Link>
-            <Link href="/terms" className="hover:text-primary transition-colors duration-200">
+            <Link href="/terms" className="hover:text-foreground">
               Terms
             </Link>
-            <Link href="/supplier-terms" className="hover:text-primary transition-colors duration-200">
-              Supplier Terms
-            </Link>
           </div>
-        </div>
-
-        {/* Copyright */}
-        <div className="mt-8 text-center text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} Stats for Spotify. Not affiliated with Spotify AB.</p>
         </div>
       </div>
     </footer>

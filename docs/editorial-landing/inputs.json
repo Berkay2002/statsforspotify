@@ -1,0 +1,157 @@
+{
+  "$schema": "https://open-design.dev/schemas/editorial-landing-inputs.v1.json",
+  "design_system": {
+    "id": "spotify",
+    "path": "./design-systems/spotify"
+  },
+  "brand": {
+    "name": "Stats for Spotify",
+    "mark": "S",
+    "tagline": "Spotify-connected listening analytics",
+    "description": "Stats for Spotify turns Spotify listening data into rankings, snapshots, trend charts, and social taste views.",
+    "primary_url": "https://statsforspotify.local"
+  },
+  "nav": [
+    { "label": "About", "href": "#about" },
+    { "label": "Signals", "href": "#signals", "count": "04" },
+    { "label": "Labs", "href": "#labs", "count": "05" },
+    { "label": "Method", "href": "#method" }
+  ],
+  "hero": {
+    "label": "Spotify-native stats",
+    "headline": [
+      { "text": "Your listening history, " },
+      { "text": "made visible", "em": true },
+      { "text": ".", "dot": true }
+    ],
+    "lead": "Track top artists, songs, albums, genres, snapshots, and friend taste shifts from one private Spotify-connected dashboard.",
+    "primary": { "label": "Connect with Spotify", "href": "/auth/callback?action=login" },
+    "secondary": { "label": "See signals", "href": "#signals" },
+    "stats": [
+      { "value": "50", "label": "ranked items", "sub": "per view" },
+      { "value": "3", "label": "time ranges", "sub": "Spotify API" },
+      { "value": "1", "label": "private profile", "sub": "user controlled" }
+    ],
+    "command": "Stats for Spotify tracks my changing music taste."
+  },
+  "sections": [
+    {
+      "id": "about",
+      "roman": "I.",
+      "label": "About",
+      "headline": [
+        { "text": "A cleaner record of what you actually " },
+        { "text": "listen to", "em": true },
+        { "text": ".", "dot": true }
+      ],
+      "body": "Spotify shows what is playing now. Stats for Spotify keeps the longer record: who keeps climbing, which albums return, and how your taste changes across time."
+    },
+    {
+      "id": "signals",
+      "roman": "II.",
+      "label": "Signals",
+      "headline": [
+        { "text": "Four views turn listening data into " },
+        { "text": "signal", "em": true },
+        { "text": ".", "dot": true }
+      ],
+      "body": "Rankings, snapshots, recaps, and friend views give the dashboard a compact system for reading your music taste.",
+      "cards": [
+        { "eyebrow": "Rankings", "title": "Top artists and tracks", "body": "Browse your strongest artists, tracks, and albums across Spotify time ranges." },
+        { "eyebrow": "History", "title": "Snapshot memory", "body": "Capture positions over time so a temporary obsession does not disappear." },
+        { "eyebrow": "Recaps", "title": "Taste stories", "body": "Read album takeovers, hall of fame returns, and plot twists from your own data." },
+        { "eyebrow": "Social", "title": "Friend overlap", "body": "Compare profiles without exposing more than you choose to share." }
+      ]
+    },
+    {
+      "id": "labs",
+      "roman": "III.",
+      "label": "Labs",
+      "headline": [
+        { "text": "Small experiments for " },
+        { "text": "music patterns", "em": true },
+        { "text": ".", "dot": true }
+      ],
+      "body": "Filterable experiments frame what the product can reveal without pretending the app has metrics it does not collect.",
+      "cards": [
+        { "eyebrow": "Ranking", "title": "Rank drift", "body": "Spot the tracks and artists that keep moving up." },
+        { "eyebrow": "Recap", "title": "Album takeover", "body": "Find weeks where one album dominates your profile." },
+        { "eyebrow": "Social", "title": "Taste overlap", "body": "See where a friend's profile meets yours." },
+        { "eyebrow": "Control", "title": "Privacy switches", "body": "Choose what parts of your profile are public." },
+        { "eyebrow": "History", "title": "Snapshot replay", "body": "Move through older captures without losing context." }
+      ]
+    },
+    {
+      "id": "method",
+      "roman": "IV.",
+      "label": "Method",
+      "headline": [
+        { "text": "Connect once, then let the archive " },
+        { "text": "build", "em": true },
+        { "text": ".", "dot": true }
+      ],
+      "body": "The flow is intentionally small: authenticate with Spotify, read your top items, save snapshots, then turn changes into clean dashboard views.",
+      "cards": [
+        { "eyebrow": "01", "title": "Connect", "body": "Use Spotify OAuth through Supabase." },
+        { "eyebrow": "02", "title": "Read", "body": "Load top artists, tracks, albums, and genres." },
+        { "eyebrow": "03", "title": "Snapshot", "body": "Store ranking positions for later comparison." },
+        { "eyebrow": "04", "title": "Compare", "body": "Render charts, recaps, and friend views." }
+      ]
+    },
+    {
+      "id": "work",
+      "roman": "V.",
+      "label": "Selected work",
+      "headline": [
+        { "text": "Two surfaces anchor the " },
+        { "text": "product", "em": true },
+        { "text": ".", "dot": true }
+      ],
+      "body": "The landing page previews real app surfaces instead of generic feature claims.",
+      "cards": [
+        { "eyebrow": "Dashboard", "title": "Weekly movement", "body": "A focused view of top-item changes and ranking history." },
+        { "eyebrow": "Social", "title": "Friend profile", "body": "A shared taste page with privacy controls." }
+      ]
+    },
+    {
+      "id": "proof",
+      "roman": "VI.",
+      "label": "Proof",
+      "headline": [
+        { "text": "Private by default, readable by " },
+        { "text": "design", "em": true },
+        { "text": ".", "dot": true }
+      ],
+      "body": "The app includes privacy settings, data export, delete-data controls, and Spotify attribution where Spotify content appears.",
+      "meta": ["Supabase auth", "Spotify OAuth", "User controls"]
+    }
+  ],
+  "cta": {
+    "label": "Start",
+    "headline": [
+      { "text": "Start a music archive you can " },
+      { "text": "actually read", "em": true },
+      { "text": ".", "dot": true }
+    ],
+    "lead": "Connect Spotify and turn your top items into a private, evolving dashboard.",
+    "primary": { "label": "Connect with Spotify", "href": "/auth/callback?action=login" }
+  },
+  "footer": {
+    "columns": [
+      { "title": "Product", "links": [{ "label": "Dashboard", "href": "/dashboard" }, { "label": "Signals", "href": "#signals" }] },
+      { "title": "Company", "links": [{ "label": "Privacy", "href": "/privacy" }, { "label": "Terms", "href": "/terms" }] },
+      { "title": "Spotify", "links": [{ "label": "Developer guidelines", "href": "https://developer.spotify.com/documentation/design" }] },
+      { "title": "Start", "links": [{ "label": "Connect", "href": "/auth/callback?action=login" }] }
+    ],
+    "mega": [
+      { "text": "Stats for " },
+      { "text": "Spotify", "em": true },
+      { "text": ".", "dot": true }
+    ]
+  },
+  "imagery": {
+    "strategy": "placeholder",
+    "assets_path": "./assets",
+    "provider_model": "gpt-image-2"
+  }
+}

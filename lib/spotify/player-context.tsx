@@ -126,15 +126,24 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
 
   // Load Spotify SDK script
   useEffect(() => {
+    if (!session?.provider_token || window.Spotify) return;
+
+    window.onSpotifyWebPlaybackSDKReady = () => {};
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://sdk.scdn.co/spotify-player.js"]',
+    );
+    if (existingScript) return;
+
     const script = document.createElement("script");
     script.src = "https://sdk.scdn.co/spotify-player.js";
     script.async = true;
     document.body.appendChild(script);
 
     return () => {
-      document.body.removeChild(script);
+      script.remove();
     };
-  }, []);
+  }, [session?.provider_token]);
 
   // Initialize player when window.Spotify is available
   const initializePlayer = useCallback(async () => {

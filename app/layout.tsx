@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Ultra, Protest_Guerrilla } from "next/font/google";
+import { DM_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { ThemeProvider } from "@/components/theme-provider"
@@ -8,28 +8,16 @@ import { CookieConsent } from "@/components/ui/cookies"
 import { AnalyticsWrapper } from "@/components/analytics-wrapper"
 import { SpotifyPlayerProvider } from "@/lib/spotify/player-context"
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
-
-const ultra = Ultra({
-  weight: "400",
+const spotifySans = DM_Sans({
   subsets: ["latin"],
-  variable: "--font-ultra",
+  variable: "--font-spotify-sans",
+  display: "swap",
 });
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spotifyMono = Geist_Mono({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const protestGuerrilla = Protest_Guerrilla({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-protest-guerrilla",
+  variable: "--font-spotify-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -61,16 +49,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${ultra.variable} ${protestGuerrilla.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${spotifySans.variable} ${spotifyMono.variable}`}
+    >
       <head>
         <meta name="theme-color" content="#1DB954" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="font-sans antialiased">
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"

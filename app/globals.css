@@ -38,9 +38,11 @@
   --sidebar-accent-foreground: oklch(0.1974 0.0082 17.8662);
   --sidebar-border: oklch(0.9067 0 0);
   --sidebar-ring: oklch(0.7697 0.2124 148.6695);
-  --font-sans: 'Montserrat', sans-serif;
-  --font-serif: 'Times New Roman', serif;
-  --font-mono: 'Roboto Mono', monospace;
+  --app-font-sans: var(--font-spotify-sans), "CircularSp", "Circular Std", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --app-font-mono: var(--font-spotify-mono), "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
   --radius: 0.25rem;
   --shadow-x: 0rem;
   --shadow-y: 0.25rem;
@@ -94,9 +96,11 @@
   --sidebar-accent-foreground: oklch(1.0000 0 0);
   --sidebar-border: oklch(0.3485 0 0);
   --sidebar-ring: oklch(0.7697 0.2124 148.6695);
-  --font-sans: 'Montserrat', sans-serif;
-  --font-serif: 'Times New Roman', serif;
-  --font-mono: 'Roboto Mono', monospace;
+  --app-font-sans: var(--font-spotify-sans), "CircularSp", "Circular Std", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --app-font-mono: var(--font-spotify-mono), "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
   --radius: 0.25rem;
   --shadow-x: 0rem;
   --shadow-y: 0.25rem;
@@ -149,9 +153,9 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-serif: var(--font-serif);
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --font-serif: var(--app-font-sans);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

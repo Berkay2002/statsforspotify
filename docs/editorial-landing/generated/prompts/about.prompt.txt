@@ -1,0 +1,113 @@
+Use case: ads-marketing
+
+Asset type: editorial landing-page image plate
+
+Design system package: Spotify Encore
+
+Design system id: spotify
+
+Design system category: Consumer audio
+
+Design system description: Spotify-inspired web landing system for a music analytics app, using a dark surface, Spotify green as the single accent, dense media grids, rounded artwork, and direct sans typography.
+
+Source standard: Open Design od-design-system-project/v1 package. The following guidance is extracted from DESIGN.md, tokens.css, and components.manifest.json; do not invent an unrelated visual language.
+
+Token contract:
+:root {
+  --bg: #121212;
+  --surface: #181818;
+  --surface-raised: #242424;
+  --fg: #ffffff;
+  --muted: #b3b3b3;
+  --accent: #1db954;
+  --accent-on: #000000;
+  --border: rgba(255, 255, 255, 0.1);
+  --font-display: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+  --motion-fast: 140ms;
+  --motion-base: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+Component inventory:
+Sticky navigation: selectors .spotify-nav, .spotify-brand, .spotify-nav-link; classes spotify-nav, spotify-brand, spotify-nav-link; tokens --bg, --fg, --muted, --accent, --border
+Asymmetric hero: selectors .spotify-hero, .spotify-copy, .spotify-plate; classes spotify-hero, spotify-copy, spotify-plate; tokens --bg, --surface, --fg, --muted, --accent
+Music data cards: selectors .spotify-card, .spotify-matrix, .spotify-row; classes spotify-card, spotify-matrix, spotify-row, card; tokens --surface, --surface-raised, --fg, --muted, --accent, --border
+Pill actions: selectors .spotify-button; classes spotify-button; tokens --accent, --accent-on, --border
+
+Design guidance:
+## Visual Theme
+
+Dark music-native editorial surface. The interface should feel like a listening history console, not a generic SaaS site. Use black and near-black foundations, bright Spotify green for action and signal, and album-art color only as content texture. Keep the app name clear and preserve the existing "not affiliated with Spotify AB" framing in the site footer.
+
+## Color
+
+Spotify green is the only accent. Use it for primary actions, active filters, graph signals, and small proof marks. Pair it with black, near-black, white, and neutral gray. Avoid purple, blue, beige, brass, glassy multicolor gradients, and unrelated accent colors.
+
+## Typography
+
+Use a direct sans-serif stack. Headings are heavy and compact, but letter spacing stays normal. Body copy is short, high contrast, and pragmatic. Avoid decorative serif emphasis and avoid long manifesto blocks.
+
+## Layout
+
+Use editorial bands with clear section changes. Prefer asymmetric hero composition: copy on one side, data/media plate on the other. Repeated cards use 8px radius or less. Album artwork and artist imagery should sit in clean shelves, matrices, or rows. Do not overlay text on Spotify artwork.
+
+## Motion
+
+Motion is restrained: section reveal, active filter state, button feedback. No autoplaying decorative motion. Respect reduced motion. Sticky navigation should stay usable and should not cover focused content.
+
+## Imagery
+
+Use product-like plates: ranking lists, listening fingerprints, snapshot timelines, taste overlap matrices, and cover grids. If Spotify artwork or metadata appears, keep it legible, uncropped, and accompanied by Spotify attribution elsewhere on the surface.
+
+## Anti-patterns
+
+- No generic dashboard stock art.
+- No fake user counts, fake revenue numbers, or fake testimonials.
+- No text overlays on album artwork.
+- No Spotify logo placed on busy media.
+- No decorative gradient orbs.
+- No more than one accent color.
+
+## Agent Prompt Guide
+
+Create editorial landing-page image plates for a Spotify-connected analytics app. Build dark surfaces, clean grids, ranking bars, compact music metadata rows, and cover-art shelves. Use Spotify green as the only accent. Keep images label-free or use non-readable marks only. Do not invent readable marketing copy, watermarks, or fake Spotify UI.
+
+Brand name: Stats for Spotify
+Brand mark: S
+Tagline: Spotify-connected listening analytics
+Description: Stats for Spotify turns Spotify listening data into rankings, snapshots, trend charts, and social taste views.
+Location: unspecified
+Navigation: About, Signals, Labs, Method
+Hero label: Spotify-native stats
+Hero headline: Your listening history, made visible.
+Hero lead: Track top artists, songs, albums, genres, snapshots, and friend taste shifts from one private Spotify-connected dashboard.
+Primary CTA: Connect with Spotify
+Secondary CTA: See signals
+Proof stats: 50 ranked items per view; 3 time ranges Spotify API; 1 private profile user controlled
+Sections:
+I. About: A cleaner record of what you actually listen to.
+II. Signals: Four views turn listening data into signal.
+III. Labs: Small experiments for music patterns.
+IV. Method: Connect once, then let the archive build.
+V. Selected work: Two surfaces anchor the product.
+VI. Proof: Private by default, readable by design.
+
+Slot: about
+
+Output file: about.png
+
+Dimensions: 1024x1024
+
+Aspect ratio: 1:1
+
+Slot purpose: manifesto or origin plate
+
+Composition recipe: Represent the brand premise as one calm editorial object study with generous negative space and one annotation cluster.
+
+Prompting rules: infer image medium, subjects, materials, palette, texture, camera/framing, and negative constraints only from the design-system package and the brand brief.
+
+Text policy: no readable marketing copy, logos, watermarks, UI screenshots, or hallucinated captions inside generated images unless DESIGN.md explicitly requires them. Abstract registration marks or non-readable annotation marks are allowed only when consistent with the design system.
+
+Quality bar: premium editorial art direction, clear focal hierarchy, design-system fidelity, no generic stock-photo feel, no watermark.

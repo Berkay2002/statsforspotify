@@ -1,0 +1,6 @@
+$ next dev --hostname "127.0.0.1" --port "3000"
+⨯ upstream image response failed for https://i.scdn.co/image/ab6761610000e5eb0e7deab8c0245e6e23e4cef1 404
+⨯ The requested resource isn't a valid image for /landing/app-hero-panel.png received null
+⨯ The requested resource isn't a valid image for /landing/app-hero-panel.png received null
+⚠ Fast Refresh had to perform a full reload when ./lib/spotify/player-context.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+⚠ Fast Refresh had to perform a full reload when ./lib/spotify/player-context.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload

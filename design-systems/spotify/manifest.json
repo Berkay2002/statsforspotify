@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "od-design-system-project/v1",
+  "id": "spotify",
+  "name": "Spotify Encore",
+  "category": "Consumer audio",
+  "description": "Spotify-inspired web landing system for a music analytics app, using a dark surface, Spotify green as the single accent, dense media grids, rounded artwork, and direct sans typography.",
+  "files": {
+    "design": "DESIGN.md",
+    "tokens": "tokens.css",
+    "components": "components.html"
+  },
+  "usage": "Use for Stats for Spotify marketing surfaces only. Keep Spotify attribution visible when Spotify content or brand assets appear.",
+  "componentsManifest": "components.manifest.json",
+  "importMode": "local"
+}
