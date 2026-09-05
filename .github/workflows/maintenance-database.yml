@@ -51,10 +51,6 @@ jobs:
           SELECT count(*) AS users FROM auth.users;
           SELECT count(*) AS snapshots FROM public.snapshots;
           SQL
-          supabase functions list --project-ref "$SUPABASE_PROJECT_ID"
-          mkdir -p supabase/.temp
-          printf '%s' "$SUPABASE_PROJECT_ID" > supabase/.temp/project-ref
-          supabase db advisors --linked --type security --fail-on none
       - name: Back up public and Auth schemas and data, then encrypt
         env:
           STATS_BACKUP_PUBLIC_KEY: ${{ vars.STATS_BACKUP_PUBLIC_KEY }}
@@ -72,3 +68,10 @@ jobs:
           path: ${{ runner.temp }}/stats.dump.encrypted
           retention-days: 7
           if-no-files-found: error
+      - name: Inspect function and security advisors through the IPv4 pooler
+        run: |
+          supabase --agent=no functions list --project-ref "$SUPABASE_PROJECT_ID"
+          ENCODED_PASSWORD=$(python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["PGPASSWORD"], safe=""))')
+          echo "::add-mask::$ENCODED_PASSWORD"
+          DB_URL="postgresql://$PGUSER:$ENCODED_PASSWORD@$PGHOST:$PGPORT/$PGDATABASE?sslmode=require"
+          supabase --agent=no db advisors --db-url "$DB_URL" --type security --fail-on none
