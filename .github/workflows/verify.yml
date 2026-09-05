@@ -65,4 +65,4 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.9.6
-      - run: deno check supabase/functions/collect-snapshots/index.ts
+      - run: deno check --node-modules-dir=none --no-lock supabase/functions/collect-snapshots/index.ts
