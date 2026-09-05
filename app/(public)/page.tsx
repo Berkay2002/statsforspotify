@@ -64,7 +64,7 @@ const method = [
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ reauth?: string }>;
+  searchParams: Promise<{ reauth?: string; error?: string }>;
 }) {
   const params = await searchParams;
   const needsReauth = params.reauth === "spotify";
@@ -73,17 +73,18 @@ export default async function HomePage({
     <PublicLayout showLandingNav>
       <AuthRedirect />
 
-      <main className="overflow-hidden bg-background">
+      <div className="overflow-hidden bg-background">
         <section className="relative border-b border-white/[0.08]">
           <div className="mx-auto grid max-w-7xl gap-12 px-4 py-14 sm:px-6 md:py-20 lg:grid-cols-[0.82fr_1.18fr] lg:items-stretch lg:px-8">
             <div className="flex flex-col justify-center">
-              {needsReauth && (
+              {(needsReauth || params.error) && (
                 <Alert variant="destructive" className="mb-8 max-w-xl">
                   <AlertCircle />
-                  <AlertTitle>Spotify connection required</AlertTitle>
+                  <AlertTitle>{needsReauth ? "Spotify connection required" : "Sign-in could not be completed"}</AlertTitle>
                   <AlertDescription>
-                    Your Spotify session has expired. Please reconnect your
-                    account to continue.
+                    {needsReauth
+                      ? "Your Spotify session has expired. Please reconnect your account to continue."
+                      : "Please try connecting to Spotify again."}
                   </AlertDescription>
                 </Alert>
               )}
@@ -299,7 +300,7 @@ export default async function HomePage({
             </AnimatedSection>
           </div>
         </section>
-      </main>
+      </div>
     </PublicLayout>
   );
 }

@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/api/validation";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { 
@@ -5,7 +6,8 @@ import {
   unauthorizedResponse, 
   badRequestResponse, 
   serverErrorResponse,
-  validateItemType
+  validateItemType,
+  validateTimeRange
 } from "@/lib/api/utils";
 
 interface SparklineResponse {
@@ -27,6 +29,10 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const idsParam = searchParams.get("ids");
     const daysParam = searchParams.get("days");
+    const timeRange = searchParams.get("time_range") ?? "medium_term";
+    const targetUserId = searchParams.get("user_id") ?? user.id;
+    if (!validateTimeRange(timeRange)) return badRequestResponse("Invalid time_range");
+    if (!isUuid(targetUserId)) return badRequestResponse("Invalid user_id");
 
     // Validate required params
     if (!type || !idsParam) {
@@ -39,7 +45,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse and validate IDs
-    const ids = idsParam.split(",").filter(Boolean);
+    const ids = [...new Set(idsParam.split(",").filter(Boolean))];
+    if (ids.some((id) => !/^[a-zA-Z0-9]{22}$/.test(id))) {
+      return badRequestResponse("Invalid Spotify item ID");
+    }
     if (ids.length === 0) {
       return badRequestResponse("No valid IDs provided");
     }
@@ -49,37 +58,37 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse days parameter
-    const days = daysParam ? parseInt(daysParam, 10) : 14;
-    if (isNaN(days) || days < 1 || days > 365) {
+    const days = daysParam === null ? 14 : Number(daysParam);
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
       return badRequestResponse("Invalid days parameter. Must be between 1 and 365");
     }
 
-    // Call the database function
-    const { data, error } = await supabase.rpc("get_sparkline_data", {
-      p_user_id: user.id,
-      p_item_ids: ids,
-      p_item_type: type,
-      p_days: days,
-    });
+    // RLS enforces ownership, accepted friendship, and profile visibility.
+    const sparklines: SparklineResponse["sparklines"] = {};
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    // PostgREST caps each response; page through larger windows instead of truncating history.
+    const pageSize = 1000;
+    for (let offset = 0; ; offset += pageSize) {
+      const query = type === "artist"
+        ? supabase.from("artist_rankings").select("item_id:artist_id,rank,snapshots!inner(created_at,time_range)").in("artist_id", ids)
+        : type === "track"
+          ? supabase.from("track_rankings").select("item_id:track_id,rank,snapshots!inner(created_at,time_range)").in("track_id", ids)
+          : supabase.from("album_rankings").select("item_id:album_id,rank,snapshots!inner(created_at,time_range)").in("album_id", ids);
+      const { data, error } = await query
+        .eq("user_id", targetUserId)
+        .eq("snapshots.time_range", timeRange)
+        .gte("snapshots.created_at", since)
+        .order("id", { ascending: true })
+        .range(offset, offset + pageSize - 1);
 
-    if (error) {
-      console.error("Database error:", error);
-      return serverErrorResponse("Failed to fetch sparkline data");
-    }
-
-    // Group results by item_id
-    const sparklines: Record<string, { date: string; rank: number }[]> = {};
-    
-    if (data) {
-      for (const row of data) {
-        if (!sparklines[row.item_id]) {
-          sparklines[row.item_id] = [];
-        }
-        sparklines[row.item_id].push({
-          date: row.date,
-          rank: row.rank,
-        });
+      if (error) {
+        console.error("Database error:", error);
+        return serverErrorResponse("Failed to fetch sparkline data");
       }
+      for (const row of data ?? []) {
+        (sparklines[row.item_id] ??= []).push({ date: row.snapshots.created_at, rank: row.rank });
+      }
+      if (!data || data.length < pageSize) break;
     }
 
     // Ensure stable chronological ordering per item (defensive against any upstream ordering changes)
@@ -95,9 +104,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        // Increase cache time since sparkline data doesn't change frequently
-        // Allow browser to cache for 5 minutes, CDN can cache for 2 minutes
-        "Cache-Control": "private, max-age=300, s-maxage=120, stale-while-revalidate=600",
+        // Listening data must not survive account changes in the browser cache.
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {

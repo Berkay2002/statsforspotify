@@ -21,6 +21,7 @@ interface Track {
 }
 
 interface TracksListProps {
+  userId?: string;
   tracksByTimeRange: {
     short_term: Track[];
     medium_term: Track[];
@@ -34,9 +35,10 @@ function formatDuration(durationMilliseconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function TracksList({ tracksByTimeRange }: TracksListProps) {
+export function TracksList({ tracksByTimeRange, userId }: TracksListProps) {
   return (
     <TimeRangeList
+      userId={userId}
       itemsByTimeRange={tracksByTimeRange}
       itemType="track"
       className="w-full"

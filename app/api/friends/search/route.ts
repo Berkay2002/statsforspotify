@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     // Get friendship status for each profile
     const profileUserIds = profiles.map(profile => profile.user_id);
     
-    const { data: friendships } = await supabase
+    const { data: friendships, error: friendshipError } = await supabase
       .from("friendships")
       .select("user_id, friend_id, status")
       .or(
@@ -44,6 +44,11 @@ export async function GET(request: Request) {
         ).join(",")
       );
     
+    if (friendshipError) {
+      console.error("[search] Error fetching friendships:", friendshipError);
+      return serverErrorResponse("Failed to fetch friendship status");
+    }
+
     // Build a map of friendship status by user ID
     const friendshipStatusMap = new Map<string, { status: string; isIncoming: boolean }>();
     (friendships || []).forEach(friendship => {

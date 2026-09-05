@@ -1,3 +1,4 @@
+import { readJsonObject } from "@/lib/api/validation";
 import { NextResponse } from "next/server";
 import { authenticateUser, badRequestResponse, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 
@@ -9,19 +10,22 @@ export async function PATCH(request: Request) {
     }
     
     const { user, supabase } = authResult;
-    const { stats_visibility } = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return badRequestResponse("Request body must be a JSON object");
+    const { stats_visibility } = body;
     
-    if (!stats_visibility || !["public", "followers", "private"].includes(stats_visibility)) {
+    if (stats_visibility !== "public" && stats_visibility !== "followers" && stats_visibility !== "private") {
       return badRequestResponse("Invalid stats_visibility value");
     }
     
     // Update user profile
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from("user_profiles")
-      .update({ stats_visibility, updated_at: new Date().toISOString() })
+      .update({ stats_visibility, updated_at: new Date().toISOString() }, { count: "exact" })
       .eq("user_id", user.id);
     
     if (error) throw error;
+    if (count === 0) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     
     return NextResponse.json({ success: true });
   } catch (error) {

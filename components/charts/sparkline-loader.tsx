@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   clearSparklinesCache,
   readCachedSparklines,
@@ -8,15 +8,18 @@ import {
   SPARKLINE_CACHE_INVALIDATION_EVENT_NAME,
   type SparklinesByItemId,
 } from "@/components/charts/sparkline-cache";
+import type { TimeRange } from "@/lib/spotify/types";
 import SparklineChart from "@/components/charts/sparkline-chart";
 
 interface SparklineLoaderProps {
   itemIds: string[];
   itemType: "artist" | "track" | "album";
+  timeRange?: TimeRange;
+  userId?: string;
   children: (sparklinesByItemId: SparklinesByItemId, isLoading: boolean) => React.ReactNode;
 }
 
-export function SparklineLoader({ itemIds, itemType, children }: SparklineLoaderProps) {
+export function SparklineLoader({ itemIds, itemType, timeRange = "medium_term", userId, children }: SparklineLoaderProps) {
   const [sparklinesByItemId, setSparklinesByItemId] = useState<SparklinesByItemId>({});
   const [isLoading, setIsLoading] = useState(true);
   const [cacheInvalidationCounter, setCacheInvalidationCounter] = useState(0);
@@ -24,15 +27,12 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
   // Stable key to prevent unnecessary refetches when array reference changes
   // Only refetch if the actual IDs or their order changes
   const itemIdsSignature = useMemo(() => itemIds.join(","), [itemIds]);
-  const sparklinesCacheKey = `${itemType}:${itemIdsSignature}`;
+  const sparklinesCacheKey = `${userId ?? "self"}:${timeRange}:${itemType}:${itemIdsSignature}`;
   
-  // Track ongoing requests to prevent duplicate fetches
-  const inFlightCacheKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleSparklinesCacheInvalidation = () => {
       clearSparklinesCache();
-      inFlightCacheKeyRef.current = null;
       setCacheInvalidationCounter((previousValue) => previousValue + 1);
     };
 
@@ -49,10 +49,14 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const fetchSparklines = async () => {
       if (itemIds.length === 0) {
-        if (!isCancelled) setIsLoading(false);
+        if (!isCancelled) {
+          setSparklinesByItemId({});
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -66,19 +70,15 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
         return;
       }
 
-      // Prevent duplicate requests for the same data
-      if (inFlightCacheKeyRef.current === sparklinesCacheKey) {
-        return;
-      }
-
       if (!isCancelled) {
         setIsLoading(true);
-        inFlightCacheKeyRef.current = sparklinesCacheKey;
+        setSparklinesByItemId({});
       }
       
       try {
         const response = await fetch(
-          `/api/rankings/sparklines?type=${itemType}&ids=${itemIdsSignature}`,
+          `/api/rankings/sparklines?type=${itemType}&ids=${itemIdsSignature}&time_range=${timeRange}${userId ? `&user_id=${userId}` : ""}`,
+          { signal: controller.signal, cache: "no-store" },
         );
         
         if (isCancelled) return;
@@ -96,13 +96,11 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
             setSparklinesByItemId(responseBody.sparklines);
           }
           setIsLoading(false);
-          inFlightCacheKeyRef.current = null;
         }
       } catch (caughtError) {
         if (!isCancelled) {
           console.error("Failed to fetch sparklines:", caughtError);
           setIsLoading(false);
-          inFlightCacheKeyRef.current = null;
         }
       }
     };
@@ -111,8 +109,9 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
-  }, [itemIds.length, itemIdsSignature, itemType, sparklinesCacheKey, cacheInvalidationCounter]); // Use stable key instead of itemIds array
+  }, [itemIds.length, itemIdsSignature, itemType, timeRange, userId, sparklinesCacheKey, cacheInvalidationCounter]); // Use stable key instead of itemIds array
 
   return <>{children(sparklinesByItemId, isLoading)}</>;
 }

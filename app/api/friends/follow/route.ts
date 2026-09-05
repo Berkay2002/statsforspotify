@@ -1,3 +1,4 @@
+import { isUuid, readJsonObject } from "@/lib/api/validation";
 import { NextResponse } from "next/server";
 import { authenticateUser, badRequestResponse, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 
@@ -13,10 +14,12 @@ export async function POST(request: Request) {
     }
     
     const { user, supabase } = authResult;
-    const { friendUserId } = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return badRequestResponse("Request body must be a JSON object");
+    const { friendUserId } = body;
     
-    if (!friendUserId) {
-      return badRequestResponse("friendUserId is required");
+    if (!isUuid(friendUserId)) {
+      return badRequestResponse("A valid friendUserId is required");
     }
     
     // Don't allow self-friending
@@ -25,12 +28,17 @@ export async function POST(request: Request) {
     }
     
     // Check if a friendship already exists (in either direction)
-    const { data: existingFriendship } = await supabase
+    const { data: existingFriendship, error: lookupError } = await supabase
       .from("friendships")
       .select("id, status, user_id, friend_id")
       .or(`and(user_id.eq.${user.id},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${user.id})`)
-      .single();
+      .maybeSingle();
     
+    if (lookupError) {
+      console.error("[follow] Error checking friendship:", lookupError);
+      return serverErrorResponse("Failed to check existing friendship");
+    }
+
     if (existingFriendship) {
       // If there's a pending request FROM the friend, accept it instead
       if (existingFriendship.friend_id === user.id && existingFriendship.status === "pending") {

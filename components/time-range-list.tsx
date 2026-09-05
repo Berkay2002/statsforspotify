@@ -22,6 +22,7 @@ interface TimeRangeListProps<T extends ItemWithId> {
   itemType: "artist" | "track" | "album";
   renderItems: (items: T[], sparklinesByItemId: SparklinesByItemId, isLoading: boolean) => ReactNode;
   className?: string;
+  userId?: string;
   tabsRightContent?: ReactNode;
 }
 
@@ -34,6 +35,7 @@ export function TimeRangeList<T extends ItemWithId>({
   itemType,
   renderItems,
   className,
+  userId,
   tabsRightContent,
 }: TimeRangeListProps<T>) {
   const [timeRange, setTimeRange] = useState<TimeRange>("short_term");
@@ -41,7 +43,7 @@ export function TimeRangeList<T extends ItemWithId>({
   const itemIds = useMemo(() => items.map((item) => item.id), [items]);
 
   return (
-    <SparklineLoader itemIds={itemIds} itemType={itemType}>
+    <SparklineLoader itemIds={itemIds} itemType={itemType} timeRange={timeRange} userId={userId}>
       {(sparklinesByItemId, isLoading) => (
         <TimeRangeTabs
           value={timeRange}

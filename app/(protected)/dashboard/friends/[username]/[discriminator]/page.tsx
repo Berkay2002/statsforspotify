@@ -34,18 +34,20 @@ export default async function FriendProfilePage({ params }: Props) {
   const { data: friendProfile, error } = await supabase
     .from("user_profiles")
     .select("*")
-    .eq("display_name", decodeURIComponent(username))
+    .eq("display_name", username)
     .eq("discriminator", discriminator)
-    .single();
+    .maybeSingle();
   
   // Fallback: Try to find by old username via discriminator lookup
-  if (error || !friendProfile) {
-    const { data: profiles } = await supabase
+  if (error) throw new Error("Failed to fetch friend profile");
+  if (!friendProfile) {
+    const { data: profiles, error: profilesError } = await supabase
       .from("user_profiles")
       .select("*")
       .eq("discriminator", discriminator)
       .limit(10);
     
+    if (profilesError) throw new Error("Failed to look up friend profile");
     if (profiles && profiles.length === 1) {
       const newUsername = profiles[0].display_name;
       redirect(`/dashboard/friends/${encodeURIComponent(newUsername)}/${discriminator}`);
@@ -57,7 +59,7 @@ export default async function FriendProfilePage({ params }: Props) {
   // Check friendship status using our internal friendships table
   const friendshipStatus = await checkFriendshipStatus(supabase, user.id, friendProfile.user_id);
   
-  const canView = friendProfile.stats_visibility === "public" ||
+  const canView = friendProfile.user_id === user.id || friendProfile.stats_visibility === "public" ||
     (friendProfile.stats_visibility === "followers" && friendshipStatus.isFriend);
   
   if (!canView) {
@@ -77,13 +79,14 @@ export default async function FriendProfilePage({ params }: Props) {
             <Alert>
               <Lock className="h-4 w-4" />
               <AlertDescription>
-                {friendshipStatus.status === "none" && (
+                {friendProfile.stats_visibility === "private" && "This user has made their stats private."}
+                {friendProfile.stats_visibility !== "private" && friendshipStatus.status === "none" && (
                   "This user's stats are private. Send them a friend request to view their stats."
                 )}
-                {friendshipStatus.status === "pending" && friendshipStatus.isIncoming && (
+                {friendProfile.stats_visibility !== "private" && friendshipStatus.status === "pending" && friendshipStatus.isIncoming && (
                   "This user has sent you a friend request. Accept it to view their stats."
                 )}
-                {friendshipStatus.status === "pending" && !friendshipStatus.isIncoming && (
+                {friendProfile.stats_visibility !== "private" && friendshipStatus.status === "pending" && !friendshipStatus.isIncoming && (
                   "Friend request pending. They need to accept your request to view their stats."
                 )}
               </AlertDescription>
@@ -100,14 +103,23 @@ export default async function FriendProfilePage({ params }: Props) {
     );
   }
   
-  // Get the most recent snapshot for this user
-  const { data: latestSnapshot } = await supabase
-    .from("snapshots")
-    .select("id, created_at, time_range")
-    .eq("user_id", friendProfile.user_id)
-    .order("created_at", { ascending: false })
-    .limit(3);
-  
+  // Each range can have a different latest collection date.
+  const snapshotResults = await Promise.all(
+    (["short_term", "medium_term", "long_term"] as const).map((timeRange) =>
+      supabase.from("snapshots")
+        .select("id, created_at, time_range")
+        .eq("user_id", friendProfile.user_id)
+        .eq("time_range", timeRange)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    )
+  );
+  if (snapshotResults.some((result) => result.error)) {
+    throw new Error("Failed to fetch friend snapshots");
+  }
+  const latestSnapshot = snapshotResults.flatMap((result) => result.data ? [result.data] : []);
+
   if (!latestSnapshot || latestSnapshot.length === 0) {
     return (
       <div className="container mx-auto max-w-4xl py-12">
@@ -221,6 +233,11 @@ export default async function FriendProfilePage({ params }: Props) {
       : { data: [] },
   ]);
   
+  if ([artistsShort, artistsMedium, artistsLong, tracksShort, tracksMedium, tracksLong,
+       albumsShort, albumsMedium, albumsLong].some((result) => "error" in result && result.error)) {
+    throw new Error("Failed to fetch friend rankings");
+  }
+
   // Transform database records to match component props
   const transformArtists = (data: ArtistRanking[] | null) =>
     (data || []).map((artistRanking) => ({
@@ -242,7 +259,7 @@ export default async function FriendProfilePage({ params }: Props) {
       albumId: trackRanking.album_id,
       albumName: trackRanking.album_name,
       durationMs: trackRanking.duration_ms || 0,
-      popularity: trackRanking.popularity || 0,
+      popularity: trackRanking.popularity ?? null,
     }));
   
   const transformAlbums = (data: AlbumRanking[] | null) =>
@@ -303,6 +320,7 @@ export default async function FriendProfilePage({ params }: Props) {
           </p>
         </div>
         <ArtistsList
+          userId={friendProfile.user_id}
           artistsByTimeRange={{
             short_term: transformArtists(artistsShort.data),
             medium_term: transformArtists(artistsMedium.data),
@@ -320,6 +338,7 @@ export default async function FriendProfilePage({ params }: Props) {
           </p>
         </div>
         <TracksList
+          userId={friendProfile.user_id}
           tracksByTimeRange={{
             short_term: transformTracks(tracksShort.data),
             medium_term: transformTracks(tracksMedium.data),
@@ -337,6 +356,7 @@ export default async function FriendProfilePage({ params }: Props) {
           </p>
         </div>
         <AlbumsList
+          userId={friendProfile.user_id}
           albumsByTimeRange={{
             short_term: transformAlbums(albumsShort.data),
             medium_term: transformAlbums(albumsMedium.data),
@@ -358,9 +378,10 @@ async function checkFriendshipStatus(
       .from("friendships")
       .select("id, status, user_id, friend_id")
       .or(`and(user_id.eq.${currentUserId},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${currentUserId})`)
-      .single();
+      .maybeSingle();
     
-    if (error || !friendship) {
+    if (error) throw new Error("Failed to check friendship status");
+    if (!friendship) {
       return { status: "none", isFriend: false, isPending: false, isIncoming: false };
     }
     
@@ -374,6 +395,6 @@ async function checkFriendshipStatus(
     };
   } catch (error) {
     console.error("Error checking friendship status:", error);
-    return { status: "none", isFriend: false, isPending: false, isIncoming: false };
+    throw error;
   }
 }

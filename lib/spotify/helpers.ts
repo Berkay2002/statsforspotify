@@ -55,7 +55,7 @@ async function fetchLatestSnapshotId(
 
   if (error) {
     console.error("[helpers] Error fetching latest snapshot:", error);
-    return null;
+    throw new Error("Failed to fetch previous snapshot");
   }
 
   return snapshot?.id ?? null;
@@ -115,6 +115,7 @@ async function fetchPreviousRankMapsByTimeRange(options: {
       medium_term: previousMedium.error,
       long_term: previousLong.error,
     });
+    throw new Error("Failed to fetch previous rankings");
   }
 
   const shortTermMap = new Map<string, number>();

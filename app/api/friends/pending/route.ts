@@ -32,11 +32,16 @@ export async function GET() {
     
     // Fetch profiles for the requesting users
     const userIds = pendingRequests.map(request => request.user_id);
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from("user_profiles")
       .select("user_id, display_name, discriminator, avatar_url")
       .in("user_id", userIds);
     
+    if (profileError) {
+      console.error("[pending] Error fetching profiles:", profileError);
+      return serverErrorResponse("Failed to fetch requesting profiles");
+    }
+
     const profileMap = new Map(
       (profiles || []).map(profile => [profile.user_id, profile])
     );

@@ -29,8 +29,8 @@ export default function TrackDetailPage() {
   const { play, playerState, isPWA, playbackPreference, openInSpotifyApp } = useSpotifyPlayer();
   const isMobile = useIsMobile();
 
-  const [track, setTrack] = useState<{ id: string; name: string; album: { id: string; name: string; images: { url: string }[] }; artists: { name: string; id: string }[]; duration_ms: number } | null>(null);
-  const [relatedTracks, setRelatedTracks] = useState<{ rank: number; id: string; name: string; imageUrl: string; subtitle: string; durationMs: number; popularity: number }[]>([]);
+  const [track, setTrack] = useState<{ id: string; name: string; album: { id: string; name: string; images?: { url: string }[] | null }; artists: { name: string; id: string }[]; duration_ms: number } | null>(null);
+  const [relatedTracks, setRelatedTracks] = useState<{ rank: number; id: string; name: string; imageUrl: string | null; subtitle: string; durationMs: number; popularity: number | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
   const [pendingPlayAction, setPendingPlayAction] = useState<(() => void) | null>(null);
@@ -56,7 +56,7 @@ export default function TrackDetailPage() {
           const tracksData = await tracksResponse.json();
           const related = tracksData
             .filter((t: { albumId: string; id: string }) => t.albumId === trackData.album.id && t.id !== trackData.id)
-            .map((t: { rank: number; id: string; name: string; imageUrl: string; artistName: string; durationMs: number; popularity: number }) => ({
+            .map((t: { rank: number; id: string; name: string; imageUrl: string | null; artistName: string; durationMs: number; popularity: number | null }) => ({
               rank: t.rank,
               id: t.id,
               name: t.name,
@@ -93,7 +93,7 @@ export default function TrackDetailPage() {
     return null;
   }
 
-  const imageUrl = track.album.images[1]?.url ?? track.album.images[0]?.url ?? null;
+  const imageUrl = track.album.images?.[1]?.url ?? track.album.images?.[0]?.url ?? null;
   const artistName = track.artists.map((artist) => artist.name).join(", ");
   const primaryArtistId = track.artists[0]?.id;
 

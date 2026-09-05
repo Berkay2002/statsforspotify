@@ -13,15 +13,16 @@ export function AuthRedirect() {
   const supabase = createClient()
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('reauth') || params.has('error')) return
+    let active = true
     // Check if user is already authenticated
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        console.log('[AuthRedirect] User is authenticated, redirecting to dashboard')
+      if (session && active) {
         router.push('/dashboard')
-      } else {
-        console.log('[AuthRedirect] User is not authenticated, staying on home page')
       }
     })
+    return () => { active = false }
   }, [router, supabase])
 
   return null

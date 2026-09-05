@@ -20,6 +20,7 @@ interface Artist {
 }
 
 interface ArtistsListProps {
+  userId?: string;
   artistsByTimeRange: {
     short_term: Artist[];
     medium_term: Artist[];
@@ -27,9 +28,10 @@ interface ArtistsListProps {
   };
 }
 
-export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
+export function ArtistsList({ artistsByTimeRange, userId }: ArtistsListProps) {
   return (
     <TimeRangeList
+      userId={userId}
       itemsByTimeRange={artistsByTimeRange}
       itemType="artist"
       className="w-full"

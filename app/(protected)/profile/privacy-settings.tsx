@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "sonner";
 import { useState } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -30,6 +31,7 @@ export function PrivacySettings({ currentVisibility }: PrivacySettingsProps) {
       router.refresh();
     } catch (error) {
       console.error("Error updating privacy:", error);
+      toast.error("Failed to update privacy settings. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -59,9 +61,9 @@ export function PrivacySettings({ currentVisibility }: PrivacySettingsProps) {
           <Label htmlFor="followers" className="flex-1 cursor-pointer font-normal">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Followers Only</p>
+                <p className="font-medium">Friends Only</p>
                 <p className="text-sm text-muted-foreground">
-                  Only mutual Spotify follows can view
+                  Only accepted friends can view
                 </p>
               </div>
             </div>

@@ -11,9 +11,9 @@ export interface SpotifyImage {
 export interface SpotifyArtist {
   id: string;
   name: string;
-  genres: string[];
-  popularity: number;
-  images: SpotifyImage[];
+  genres?: string[] | null;
+  popularity?: number | null;
+  images?: SpotifyImage[] | null;
   external_urls: {
     spotify: string;
   };
@@ -25,7 +25,7 @@ export interface SpotifyArtist {
 export interface SpotifyAlbum {
   id: string;
   name: string;
-  images: SpotifyImage[];
+  images?: SpotifyImage[] | null;
   release_date: string;
   total_tracks: number;
   album_type: string;
@@ -42,7 +42,7 @@ export interface SpotifyTrack {
   id: string;
   name: string;
   duration_ms: number;
-  popularity: number;
+  popularity?: number | null;
   preview_url: string | null;
   track_number: number;
   explicit: boolean;
@@ -85,7 +85,7 @@ export interface RankedArtist {
   name: string;
   imageUrl: string | null;
   genres: string[];
-  popularity: number;
+  popularity: number | null;
 }
 
 export interface RankedTrack {
@@ -98,7 +98,7 @@ export interface RankedTrack {
   albumId: string;
   albumName: string;
   durationMs: number;
-  popularity: number;
+  popularity: number | null;
 }
 
 export interface RankedAlbum {

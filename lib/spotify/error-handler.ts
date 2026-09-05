@@ -34,6 +34,7 @@ export function handleSpotifyError(
     console.error("[Spotify Error] Authentication required:", data.error);
     
     if (autoRedirect) {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- Reauthentication must discard stale authenticated client state.
       window.location.href = "/?reauth=spotify";
     }
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAlbumDetails } from "@/lib/spotify/api";
-import { serverErrorResponse } from "@/lib/api/utils";
+import { handleAPIError } from "@/lib/api/utils";
 
 export async function GET(
   request: NextRequest,
@@ -13,6 +13,6 @@ export async function GET(
     return NextResponse.json(album);
   } catch (error) {
     console.error(`Error fetching album ${albumId}:`, error);
-    return serverErrorResponse("Failed to fetch album details");
+    return handleAPIError(error);
   }
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { clearSparklinesCache, SPARKLINE_CACHE_INVALIDATION_EVENT_NAME } from "@/components/charts/sparkline-cache";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -21,6 +23,7 @@ export function DeleteDataDialog() {
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleDelete = async () => {
     if (confirmText !== "DELETE") return;
@@ -35,6 +38,9 @@ export function DeleteDataDialog() {
         throw new Error("Failed to delete data");
       }
 
+      clearSparklinesCache();
+      window.dispatchEvent(new Event(SPARKLINE_CACHE_INVALIDATION_EVENT_NAME));
+      queryClient.clear();
       setIsOpen(false);
       router.refresh();
     } catch (error) {
@@ -59,7 +65,7 @@ export function DeleteDataDialog() {
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete all your
-            snapshots, artist rankings, track rankings, and album rankings.
+            snapshots, artist rankings, track rankings, album rankings, and listening statistics.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="py-4">

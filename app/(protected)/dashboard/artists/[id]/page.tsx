@@ -22,7 +22,7 @@ interface ArtistDetails {
   imageUrl: string | null;
   genres: string[];
   followers: number;
-  popularity: number;
+  popularity: number | null;
 }
 
 interface ArtistStats {
@@ -38,7 +38,7 @@ interface Track {
   imageUrl: string | null;
   albumName: string;
   durationMs: number;
-  popularity: number;
+  popularity: number | null;
 }
 
 export default function ArtistDetailPage() {
@@ -379,9 +379,11 @@ export default function ArtistDetailPage() {
                           </p>
                         </div>
 
-                        <Badge variant="secondary" className="hidden sm:inline-flex text-sm px-3 py-1">
-                          {track.popularity}% popularity
-                        </Badge>
+                        {typeof track.popularity === "number" && (
+                          <Badge variant="secondary" className="hidden sm:inline-flex text-sm px-3 py-1">
+                            {track.popularity}% popularity
+                          </Badge>
+                        )}
 
                         <div className="text-base text-muted-foreground tabular-nums">
                           {formatDuration(track.durationMs)}

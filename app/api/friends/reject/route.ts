@@ -1,3 +1,4 @@
+import { isUuid, readJsonObject } from "@/lib/api/validation";
 import { NextResponse } from "next/server";
 import { authenticateUser, badRequestResponse, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 
@@ -12,11 +13,15 @@ export async function POST(request: Request) {
     }
     
     const { user, supabase } = authResult;
-    const { friendshipId, friendUserId } = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return badRequestResponse("Request body must be a JSON object");
+    const { friendshipId, friendUserId } = body;
     
     // Reject by friendship ID or friend user ID
-    if (!friendshipId && !friendUserId) {
-      return badRequestResponse("friendshipId or friendUserId is required");
+    if ((friendshipId !== undefined && !isUuid(friendshipId)) ||
+        (friendUserId !== undefined && !isUuid(friendUserId)) ||
+        (!friendshipId && !friendUserId)) {
+      return badRequestResponse("A valid friendshipId or friendUserId is required");
     }
     
     let query = supabase
@@ -27,7 +32,7 @@ export async function POST(request: Request) {
     
     if (friendshipId) {
       query = query.eq("id", friendshipId);
-    } else {
+    } else if (friendUserId) {
       query = query.eq("user_id", friendUserId);
     }
     

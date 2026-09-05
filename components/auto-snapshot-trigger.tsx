@@ -6,7 +6,7 @@ import { SPARKLINE_CACHE_INVALIDATION_EVENT_NAME } from "@/components/charts/spa
 
 /**
  * Auto-triggers snapshot collection when dashboard loads
- * Runs only once per page load and respects 24-hour interval on server
+ * Runs once per page load; the server collects each UTC calendar day once.
  * Shows success toast and invalidates caches after successful collection
  */
 export function AutoSnapshotTrigger() {
@@ -26,14 +26,18 @@ export function AutoSnapshotTrigger() {
     })
       .then((response) => response.json())
       .then((snapshotResult) => {
+        const failed = snapshotResult.results?.some((result: { success: boolean }) => !result.success);
         if (snapshotResult.success && !snapshotResult.skipped) {
           // Invalidate sparkline cache
           window.dispatchEvent(new CustomEvent(SPARKLINE_CACHE_INVALIDATION_EVENT_NAME));
           
           // Show success notification
-          toast.success("Stats updated!", {
+          const notify = failed ? toast.warning : toast.success;
+          notify(failed ? "Stats partially updated" : "Stats updated!", {
             duration: 3000,
-            description: `Updated ${snapshotResult.succeeded || "all"} time ranges`,
+            description: failed
+              ? "Some time ranges could not be collected. Reload later to retry."
+              : `Updated ${snapshotResult.succeeded || "all"} time ranges`,
           });
         }
       })

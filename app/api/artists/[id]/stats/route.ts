@@ -22,9 +22,14 @@ export async function GET(
       .select("total_hours_listened, unique_tracks_count, total_play_count")
       .eq("user_id", user.id)
       .eq("artist_id", id)
-      .single();
+      .maybeSingle();
 
-    if (statsError || !stats) {
+    if (statsError) {
+      console.error("Error fetching artist stats:", statsError);
+      return serverErrorResponse("Failed to fetch artist stats");
+    }
+
+    if (!stats) {
       // If no stats found, return zeros
       return NextResponse.json({
         totalHoursListened: 0,

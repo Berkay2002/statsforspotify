@@ -94,6 +94,24 @@ export async function GET(request: NextRequest) {
       timeRange: row.time_range,
     }));
 
+    const { data: latestSnapshot, error: snapshotError } = await supabase
+      .from("snapshots")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("time_range", effectiveTimeRange)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (snapshotError) return serverErrorResponse("Failed to fetch latest snapshot");
+
+    const table = type === "artist" ? "artist_rankings" : type === "track" ? "track_rankings" : "album_rankings";
+    const itemColumn = type === "artist" ? "artist_id" : type === "track" ? "track_id" : "album_id";
+    const { data: latestRanking, error: rankingError } = latestSnapshot
+      ? await supabase.from(table).select("rank").eq("snapshot_id", latestSnapshot.id)
+          .eq(itemColumn, id).maybeSingle()
+      : { data: null, error: null };
+    if (rankingError) return serverErrorResponse("Failed to fetch current rank");
+
     // Compute metadata
     const peakRank = data[0].peak_rank;
     const peakEntry = data.find((row: { rank: number; date: string }) => row.rank === peakRank);
@@ -108,14 +126,14 @@ export async function GET(request: NextRequest) {
         totalSnapshots: data.length,
         firstSeen: firstEntry.date,
         lastSeen: lastEntry.date,
-        currentRank: lastEntry.rank,
+        currentRank: latestRanking?.rank ?? null,
       },
     };
 
     return NextResponse.json(response, {
       headers: {
-        // History data is relatively stable, increase cache time
-        "Cache-Control": "private, max-age=600, s-maxage=300, stale-while-revalidate=1800",
+        // Listening data must not survive account changes in the browser cache.
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistDetails } from "@/lib/spotify/api";
-import { serverErrorResponse } from "@/lib/api/utils";
+import { handleAPIError } from "@/lib/api/utils";
+import { normalizePopularity } from "@/lib/spotify/normalizers";
 
 export async function GET(
   request: NextRequest,
@@ -13,13 +14,13 @@ export async function GET(
     return NextResponse.json({
       id: artist.id,
       name: artist.name,
-      imageUrl: artist.images[0]?.url ?? null,
-      genres: artist.genres,
+      imageUrl: artist.images?.[0]?.url ?? null,
+      genres: artist.genres ?? [],
       followers: artist.followers?.total ?? 0,
-      popularity: artist.popularity,
+      popularity: normalizePopularity(artist.popularity),
     });
   } catch (error) {
     console.error("Error fetching artist details:", error);
-    return serverErrorResponse("Failed to fetch artist details");
+    return handleAPIError(error);
   }
 }

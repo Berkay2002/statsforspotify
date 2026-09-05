@@ -14,7 +14,7 @@ export interface TopTracksSectionTrack {
   imageUrl: string | null;
   subtitle: string;
   durationMs: number;
-  popularity: number;
+  popularity?: number | null;
 }
 
 interface TopTracksSectionProps {
@@ -89,12 +89,14 @@ export function TopTracksSection({
                   </p>
                 </div>
 
-                <Badge
-                  variant="secondary"
-                  className="hidden sm:inline-flex text-sm px-3 py-1"
-                >
-                  {track.popularity}% popularity
-                </Badge>
+                {typeof track.popularity === "number" && (
+                  <Badge
+                    variant="secondary"
+                    className="hidden sm:inline-flex text-sm px-3 py-1"
+                  >
+                    {track.popularity}% popularity
+                  </Badge>
+                )}
 
                 <div className="text-base text-muted-foreground tabular-nums">
                   {formatDuration(track.durationMs)}
@@ -120,4 +122,3 @@ export function TopTracksSection({
     </div>
   );
 }
-

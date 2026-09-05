@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
-import { SpotifyAPIError } from "@/lib/spotify/api";
+import { SpotifyAPIError } from "@/lib/spotify/errors";
 import { isTimeRange } from "@/lib/spotify/time-range";
 
 async function getAuthContext() {

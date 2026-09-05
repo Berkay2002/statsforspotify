@@ -1,3 +1,4 @@
+import { isUuid, readJsonObject } from "@/lib/api/validation";
 import { NextResponse } from "next/server";
 import { authenticateUser, badRequestResponse, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 
@@ -13,10 +14,12 @@ export async function POST(request: Request) {
     }
     
     const { user, supabase } = authResult;
-    const { friendUserId } = await request.json();
+    const body = await readJsonObject(request);
+    if (!body) return badRequestResponse("Request body must be a JSON object");
+    const { friendUserId } = body;
     
-    if (!friendUserId) {
-      return badRequestResponse("friendUserId is required");
+    if (!isUuid(friendUserId)) {
+      return badRequestResponse("A valid friendUserId is required");
     }
     
     // Delete friendship in either direction (RLS policy allows this for either party)

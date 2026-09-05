@@ -68,7 +68,7 @@ export function DashboardOverview({ dataByTimeRange }: DashboardOverviewProps) {
   const trackIds = useMemo(() => data.tracks.map(track => track.id), [data.tracks]);
 
   return (
-    <CombinedSparklineLoader artistIds={artistIds} trackIds={trackIds}>
+    <CombinedSparklineLoader artistIds={artistIds} trackIds={trackIds} timeRange={timeRange}>
       {(sparklines, loading) => (
         <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)} className="w-full">
             <TabsList>

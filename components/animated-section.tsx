@@ -19,11 +19,12 @@ export function AnimatedSection({
   return (
     <motion.div
       initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
+      animate={shouldReduceMotion ? { opacity: 1, y: 0 } : undefined}
       whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
       viewport={shouldReduceMotion ? undefined : { once: true, margin: "-80px" }}
       transition={
         shouldReduceMotion
-          ? undefined
+          ? { duration: 0 }
           : { duration: 0.5, delay, ease: "easeOut" }
       }
       className={className}

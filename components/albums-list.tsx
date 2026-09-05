@@ -20,6 +20,7 @@ interface Album {
 }
 
 interface AlbumsListProps {
+  userId?: string;
   albumsByTimeRange: {
     short_term: Album[];
     medium_term: Album[];
@@ -27,9 +28,10 @@ interface AlbumsListProps {
   };
 }
 
-export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
+export function AlbumsList({ albumsByTimeRange, userId }: AlbumsListProps) {
   return (
     <TimeRangeList
+      userId={userId}
       itemsByTimeRange={albumsByTimeRange}
       itemType="album"
       className="w-full"

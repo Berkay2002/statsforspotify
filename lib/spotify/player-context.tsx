@@ -4,7 +4,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Session } from "@supabase/supabase-js";
+import { createBrowserTokenClient } from "./browser-token";
+import { connectPlaybackPlayer, disconnectPlaybackPlayer, waitForPlaybackSdk } from "./player-lifecycle";
 
 interface Track {
   id: string | null;
@@ -71,8 +72,9 @@ interface SpotifyPlayerProviderProps {
 }
 
 export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ children }) => {
-  const supabase = createClient();
-  const [session, setSession] = useState<Session | null>(null);
+  const [supabase] = useState(createClient);
+  const [tokens] = useState(() => createBrowserTokenClient());
+  const [userId, setUserId] = useState<string | null>(null);
   const [player, setPlayer] = useState<Spotify.PlayerInstance | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPremium, setIsPremium] = useState(true);
@@ -92,9 +94,11 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
   });
 
   useEffect(() => {
+    let active = true;
+    let authChanged = false;
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      if (active && !authChanged) setUserId(session?.user.id ?? null);
     });
 
     // Detect PWA mode
@@ -113,20 +117,44 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+      authChanged = true;
+      if (active) setUserId(session?.user.id ?? null);
     });
 
     return () => {
+      active = false;
       subscription.unsubscribe();
     };
   }, [supabase]);
 
   const deviceIdRef = useRef<string | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const playerRef = useRef<Spotify.PlayerInstance | null>(null);
+  const lifecycleRef = useRef<AbortController | null>(null);
+  const initializingRef = useRef(false);
+  const playbackRequestRef = useRef(false);
+
+  useEffect(() => {
+    const lifecycle = new AbortController();
+    lifecycleRef.current = lifecycle;
+    initializingRef.current = false;
+    tokens.clear();
+    setPlayer(null);
+    setIsLoading(false);
+    setIsPremium(true);
+    setPlayerState(previous => ({ ...previous, track: null, isPlaying: false, isPaused: true, isReady: false, deviceId: null }));
+    return () => {
+      lifecycle.abort();
+      if (playerRef.current) disconnectPlaybackPlayer(playerRef.current);
+      playerRef.current = null;
+      deviceIdRef.current = null;
+      tokens.clear();
+    };
+  }, [userId, tokens]);
 
   // Load Spotify SDK script
   useEffect(() => {
-    if (!session?.provider_token || window.Spotify) return;
+    if (!userId || window.Spotify) return;
 
     window.onSpotifyWebPlaybackSDKReady = () => {};
 
@@ -143,29 +171,30 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     return () => {
       script.remove();
     };
-  }, [session?.provider_token]);
+  }, [userId]);
 
   // Initialize player when window.Spotify is available
   const initializePlayer = useCallback(async () => {
-    if (!session?.provider_token || player) return;
+    const lifecycle = lifecycleRef.current;
+    if (!userId || playerRef.current || initializingRef.current || !lifecycle || lifecycle.signal.aborted) return;
+    initializingRef.current = true;
 
     setIsLoading(true);
 
     try {
-      // Wait for Spotify to be available
-      while (!window.Spotify) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+      await waitForPlaybackSdk(lifecycle.signal, () => Boolean(window.Spotify));
+      if (lifecycle.signal.aborted) return;
 
       const player = new window.Spotify.Player({
         name: "Stats for Spotify Player",
         getOAuthToken: async (cb: (token: string) => void) => {
-          // Fetch fresh token from Supabase session
-          const { data: { session: freshSession } } = await supabase.auth.getSession();
-          if (freshSession?.provider_token) {
-            cb(freshSession.provider_token);
-          } else {
-            console.error("No provider token available");
+          try {
+            const token = await tokens.getToken();
+            if (!lifecycle.signal.aborted) cb(token);
+          } catch {
+            if (!lifecycle.signal.aborted) {
+              setPlayerState(previous => ({ ...previous, error: "Please reconnect your Spotify account." }));
+            }
           }
         },
         volume: 0.5,
@@ -178,10 +207,8 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
       });
 
       player.addListener("authentication_error", ({ message }: { message: string }) => {
-        // Log as warning since player may still work despite scope warnings
-        console.warn("Player authentication warning:", message);
-        // Only set isPremium to false, don't show error to user if player works
-        setIsPremium(false);
+        tokens.clear();
+        setPlayerState(previous => ({ ...previous, error: message }));
       });
 
       player.addListener("account_error", ({ message }: { message: string }) => {
@@ -196,23 +223,14 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
 
       // Ready
       player.addListener("ready", ({ device_id }: { device_id: string }) => {
-        console.log("Ready with Device ID", device_id);
+        if (lifecycle.signal.aborted) return;
         deviceIdRef.current = device_id;
-        
-        // Give Spotify servers a moment to register the device before marking ready
-        setTimeout(() => {
-          setPlayerState(prev => ({
-            ...prev,
-            deviceId: device_id,
-            isReady: true,
-            error: null
-          }));
-        }, 1000);
+        setPlayerState(prev => ({ ...prev, deviceId: device_id, isReady: true, error: null }));
       });
 
       // Not Ready
-      player.addListener("not_ready", ({ device_id }: { device_id: string }) => {
-        console.log("Device ID has gone offline", device_id);
+      player.addListener("not_ready", () => {
+        deviceIdRef.current = null;
         setPlayerState(prev => ({
           ...prev,
           isReady: false,
@@ -238,26 +256,34 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
       });
 
       // Connect the player
-      await player.connect();
+      playerRef.current = player;
+      const connected = await connectPlaybackPlayer(player, lifecycle.signal);
+      if (lifecycle.signal.aborted) { disconnectPlaybackPlayer(player); return; }
+      if (!connected) throw new Error("Spotify player could not connect. Please try again.");
       setPlayer(player);
     } catch (error) {
+      if (lifecycle.signal.aborted) return;
+      if (playerRef.current) disconnectPlaybackPlayer(playerRef.current);
+      playerRef.current = null;
       console.error("Failed to initialize player:", error);
       setPlayerState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : "Unknown error"
       }));
     } finally {
-      setIsLoading(false);
+      if (!lifecycle.signal.aborted) {
+        initializingRef.current = false;
+        setIsLoading(false);
+      }
     }
-  }, [session?.provider_token, player, supabase]);
+  }, [userId, tokens]);
 
   // Player control functions - Define transferPlayback first to avoid circular dependency
   const transferPlayback = useCallback(async (deviceId: string) => {
     try {
-      const response = await fetch("https://api.spotify.com/v1/me/player", {
+      const response = await tokens.request("https://api.spotify.com/v1/me/player", {
         method: "PUT",
         headers: {
-          "Authorization": `Bearer ${session?.provider_token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -276,7 +302,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
         error: error instanceof Error ? error.message : "Failed to transfer playback"
       }));
     }
-  }, [session?.provider_token]);
+  }, [tokens]);
 
   const play = useCallback(async (uri?: string, contextUri?: string, uris?: string[]) => {
     if (!player || !deviceIdRef.current) {
@@ -286,18 +312,14 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
 
     try {
       const body = {
-        device_id: deviceIdRef.current,
         ...(uri && { uris: [uri] }),
         ...(contextUri && { context_uri: contextUri }),
         ...(uris && { uris }),
       };
 
-      console.log("Playing with body:", body);
-
-      const response = await fetch("https://api.spotify.com/v1/me/player/play", {
+      const response = await tokens.request(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceIdRef.current)}`, {
         method: "PUT",
         headers: {
-          "Authorization": `Bearer ${session?.provider_token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
@@ -316,10 +338,9 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
             await new Promise(resolve => setTimeout(resolve, 500));
             
             // Retry play after transfer
-            const retryResponse = await fetch("https://api.spotify.com/v1/me/player/play", {
+            const retryResponse = await tokens.request(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceIdRef.current)}`, {
               method: "PUT",
               headers: {
-                "Authorization": `Bearer ${session?.provider_token}`,
                 "Content-Type": "application/json",
               },
               body: JSON.stringify(body),
@@ -356,7 +377,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
         error: error instanceof Error ? error.message : "Failed to play"
       }));
     }
-  }, [player, session?.provider_token, transferPlayback]);
+  }, [player, tokens, transferPlayback]);
 
   const pause = useCallback(async () => {
     if (!player) return;
@@ -385,17 +406,14 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
 
   const setVolume = useCallback(async (volume: number) => {
     if (!player) return;
-    await player.setVolume(Math.max(0, Math.min(1, volume)));
-    setPlayerState(prev => ({ ...prev, volume }));
+    const clampedVolume = Math.max(0, Math.min(1, volume));
+    await player.setVolume(clampedVolume);
+    setPlayerState(prev => ({ ...prev, volume: clampedVolume }));
   }, [player]);
 
   const getDevices = useCallback(async (): Promise<Spotify.Device[]> => {
     try {
-      const response = await fetch("https://api.spotify.com/v1/me/player/devices", {
-        headers: {
-          "Authorization": `Bearer ${session?.provider_token}`,
-        },
-      });
+      const response = await tokens.request("https://api.spotify.com/v1/me/player/devices");
 
       if (!response.ok) {
         throw new Error(`Failed to get devices: ${response.statusText}`);
@@ -407,15 +425,12 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
       console.error("Get devices error:", error);
       return [];
     }
-  }, [session?.provider_token]);
+  }, [tokens]);
 
   const addToQueue = useCallback(async (uri: string) => {
     try {
-      const response = await fetch(`https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(uri)}`, {
+      const response = await tokens.request(`https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(uri)}`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${session?.provider_token}`,
-        },
       });
 
       if (!response.ok) {
@@ -428,7 +443,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
         error: error instanceof Error ? error.message : "Failed to add to queue"
       }));
     }
-  }, [session?.provider_token]);
+  }, [tokens]);
 
   const setPlaybackPreference = useCallback((preference: 'in-app' | 'spotify-app') => {
     setPlaybackPreferenceState(preference);
@@ -459,10 +474,12 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
 
   // Get current playback state from Spotify API (for syncing with external playback)
   const getCurrentPlayback = useCallback(async () => {
-    if (!session?.provider_token) return;
+    if (!userId || playbackRequestRef.current) return;
+    const lifecycle = lifecycleRef.current;
+    playbackRequestRef.current = true;
 
     try {
-      const response = await fetch('/api/spotify/player/currently-playing');
+      const response = await fetch('/api/spotify/player/currently-playing', { signal: lifecycle?.signal });
       
       if (!response.ok) {
         console.warn('Failed to get current playback:', response.statusText);
@@ -470,9 +487,10 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
       }
 
       const data = await response.json();
+      if (lifecycle?.signal.aborted) return;
 
       // If nothing is playing, clear the track
-      if (!data.is_playing || !data.item) {
+      if (!data.item || data.item.type === "episode") {
         setPlayerState(prev => ({
           ...prev,
           track: null,
@@ -504,22 +522,24 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
         duration: data.item.duration_ms,
       }));
     } catch (error) {
-      console.error('Error fetching current playback:', error);
+      if (!lifecycle?.signal.aborted) console.error('Error fetching current playback:', error);
+    } finally {
+      playbackRequestRef.current = false;
     }
-  }, [session?.provider_token]);
+  }, [userId]);
 
   // Auto-initialize player on mount
   useEffect(() => {
-    if (session?.provider_token && !player) {
-      initializePlayer();
-    }
-  }, [session?.provider_token, player, initializePlayer]);
+    void initializePlayer();
+  }, [initializePlayer]);
+
+  const hasTrack = playerState.track !== null;
 
   // Poll for external playback state on mobile/PWA with adaptive intervals
   useEffect(() => {
     // Only poll for mobile and PWA users to sync with external Spotify playback
     const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const shouldPoll = (isMobileDevice || isPWA) && session?.provider_token;
+    const shouldPoll = (isMobileDevice || isPWA) && userId;
 
     if (!shouldPoll) return;
 
@@ -530,7 +550,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
     const getPollingInterval = () => {
       if (playerState.isPlaying) {
         return 2000; // 2s when actively playing for tighter sync
-      } else if (playerState.track) {
+      } else if (hasTrack) {
         return 5000; // 5s when paused but track exists
       } else {
         return 10000; // 10s when idle/no track
@@ -558,20 +578,7 @@ export const SpotifyPlayerProvider: React.FC<SpotifyPlayerProviderProps> = ({ ch
         pollingIntervalRef.current = null;
       }
     };
-  }, [isPWA, session?.provider_token, getCurrentPlayback, playerState.isPlaying, playerState.track]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (player) {
-        player.disconnect();
-      }
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-    };
-  }, [player]);
+  }, [isPWA, userId, getCurrentPlayback, playerState.isPlaying, hasTrack]);
 
   const value: SpotifyPlayerContextType = {
     player,

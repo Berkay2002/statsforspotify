@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/api/validation";
 import { NextResponse } from "next/server";
 import { authenticateUser, badRequestResponse, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
 
@@ -12,8 +13,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const friendUserId = searchParams.get("friendUserId");
     
-    if (!friendUserId) {
-      return badRequestResponse("friendUserId parameter is required");
+    if (!isUuid(friendUserId)) {
+      return badRequestResponse("A valid friendUserId parameter is required");
     }
     
     // Check friendship status from our internal friendships table
@@ -21,10 +22,9 @@ export async function GET(request: Request) {
       .from("friendships")
       .select("id, status, user_id, friend_id")
       .or(`and(user_id.eq.${user.id},friend_id.eq.${friendUserId}),and(user_id.eq.${friendUserId},friend_id.eq.${user.id})`)
-      .single();
+      .maybeSingle();
     
-    if (error && error.code !== "PGRST116") {
-      // PGRST116 = no rows found (not an error, just no friendship exists)
+    if (error) {
       console.error("[check-follow] Error checking friendship:", error);
       return serverErrorResponse("Failed to check friendship status");
     }

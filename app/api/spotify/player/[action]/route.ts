@@ -1,161 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/spotify/api";
-import { badRequestResponse, serverErrorResponse } from "@/lib/api/utils";
+import { spotifyRequest } from "@/lib/spotify/api";
+import { badRequestResponse, handleAPIError } from "@/lib/api/utils";
 
-const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
+type Context = { params: Promise<{ action: string }> };
+const noStore = { "Cache-Control": "private, no-store" };
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ action: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: Context) {
   const { action } = await params;
-
+  if (action !== "devices" && action !== "currently-playing") return badRequestResponse("Unknown player action");
   try {
-    const accessToken = await getAccessToken();
-
-    switch (action) {
-      case "devices": {
-        const response = await fetch(`${SPOTIFY_API_BASE}/me/player/devices`, {
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to get devices: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return NextResponse.json(data);
-      }
-
-      case "currently-playing": {
-        const response = await fetch(`${SPOTIFY_API_BASE}/me/player/currently-playing`, {
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-          },
-        });
-
-        if (response.status === 204) {
-          return NextResponse.json({ is_playing: false });
-        }
-
-        if (!response.ok) {
-          throw new Error(`Failed to get currently playing: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return NextResponse.json(data);
-      }
-
-      default:
-        return badRequestResponse(`Unknown action: ${action}`);
-    }
+    const response = await spotifyRequest(`/me/player/${action}`);
+    return NextResponse.json(response.status === 204 ? { is_playing: false } : await response.json(), { headers: noStore });
   } catch (error) {
-    console.error(`Error in GET /api/spotify/player/[action]:`, error);
-    return serverErrorResponse(`Failed to handle player request`);
+    return handleAPIError(error);
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ action: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: Context) {
   const { action } = await params;
-
+  if (action !== "play" && action !== "pause") return badRequestResponse("Unknown player action");
   try {
-    const accessToken = await getAccessToken();
-
-    switch (action) {
-      case "play": {
-        const body = await request.json();
-        const { device_id, context_uri, uris, offset } = body;
-
-        const response = await fetch(`${SPOTIFY_API_BASE}/me/player/play`, {
-          method: "PUT",
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...(device_id && { device_id }),
-            ...(context_uri && { context_uri }),
-            ...(uris && { uris }),
-            ...(offset && { offset }),
-          }),
-        });
-
-        if (!response.ok && response.status !== 204) {
-          throw new Error(`Failed to play: ${response.statusText}`);
-        }
-
-        return NextResponse.json({ success: true });
-      }
-
-      case "pause": {
-        const response = await fetch(`${SPOTIFY_API_BASE}/me/player/pause`, {
-          method: "PUT",
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-          },
-        });
-
-        if (!response.ok && response.status !== 204) {
-          throw new Error(`Failed to pause: ${response.statusText}`);
-        }
-
-        return NextResponse.json({ success: true });
-      }
-
-      default:
-        return badRequestResponse(`Unknown action: ${action}`);
+    let endpoint = `/me/player/${action}`;
+    let body: string | undefined;
+    if (action === "play") {
+      const input: unknown = await request.json();
+      if (!input || typeof input !== "object" || Array.isArray(input)) return badRequestResponse("Invalid playback request");
+      const { device_id, context_uri, uris, offset } = input as Record<string, unknown>;
+      if (device_id !== undefined && (typeof device_id !== "string" || !device_id)) return badRequestResponse("Invalid device ID");
+      if (context_uri !== undefined && (typeof context_uri !== "string" || !/^spotify:(album|artist|playlist):[a-zA-Z0-9]+$/.test(context_uri))) return badRequestResponse("Invalid context URI");
+      if (uris !== undefined && (!Array.isArray(uris) || uris.length === 0 || uris.length > 100 || !uris.every(uri => typeof uri === "string" && /^spotify:(track|episode):[a-zA-Z0-9]+$/.test(uri)))) return badRequestResponse("Invalid playback URIs");
+      if (context_uri && uris) return badRequestResponse("Provide a context URI or track URIs");
+      if (device_id) endpoint += `?device_id=${encodeURIComponent(device_id as string)}`;
+      body = JSON.stringify({ ...(context_uri ? { context_uri } : {}), ...(uris ? { uris } : {}), ...(offset ? { offset } : {}) });
     }
+    await spotifyRequest(endpoint, { method: "PUT", headers: { "Content-Type": "application/json" }, body });
+    return NextResponse.json({ success: true }, { headers: noStore });
   } catch (error) {
-    console.error(`Error in PUT /api/spotify/player/[action]:`, error);
-    return serverErrorResponse(`Failed to handle player request`);
+    if (error instanceof SyntaxError) return badRequestResponse("Invalid JSON body");
+    return handleAPIError(error);
   }
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ action: string }> }
-) {
+export async function POST(request: NextRequest, { params }: Context) {
   const { action } = await params;
-
+  if (action !== "queue") return badRequestResponse("Unknown player action");
   try {
-    const accessToken = await getAccessToken();
-
-    switch (action) {
-      case "queue": {
-        const body = await request.json();
-        const { uri } = body;
-
-        if (!uri) {
-          return badRequestResponse("URI is required");
-        }
-
-        const response = await fetch(
-          `${SPOTIFY_API_BASE}/me/player/queue?uri=${encodeURIComponent(uri)}`,
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${accessToken}`,
-            },
-          }
-        );
-
-        if (!response.ok && response.status !== 204) {
-          throw new Error(`Failed to add to queue: ${response.statusText}`);
-        }
-
-        return NextResponse.json({ success: true });
-      }
-
-      default:
-        return badRequestResponse(`Unknown action: ${action}`);
-    }
+    const input: unknown = await request.json();
+    const uri = input && typeof input === "object" && "uri" in input ? input.uri : null;
+    if (typeof uri !== "string" || !/^spotify:(track|episode):[a-zA-Z0-9]+$/.test(uri)) return badRequestResponse("Invalid Spotify URI");
+    await spotifyRequest(`/me/player/queue?uri=${encodeURIComponent(uri)}`, { method: "POST" });
+    return NextResponse.json({ success: true }, { headers: noStore });
   } catch (error) {
-    console.error(`Error in POST /api/spotify/player/[action]:`, error);
-    return serverErrorResponse(`Failed to handle player request`);
+    if (error instanceof SyntaxError) return badRequestResponse("Invalid JSON body");
+    return handleAPIError(error);
   }
 }

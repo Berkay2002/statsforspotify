@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   clearSparklinesCache,
   readCachedSparklines,
@@ -9,13 +9,16 @@ import {
   type SparklinesByItemId,
 } from "@/components/charts/sparkline-cache";
 
+import type { TimeRange } from "@/lib/spotify/types";
+
 interface CombinedSparklineLoaderProps {
   artistIds: string[];
   trackIds: string[];
+  timeRange?: TimeRange;
   children: (sparklinesByItemId: SparklinesByItemId, isLoading: boolean) => React.ReactNode;
 }
 
-export function CombinedSparklineLoader({ artistIds, trackIds, children }: CombinedSparklineLoaderProps) {
+export function CombinedSparklineLoader({ artistIds, trackIds, timeRange = "medium_term", children }: CombinedSparklineLoaderProps) {
   const [sparklinesByItemId, setSparklinesByItemId] = useState<SparklinesByItemId>({});
   const [isLoading, setIsLoading] = useState(true);
   const [cacheInvalidationCounter, setCacheInvalidationCounter] = useState(0);
@@ -23,16 +26,13 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
   // Stable keys to prevent unnecessary refetches
   const artistIdsSignature = useMemo(() => artistIds.join(","), [artistIds]);
   const trackIdsSignature = useMemo(() => trackIds.join(","), [trackIds]);
-  const combinedSparklinesCacheKey = `combined:artist:${artistIdsSignature}:track:${trackIdsSignature}`;
+  const combinedSparklinesCacheKey = `combined:${timeRange}:artist:${artistIdsSignature}:track:${trackIdsSignature}`;
   
-  // Track ongoing requests to prevent duplicate fetches
-  const inFlightCacheKeyRef = useRef<string | null>(null);
 
   // Listen for cache invalidation events
   useEffect(() => {
     const handleSparklinesCacheInvalidation = () => {
       clearSparklinesCache();
-      inFlightCacheKeyRef.current = null;
       setCacheInvalidationCounter((previousValue) => previousValue + 1);
     };
     
@@ -49,10 +49,14 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
 
     const fetchSparklines = async () => {
       if (artistIds.length === 0 && trackIds.length === 0) {
-        if (!isCancelled) setIsLoading(false);
+        if (!isCancelled) {
+          setSparklinesByItemId({});
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -66,14 +70,9 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
         return;
       }
 
-      // Prevent duplicate requests for the same data
-      if (inFlightCacheKeyRef.current === combinedSparklinesCacheKey) {
-        return;
-      }
-
       if (!isCancelled) {
         setIsLoading(true);
-        inFlightCacheKeyRef.current = combinedSparklinesCacheKey;
+        setSparklinesByItemId({});
       }
 
       try {
@@ -82,7 +81,7 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
         
         if (artistIds.length > 0) {
           fetchRequests.push(
-            fetch(`/api/rankings/sparklines?type=artist&ids=${artistIdsSignature}`).then(async (response) => {
+            fetch(`/api/rankings/sparklines?type=artist&ids=${artistIdsSignature}&time_range=${timeRange}`, { signal: controller.signal, cache: "no-store" }).then(async (response) => {
               if (!response.ok) {
                 throw new Error("Failed to fetch artist sparklines");
               }
@@ -93,7 +92,7 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
         
         if (trackIds.length > 0) {
           fetchRequests.push(
-            fetch(`/api/rankings/sparklines?type=track&ids=${trackIdsSignature}`).then(async (response) => {
+            fetch(`/api/rankings/sparklines?type=track&ids=${trackIdsSignature}&time_range=${timeRange}`, { signal: controller.signal, cache: "no-store" }).then(async (response) => {
               if (!response.ok) {
                 throw new Error("Failed to fetch track sparklines");
               }
@@ -120,13 +119,11 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
           writeCachedSparklines(combinedSparklinesCacheKey, combinedSparklinesByItemId);
           setSparklinesByItemId(combinedSparklinesByItemId);
           setIsLoading(false);
-          inFlightCacheKeyRef.current = null;
         }
       } catch (caughtError) {
         if (!isCancelled) {
           console.error("Failed to fetch sparklines:", caughtError);
           setIsLoading(false);
-          inFlightCacheKeyRef.current = null;
         }
       }
     };
@@ -135,8 +132,10 @@ export function CombinedSparklineLoader({ artistIds, trackIds, children }: Combi
 
     return () => {
       isCancelled = true;
+      controller.abort();
     };
   }, [
+    timeRange,
     artistIdsSignature,
     trackIdsSignature,
     artistIds.length,

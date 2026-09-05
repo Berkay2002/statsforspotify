@@ -23,6 +23,7 @@ export function LoginDialog({ children }: LoginDialogProps) {
   const handleLogin = () => {
     setIsLoading(true);
     // Use window.location to ensure proper redirect behavior on mobile
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- OAuth needs a full document request, not a prefetched route transition.
     window.location.href = "/auth/callback?action=login";
   };
 

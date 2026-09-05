@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTrackDetails } from "@/lib/spotify/api";
-import { serverErrorResponse } from "@/lib/api/utils";
+import { handleAPIError } from "@/lib/api/utils";
 
 export async function GET(
   request: NextRequest,
@@ -13,6 +13,6 @@ export async function GET(
     return NextResponse.json(track);
   } catch (error) {
     console.error(`Error fetching track ${trackId}:`, error);
-    return serverErrorResponse("Failed to fetch track details");
+    return handleAPIError(error);
   }
 }
