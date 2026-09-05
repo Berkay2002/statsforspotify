@@ -1,0 +1,74 @@
+name: Maintenance database backup
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: production-database-maintenance
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PGHOST: aws-1-eu-central-1.pooler.supabase.com
+      PGPORT: '5432'
+      PGDATABASE: postgres
+      PGSSLMODE: require
+      PGCONNECT_TIMEOUT: '20'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.0
+      - name: Install native PostgreSQL client
+        run: |
+          . /etc/os-release
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          printf 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt %s-pgdg main\n' "$VERSION_CODENAME" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
+      - name: Verify destination and inspect production metadata
+        run: |
+          test "$SUPABASE_PROJECT_ID" = zpswcygleazebxmpblcx
+          echo "PGUSER=postgres.$SUPABASE_PROJECT_ID" >> "$GITHUB_ENV"
+          export PGUSER="postgres.$SUPABASE_PROJECT_ID"
+          psql -X -v ON_ERROR_STOP=1 <<'SQL'
+          SELECT current_setting('server_version') AS server_version;
+          SELECT 'artist_rankings' AS source,count(*) AS owner_mismatches FROM public.artist_rankings r JOIN public.snapshots s ON s.id=r.snapshot_id WHERE r.user_id<>s.user_id
+          UNION ALL SELECT 'track_rankings',count(*) FROM public.track_rankings r JOIN public.snapshots s ON s.id=r.snapshot_id WHERE r.user_id<>s.user_id
+          UNION ALL SELECT 'album_rankings',count(*) FROM public.album_rankings r JOIN public.snapshots s ON s.id=r.snapshot_id WHERE r.user_id<>s.user_id;
+          SELECT count(*) AS duplicate_utc_day_groups FROM (SELECT 1 FROM public.snapshots GROUP BY user_id,time_range,(created_at AT TIME ZONE 'UTC')::date HAVING count(*)>1) duplicates;
+          SELECT jobid,jobname,schedule,active,command LIKE '%collect-snapshots%' AS is_collector FROM cron.job;
+          SELECT count(*) AS users FROM auth.users;
+          SELECT count(*) AS snapshots FROM public.snapshots;
+          SQL
+          supabase functions list --project-ref "$SUPABASE_PROJECT_ID"
+          mkdir -p supabase/.temp
+          printf '%s' "$SUPABASE_PROJECT_ID" > supabase/.temp/project-ref
+          supabase db advisors --linked --type security --fail-on none
+      - name: Back up public and Auth schemas and data, then encrypt
+        env:
+          STATS_BACKUP_PUBLIC_KEY: ${{ vars.STATS_BACKUP_PUBLIC_KEY }}
+        run: |
+          test -n "$STATS_BACKUP_PUBLIC_KEY"
+          umask 077
+          pg_dump --format=custom --schema=public --schema=auth --file="$RUNNER_TEMP/stats.dump"
+          pg_restore --list "$RUNNER_TEMP/stats.dump" > "$RUNNER_TEMP/stats-backup-contents.txt"
+          pg_restore --file=/dev/null "$RUNNER_TEMP/stats.dump"
+          node .github/scripts/database-backup.mjs encrypt "$RUNNER_TEMP/stats.dump" "$RUNNER_TEMP/stats.dump.encrypted"
+          sha256sum "$RUNNER_TEMP/stats.dump.encrypted"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stats-database-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/stats.dump.encrypted
+          retention-days: 7
+          if-no-files-found: error
