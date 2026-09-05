@@ -9,7 +9,7 @@ A web app to track your Spotify listening history and visualize how your music t
 - **Top Genres** — Discover your favorite genres derived from top artists
 - **Historical Tracking** — Automatic snapshots save your rankings to track changes over time
 - **Trend Visualization** — Recharts-powered line graphs and sparklines showing ranking history
-- **Auto-Snapshot Collection** — Rankings are automatically collected when you visit the dashboard (respects 24-hour interval)
+- **Auto-Snapshot Collection** — Rankings are automatically collected when you visit the dashboard (once per UTC calendar day)
 - **Rank Change Visualization** — Color-coded badges showing position changes (↑5, ↓3, NEW, —)
   - Inline badges in artist/track/album lists
   - Enhanced charts with colored dots at significant rank changes (±5 positions)
@@ -17,7 +17,7 @@ A web app to track your Spotify listening history and visualize how your music t
   - Progressive enhancement: works with or without historical data
 
 ### Social Features
-- **Friends System** — Connect with friends who mutually follow you on Spotify
+- **Friends System** — Send and accept friend requests within the app
 - **Privacy Controls** — Choose who can view your stats (public, friends-only, or private)
 - **User Profiles** — Discord-style usernames with discriminators (#0000)
 - **Friend Discovery** — Search for users and see follow-back suggestions
@@ -44,13 +44,13 @@ A web app to track your Spotify listening history and visualize how your music t
 - **Animations**: Framer Motion
 - **State Management**: TanStack React Query (for social features)
 - **Auth**: Spotify OAuth via Supabase
-- **Runtime**: Node.js 18+ or Bun
+- **Runtime**: Node.js 22+ or Bun
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ or Bun
+- Node.js 22+ or Bun
 - Supabase project
 - Spotify Developer App
 
@@ -87,6 +87,10 @@ cp .env.local.example .env.local
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_server_only_spotify_client_secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ### 4. Run Development Server
@@ -158,7 +162,7 @@ All tables have Row Level Security (RLS) enabled to ensure users can only access
 
 ## Automated Snapshots
 
-Snapshots are automatically collected when users visit the dashboard (see [auto-snapshot-trigger.tsx](components/auto-snapshot-trigger.tsx)). The system respects a 24-hour interval to avoid excessive API calls. You can also set up:
+Snapshots are automatically collected when users visit the dashboard (see [auto-snapshot-trigger.tsx](components/auto-snapshot-trigger.tsx)). The system collects once per UTC calendar day to avoid excessive API calls. You can also set up:
 
 - **Scheduled snapshots** via Supabase Edge Functions with pg_cron
 - **External cron services** calling `/api/snapshot` with authentication
@@ -167,16 +171,16 @@ Snapshots are automatically collected when users visit the dashboard (see [auto-
 
 ### Friend System
 The friends feature lets users:
-- See their Spotify followers who also use the app
-- Follow back suggestions for mutual connections
+- Send and accept friend requests from other app users
+- Manage pending requests and accepted friendships
 - Search for other users by display name
 - View stats from friends (respects privacy settings)
-- Cache follow relationships to reduce Spotify API calls
+- Enforce friendship and privacy rules in the database
 
 ### Privacy Controls
 Users can set their stats visibility to:
 - **Public** — Anyone can view your stats
-- **Friends Only** — Only mutual Spotify followers can see your stats
+- **Friends Only** — Only accepted friends can see your stats
 - **Private** — Only you can see your stats
 
 ### Auto-Generated Database Types
@@ -195,6 +199,11 @@ bun dev          # Start development server
 bun build        # Build for production
 bun start        # Start production server
 bun lint         # Run ESLint
+bun run typecheck
+bun run test     # Isolated Bun regression tests
+bun run test:db:core # Embedded PostgreSQL checks
+bun run test:db  # Native PostgreSQL 17+ regression and concurrency tests
+bun run test:e2e # Playwright smoke tests after build
 ```
 
 ## Deploy on Vercel
@@ -224,6 +233,17 @@ This app includes several performance optimizations:
 - **Image optimization** — Next.js Image component with Spotify CDN integration
 - **Request deduplication** — Follow status cached to reduce Spotify API calls
 - **Code splitting** — Client components lazy-loaded only when needed
+
+## Maintenance and verification
+
+See [the maintenance audit](docs/maintenance-audit.md) for findings and evidence,
+[deployment instructions](docs/maintenance-deployment.md) for the coordinated app/database release,
+and [schema sync](SCHEMA_SYNC.md) for generated files and migration testing.
+
+On Windows, copy the example with `Copy-Item .env.local.example .env.local`.
+`bun run validate:schema-sync` works without WSL or Bash. Server credentials belong
+only in local/server environment configuration. Set the canonical HTTPS app origin
+in production and configure the matching callback allowlist in Supabase.
 
 ## License
 

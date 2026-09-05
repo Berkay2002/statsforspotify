@@ -3,23 +3,23 @@
 # Test script to validate Supabase connection and secrets
 # This simulates what the GitHub Actions workflow does
 
-set -e
+set -euo pipefail
 
 echo "🔍 Testing Supabase connection and schema sync..."
 echo ""
 
 # Check for required environment variables
-if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
   echo "❌ Error: SUPABASE_ACCESS_TOKEN is not set"
   exit 1
 fi
 
-if [ -z "$SUPABASE_PROJECT_ID" ]; then
+if [ -z "${SUPABASE_PROJECT_ID:-}" ]; then
   echo "❌ Error: SUPABASE_PROJECT_ID is not set"
   exit 1
 fi
 
-if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+if [ -z "${SUPABASE_DB_PASSWORD:-}" ]; then
   echo "❌ Error: SUPABASE_DB_PASSWORD is not set"
   exit 1
 fi
@@ -42,16 +42,18 @@ echo ""
 
 # Test database connection
 echo "🔌 Testing database connection..."
-DB_URL="postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${SUPABASE_PROJECT_ID}.supabase.co:5432/postgres"
+ENCODED_PASSWORD=$(bun -e 'process.stdout.write(encodeURIComponent(process.env.SUPABASE_DB_PASSWORD))')
+DB_URL="postgresql://postgres:${ENCODED_PASSWORD}@db.${SUPABASE_PROJECT_ID}.supabase.co:5432/postgres"
 
 # Create test directory
-mkdir -p /tmp/supabase-test
+TEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/statsforspotify-connection.XXXXXX")
+trap 'rm -f -- "$TEST_DIR/schema.sql" "$TEST_DIR/database.ts" "$TEST_DIR/dump-error.log" "$TEST_DIR/types-error.log"; rmdir -- "$TEST_DIR"' EXIT
 
 # Try to dump schema (to temp location)
 echo "📥 Attempting to dump schema..."
-if supabase db dump --db-url "$DB_URL" --data-only=false > /tmp/supabase-test/schema.sql 2>&1; then
+if supabase db dump --db-url "$DB_URL" --data-only=false > "$TEST_DIR/schema.sql" 2> "$TEST_DIR/dump-error.log"; then
   echo "✅ Schema dump successful!"
-  echo "   Schema size: $(wc -l < /tmp/supabase-test/schema.sql) lines"
+  echo "   Schema size: $(wc -l < "$TEST_DIR/schema.sql") lines"
 else
   echo "❌ Schema dump failed!"
   exit 1
@@ -60,19 +62,18 @@ echo ""
 
 # Try to generate TypeScript types
 echo "🔧 Attempting to generate TypeScript types..."
-if supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID" > /tmp/supabase-test/database.ts 2>&1; then
+if supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID" > "$TEST_DIR/database.ts" 2> "$TEST_DIR/types-error.log"; then
   echo "✅ TypeScript types generation successful!"
-  echo "   Types file size: $(wc -l < /tmp/supabase-test/database.ts) lines"
+  echo "   Types file size: $(wc -l < "$TEST_DIR/database.ts") lines"
 else
   echo "❌ TypeScript types generation failed!"
   exit 1
 fi
 echo ""
 
-# Cleanup
-rm -rf /tmp/supabase-test
+# The trap removes only the unique temporary directory created by this run.
 
-echo "🎉 All tests passed! The workflow should work correctly."
+echo "Connection, schema dump, and type generation passed. This does not test the GitHub push step."
 echo ""
 echo "📝 Next steps:"
 echo "   1. Merge this PR to main"

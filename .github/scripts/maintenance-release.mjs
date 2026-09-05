@@ -30,6 +30,7 @@ if (operation === 'inspect') {
     throw new Error('Deploy the reviewed application in maintenance mode before changing production');
   }
   if (operation === 'migrate') {
+    if (sql("SELECT EXISTS (SELECT 1 FROM cron.job_run_details d JOIN cron.job j USING(jobid) WHERE j.jobname='collect-daily-snapshots' AND (d.status='running' OR d.start_time > now()-interval '5 minutes'))") !== 'f') throw new Error('Wait for the recent scheduled collector invocation to finish before migrating');
     if (!/^\d+$/.test(process.env.BACKUP_RUN_ID ?? '')) throw new Error('Missing backup run');
     const run = JSON.parse(execFileSync('gh', ['api', `repos/Berkay2002/statsforspotify/actions/runs/${process.env.BACKUP_RUN_ID}`], { encoding: 'utf8' }));
     if (run.conclusion !== 'success' || run.path !== '.github/workflows/maintenance-database.yml' || Date.now() - Date.parse(run.created_at) > 86400000) throw new Error('A successful backup from the last 24 hours is required');
@@ -76,6 +77,7 @@ COMMIT;`;
   const response = await fetch(`${origin}/api/spotify/token`, { redirect: 'manual', cache: 'no-store' });
   if (response.status !== 401 || response.headers.get('cache-control') !== 'private, no-store') throw new Error('Updated application must be healthy and out of maintenance before resuming');
   if (sql("SELECT to_regprocedure('public.persist_snapshot(uuid,text,jsonb,jsonb,jsonb)') IS NOT NULL") !== 't') throw new Error('Snapshot migration missing');
+  if (functionInfo.version <= 6) throw new Error('Deploy the repaired collector before resuming its schedule');
   console.log(sql("SELECT cron.alter_job(jobid,active:=true) FROM cron.job WHERE jobname='collect-daily-snapshots'"));
 } else {
   throw new Error('Unknown maintenance operation');
