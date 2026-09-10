@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { statsDetailHref } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
@@ -20,6 +21,7 @@ interface Artist {
 }
 
 interface ArtistsListProps {
+  userId?: string;
   artistsByTimeRange: {
     short_term: Artist[];
     medium_term: Artist[];
@@ -27,18 +29,19 @@ interface ArtistsListProps {
   };
 }
 
-export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
+export function ArtistsList({ artistsByTimeRange, userId }: ArtistsListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={artistsByTimeRange}
       itemType="artist"
+      userId={userId}
       className="w-full"
       tabsRightContent={<SparklineInfo />}
-      renderItems={(artists, sparklines, loading) => (
+      renderItems={(artists, sparklines, loading, timeRange) => (
         <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {artists.map((artist, index) => (
             <Card key={artist.id} className="group overflow-hidden transition-all hover:shadow-lg flex flex-col p-0">
-              <Link href={`/dashboard/artists/${artist.id}`} className="relative h-32 sm:h-64 w-full shrink-0 block">
+              <Link href={statsDetailHref("artist", artist.id, timeRange, userId)} className="relative h-32 sm:h-64 w-full shrink-0 block">
                 {artist.imageUrl ? (
                   <>
                     <Image
@@ -64,7 +67,7 @@ export function ArtistsList({ artistsByTimeRange }: ArtistsListProps) {
                     {artist.rank}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <Link href={`/dashboard/artists/${artist.id}`}>
+                    <Link href={statsDetailHref("artist", artist.id, timeRange, userId)}>
                       <div className="flex items-center gap-2 min-w-0">
                         <p className="truncate font-semibold text-lg flex-1 min-w-0">
                           {artist.name}

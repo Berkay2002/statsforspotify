@@ -12,6 +12,8 @@ import type { TimeRange } from "@/lib/spotify/types";
 
 interface RankingHistoryLoaderProps {
   itemId: string;
+  userId?: string;
+  ownerLabel?: string;
   itemType: "artist" | "track" | "album";
   timeRange?: TimeRange;
   onTimeRangeChange?: (timeRange: TimeRange) => void;
@@ -29,6 +31,8 @@ const STAT_VARIANTS: Variants = {
 
 export function RankingHistoryLoader({
   itemId,
+  userId,
+  ownerLabel,
   itemType,
   timeRange: controlledTimeRange,
   onTimeRangeChange,
@@ -52,7 +56,7 @@ export function RankingHistoryLoader({
   // Reset stats animation whenever time range changes
   useEffect(() => {
     setShowStats(false);
-  }, [timeRange]);
+  }, [timeRange, userId]);
 
   const handleAnimationComplete = useCallback(() => setShowStats(true), []);
 
@@ -70,8 +74,10 @@ export function RankingHistoryLoader({
         time_range: timeRange, // Always send time_range (long_term = All Time)
       });
 
+      if (userId) queryParameters.set("user_id", userId);
+
       try {
-        const response = await fetch(`/api/rankings/history?${queryParameters}`);
+        const response = await fetch(`/api/rankings/history?${queryParameters}`, { cache: "no-store" });
 
         if (isCancelled) return;
 
@@ -85,7 +91,7 @@ export function RankingHistoryLoader({
             }
             return;
           }
-          throw new Error("Failed to fetch ranking history");
+          throw new Error(response.status === 403 ? "These stats are no longer shared with you." : "Failed to fetch ranking history. Please try again.");
         }
 
         const responseBody = (await response.json()) as RankingHistoryResponse;
@@ -109,7 +115,7 @@ export function RankingHistoryLoader({
     return () => {
       isCancelled = true;
     };
-  }, [itemId, itemType, timeRange]);
+  }, [itemId, itemType, timeRange, userId]);
 
   if (isLoading) {
     return (
@@ -129,12 +135,12 @@ export function RankingHistoryLoader({
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Ranking History</CardTitle>
+            <CardTitle>{ownerLabel ? `${ownerLabel} ranking history` : "Ranking History"}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-            {error || "No historical data available yet. Check back after your next snapshot."}
+            {error || "No saved ranking for this item in the selected time range yet."}
           </div>
         </CardContent>
       </Card>
@@ -147,7 +153,7 @@ export function RankingHistoryLoader({
     <Card className="w-full">
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
         <div className="flex items-center gap-3">
-          <CardTitle>Ranking History</CardTitle>
+          <CardTitle>{ownerLabel ? `${ownerLabel} ranking history` : "Ranking History"}</CardTitle>
           <RankingBadge
             isNewEntry={rankingHistoryResponse.metadata.totalSnapshots === 1}
             isReentry={mostRecentEntry?.isReentry}
@@ -185,7 +191,7 @@ export function RankingHistoryLoader({
       <CardContent>
         <div className="w-full pt-2 pb-4">
           <RankingChart
-            key={timeRange}
+            key={`${userId ?? "me"}:${timeRange}`}
             data={rankingHistoryResponse.history}
             metadata={rankingHistoryResponse.metadata}
             onAnimationComplete={handleAnimationComplete}

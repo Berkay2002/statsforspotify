@@ -823,7 +823,7 @@ ALTER FUNCTION "public"."get_hall_of_fame_recap"("p_target_user_id" "uuid", "p_d
 
 
 CREATE OR REPLACE FUNCTION "public"."get_latest_snapshot"("target_user_id" "uuid", "target_time_range" "text" DEFAULT 'medium_term'::"text") RETURNS TABLE("snapshot_id" "uuid", "created_at" timestamp with time zone)
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
     SET "search_path" TO 'public'
     AS $$
 BEGIN
@@ -1230,7 +1230,7 @@ ALTER FUNCTION "public"."get_plot_twists_recap"("p_target_user_id" "uuid", "p_da
 
 
 CREATE OR REPLACE FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item_id" "text", "p_item_type" "text", "p_time_range" "text") RETURNS TABLE("date" timestamp with time zone, "rank" integer, "is_new_entry" boolean, "is_reentry" boolean, "peak_rank" integer, "time_range" "text")
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
     AS $_$
 BEGIN
@@ -1282,7 +1282,7 @@ ALTER FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_item_id" "t
 
 
 CREATE OR REPLACE FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer DEFAULT 100) RETURNS TABLE("snapshot_id" "uuid", "created_at" timestamp with time zone, "rank" integer, "previous_rank" integer)
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
 BEGIN
@@ -1325,7 +1325,7 @@ ALTER FUNCTION "public"."get_ranking_history"("p_user_id" "uuid", "p_entity_id" 
 
 
 CREATE OR REPLACE FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "text"[], "p_item_type" "text", "p_days" integer) RETURNS TABLE("item_id" "text", "date" timestamp with time zone, "rank" integer)
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
     AS $_$
 BEGIN
@@ -1374,7 +1374,7 @@ ALTER FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_item_ids" "t
 
 
 CREATE OR REPLACE FUNCTION "public"."get_sparkline_data"("p_user_id" "uuid", "p_entity_id" "text", "p_entity_type" "text", "p_time_range" "text", "p_limit" integer DEFAULT 30) RETURNS TABLE("created_at" timestamp with time zone, "rank" integer)
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
 BEGIN
@@ -2219,6 +2219,22 @@ ALTER TABLE ONLY "public"."track_rankings"
 
 ALTER TABLE ONLY "public"."user_profiles"
     ADD CONSTRAINT "user_profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+CREATE POLICY "Respect stats visibility when reading album rankings" ON "public"."album_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading artist rankings" ON "public"."artist_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading snapshots" ON "public"."snapshots" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading track rankings" ON "public"."track_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
 
 
 

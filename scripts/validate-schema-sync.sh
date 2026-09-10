@@ -33,9 +33,8 @@ echo "✅ Schema file exists"
 
 # Check if documentation exists
 DOCS=(
-    "SCHEMA_SYNC.md"
+    ".github/WORKFLOW_MONITORING.md"
     ".github/SECRETS_SETUP.md"
-    ".github/README.md"
     "supabase/schema/README.md"
 )
 

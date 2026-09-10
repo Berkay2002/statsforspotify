@@ -20,7 +20,8 @@ interface TimeRangeData<T extends ItemWithId> {
 interface TimeRangeListProps<T extends ItemWithId> {
   itemsByTimeRange: TimeRangeData<T>;
   itemType: "artist" | "track" | "album";
-  renderItems: (items: T[], sparklinesByItemId: SparklinesByItemId, isLoading: boolean) => ReactNode;
+  renderItems: (items: T[], sparklinesByItemId: SparklinesByItemId, isLoading: boolean, timeRange: TimeRange) => ReactNode;
+  userId?: string;
   className?: string;
   tabsRightContent?: ReactNode;
 }
@@ -32,6 +33,7 @@ interface TimeRangeListProps<T extends ItemWithId> {
 export function TimeRangeList<T extends ItemWithId>({
   itemsByTimeRange,
   itemType,
+  userId,
   renderItems,
   className,
   tabsRightContent,
@@ -41,7 +43,7 @@ export function TimeRangeList<T extends ItemWithId>({
   const itemIds = useMemo(() => items.map((item) => item.id), [items]);
 
   return (
-    <SparklineLoader itemIds={itemIds} itemType={itemType}>
+    <SparklineLoader key={`${userId ?? "me"}:${timeRange}`} itemIds={itemIds} itemType={itemType} userId={userId}>
       {(sparklinesByItemId, isLoading) => (
         <TimeRangeTabs
           value={timeRange}
@@ -50,7 +52,7 @@ export function TimeRangeList<T extends ItemWithId>({
           rightContent={tabsRightContent}
         >
           <TabsContent value={timeRange} className="mt-6">
-            {renderItems(items, sparklinesByItemId, isLoading)}
+            {renderItems(items, sparklinesByItemId, isLoading, timeRange)}
           </TabsContent>
         </TimeRangeTabs>
       )}

@@ -12,11 +12,12 @@ import SparklineChart from "@/components/charts/sparkline-chart";
 
 interface SparklineLoaderProps {
   itemIds: string[];
+  userId?: string;
   itemType: "artist" | "track" | "album";
   children: (sparklinesByItemId: SparklinesByItemId, isLoading: boolean) => React.ReactNode;
 }
 
-export function SparklineLoader({ itemIds, itemType, children }: SparklineLoaderProps) {
+export function SparklineLoader({ itemIds, itemType, userId, children }: SparklineLoaderProps) {
   const [sparklinesByItemId, setSparklinesByItemId] = useState<SparklinesByItemId>({});
   const [isLoading, setIsLoading] = useState(true);
   const [cacheInvalidationCounter, setCacheInvalidationCounter] = useState(0);
@@ -24,7 +25,7 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
   // Stable key to prevent unnecessary refetches when array reference changes
   // Only refetch if the actual IDs or their order changes
   const itemIdsSignature = useMemo(() => itemIds.join(","), [itemIds]);
-  const sparklinesCacheKey = `${itemType}:${itemIdsSignature}`;
+  const sparklinesCacheKey = `${userId ?? "me"}:${itemType}:${itemIdsSignature}`;
   
   // Track ongoing requests to prevent duplicate fetches
   const inFlightCacheKeyRef = useRef<string | null>(null);
@@ -73,12 +74,13 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
 
       if (!isCancelled) {
         setIsLoading(true);
+        setSparklinesByItemId({});
         inFlightCacheKeyRef.current = sparklinesCacheKey;
       }
       
       try {
         const response = await fetch(
-          `/api/rankings/sparklines?type=${itemType}&ids=${itemIdsSignature}`,
+          `/api/rankings/sparklines?type=${itemType}&ids=${itemIdsSignature}${userId ? `&user_id=${encodeURIComponent(userId)}` : ""}`,
         );
         
         if (isCancelled) return;
@@ -111,8 +113,9 @@ export function SparklineLoader({ itemIds, itemType, children }: SparklineLoader
 
     return () => {
       isCancelled = true;
+      inFlightCacheKeyRef.current = null;
     };
-  }, [itemIds.length, itemIdsSignature, itemType, sparklinesCacheKey, cacheInvalidationCounter]); // Use stable key instead of itemIds array
+  }, [itemIds.length, itemIdsSignature, itemType, userId, sparklinesCacheKey, cacheInvalidationCounter]); // Use stable key instead of itemIds array
 
   return <>{children(sparklinesByItemId, isLoading)}</>;
 }
