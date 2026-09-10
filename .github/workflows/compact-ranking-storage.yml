@@ -61,5 +61,6 @@ jobs:
           path: |
             ${{ runner.temp }}/ranking-pause-state.json
             ${{ runner.temp }}/ranking-release-result.json
+            ${{ runner.temp }}/ranking-source-contract.json
           if-no-files-found: ignore
           retention-days: 7

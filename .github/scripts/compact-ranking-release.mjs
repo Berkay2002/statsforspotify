@@ -86,6 +86,22 @@ function verifyCompact() {
   }
   if (sql(`SELECT EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='${version}');`) !== 't') throw new Error('Migration history entry missing');
 }
+function verifyCurrentStorage() {
+  if (sql("SELECT to_regnamespace('ranking_storage') IS NOT NULL;") === 't') {
+    verifyCompact();
+    return;
+  }
+  // Recovery also supports a completed lossless rollback. Mixed states fail.
+  if (sql(`SELECT to_regnamespace('ranking_storage_backup') IS NULL AND
+    NOT EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='${version}');`) !== 't') {
+    throw new Error('Incomplete rollback state');
+  }
+  for (const kind of ['artist', 'track', 'album']) {
+    if (sql(`SELECT relkind='r' AND relrowsecurity FROM pg_class WHERE oid='public.${kind}_rankings'::regclass;`) !== 't') {
+      throw new Error(`Original storage was not restored: ${kind}`);
+    }
+  }
+}
 async function smokeApi() {
   const keysResponse = await fetch(`https://api.supabase.com/v1/projects/${project}/api-keys`, {
     headers: { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}` },
@@ -109,6 +125,13 @@ async function smokeApi() {
 
 if (operation === 'inspect') {
   console.log(JSON.stringify({ compact: sql("SELECT to_regnamespace('ranking_storage') IS NOT NULL;"), fingerprints: fingerprints() }));
+  const source = readFileSync(`supabase/migrations/${version}_compact_ranking_storage.sql`, 'utf8');
+  const expression = source.match(/IF md5\((jsonb_build_object\([\s\S]*?)::text\) <>/)[1];
+  const contracts = Object.fromEntries(['artist', 'track', 'album'].map(kind => [kind,
+    JSON.parse(sql(`SELECT ${expression.replaceAll('artist_rankings', `${kind}_rankings`)};`))]));
+  writeFileSync(join(process.env.RUNNER_TEMP, 'ranking-source-contract.json'), JSON.stringify({
+    searchPath: sql('SHOW search_path;'), contracts,
+  }, null, 2));
 } else if (operation === 'pause') {
   await requireMaintenance();
   writeFileSync(join(process.env.RUNNER_TEMP, 'ranking-pause-state.json'), JSON.stringify({ project, sha, job: job[0], pausedAt: new Date().toISOString() }, null, 2));
@@ -135,14 +158,14 @@ if (operation === 'inspect') {
   writeFileSync(join(process.env.RUNNER_TEMP, 'ranking-release-result.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
 } else if (operation === 'verify') {
-  verifyCompact();
+  verifyCurrentStorage();
   const before = fingerprints();
   sql(readFileSync('.github/scripts/ranking-production-smoke.sql', 'utf8'));
   if (JSON.stringify(before) !== JSON.stringify(fingerprints())) throw new Error('Rollback smoke fixture changed persisted rows');
   await smokeApi();
   console.log(JSON.stringify({ verified: true, counts: JSON.parse(sql(queryCounts)), fingerprints: fingerprints() }));
 } else if (operation === 'resume') {
-  verifyCompact();
+  verifyCurrentStorage();
   const original = pauseState();
   const response = await fetch(`${origin}/api/snapshot`, { method: 'POST', redirect: 'manual', cache: 'no-store' });
   if (response.status !== 401 || response.headers.has('x-ranking-storage-maintenance')
