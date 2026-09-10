@@ -1,8 +1,18 @@
 # Local rehearsal results — 2026-09-10
 
-The final migration is prepared for a controlled rollout. Production was not changed or deployed. The initial read-only prototype has been replaced by writable views, per-user metadata, narrow indexes, explicit authorization, concurrency handling and a tested rollback.
+The compact storage migration was applied to production on 2026-09-10. Writable views, per-user metadata, narrow indexes, explicit authorization and concurrency handling preserve the existing application contract. The rollback reconstructs original tables from current data.
 
-## Storage
+## Production storage
+
+The [production migration](https://github.com/Berkay2002/statsforspotify/actions/runs/34484044029) reduced PostgreSQL database size from **161,770,643 to 69,504,147 bytes**: **92.27 MB saved (57.0%)**. All 323,781 ranking rows, 2,397 snapshots and four Auth users remained. Every typed ranking fingerprint matched before and after the transaction.
+
+The encrypted backup taken after pausing collection ([run 34482590787](https://github.com/Berkay2002/statsforspotify/actions/runs/34482590787)) was decrypted and restored into a new isolated local database. The exact production wrapper, rollback, reapply and production smoke SQL passed there before deployment. Backup artifacts contain sensitive data and remain encrypted on GitHub; private restored copies are outside Git.
+
+[Production verification](https://github.com/Berkay2002/statsforspotify/actions/runs/34484325226) passed rolled-back owner/service writes, anonymous isolation, real REST reads and snapshot embedding for all three ranking types. Persisted ranking fingerprints remained unchanged. The post-verification size was 69.69 MB; normal catalog/page allocation can move this measurement slightly.
+
+An initial attempt stopped before execution when main advanced. A second attempt rolled back because connection search paths formatted equivalent policy/constraint expressions differently. Canonical `pg_catalog,public` deparsing matched the live schema exactly and is now enforced inside the migration transaction; regression tests cover both connection settings.
+
+## Local storage
 
 | Restored database | Before | After | Saving |
 | --- | ---: | ---: | ---: |
@@ -19,7 +29,7 @@ All **111,376 artist, 119,850 track and 92,555 album rankings** and **2,397 snap
 - 33 additional checks passed: deterministic ownership-transfer/disjoint-update/prune-and-reuse races, plus explicit rejection of unsupported isolation levels without persistence.
 - 36 actual PostgREST checks passed across all ranking types, including bulk RETURNING, metadata edits, FK snapshot embedding, original HTTP/error status behavior, ownership and atomicity.
 - 244 history, sparkline, recap and viewer/owner visibility comparisons matched; nine privacy/friendship-state fixtures also matched.
-- 12 preflight/private-schema checks passed: policy/constraint/dependency drift aborts without leaving migration changes, and API roles cannot directly read private metadata.
+- 14 preflight/private-schema checks passed: both incoming search-path settings succeed; policy/constraint/dependency drift aborts without leaving migration changes, and API roles cannot directly read private metadata.
 - Forward migration checks every typed row using bidirectional EXCEPT ALL. Rollback and reapply preserved original data plus committed post-migration inserts, edits, deletions and a non-default PostgreSQL array lower bound; fixture cleanup returned the exact original fingerprints.
 - The updated backup command worked both before and after migration. A full custom-format backup restored into a separate database; all **37 application, Auth and private tables** matched typed-row fingerprints.
 - ESLint, TypeScript and Next.js production build passed. The build was checked against both generated candidate types and the original production types; local placeholder Supabase settings were supplied for prerendering. No live Spotify/OAuth browser flow was executed.
@@ -42,8 +52,8 @@ Representative service-role batches of up to 50 existing-metadata rows took abou
 
 ## Artifacts and operational boundary
 
-Runbook: [README.md](README.md). Migration SHA-256: `e37fa620270f0e10d9b149d451890107b2761871a9a6324aaaa1482f3aee6efb`.
+Runbook: [README.md](README.md). Migration SHA-256: `64a789669e5c7288960f6271a348f90c85585ec977d06ddd1fb66ba6da74ee7e`.
 
 Raw exports, generated candidate types, detailed plans and JSON results remain in the restricted local artifact directory, outside Git. Test database engines: PostgreSQL 17.6 (Supabase image 17.6.1.063), PostgREST 14.17; type introspection used postgres-meta 0.99.0 and preserved the existing PostgREST 14.5 type hint.
 
-Production rollout still needs an approved maintenance window, freshly restored backup, verified target/schema, paused writers, cache reload and live smoke checks. Writes require READ COMMITTED. Table-only operations such as upserts, TRUNCATE or new incoming foreign keys are outside the supported view contract. Backups must retain both private schemas. The generated production schema snapshots remain unchanged until actual deployment.
+The production release uses an exact-commit maintenance gate, recorded collector pause, fresh backup, drained writers, transaction-level fingerprints and live SQL/REST checks. Writes require READ COMMITTED. Table-only operations such as upserts, TRUNCATE or new incoming foreign keys are outside the supported view contract. Backups must retain both private schemas. Generated schema snapshots are refreshed from production through the existing schema-sync workflow.

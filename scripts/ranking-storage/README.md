@@ -1,6 +1,6 @@
 # Compact ranking storage
 
-Status: implemented and rehearsed against an isolated copy on 2026-09-10. Production has not been migrated. See [measured results](RESULTS.md).
+Status: migrated to production on 2026-09-10 after isolated backup restoration, migration and rollback rehearsals. See [measured results](RESULTS.md).
 
 The [migration](../../supabase/migrations/20260910122700_compact_ranking_storage.sql) preserves every ranking UUID, snapshot, owner, timestamp, rank, previous rank, popularity and metadata value. It stores repeated descriptive metadata once per user and version. Public ranking names become writable security-invoker views; current application and collector inserts retain their endpoints and payloads. The Table Editor will still show the same logical ranking count.
 
