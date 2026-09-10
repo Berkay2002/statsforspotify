@@ -51,13 +51,15 @@ jobs:
           SELECT count(*) AS users FROM auth.users;
           SELECT count(*) AS snapshots FROM public.snapshots;
           SQL
-      - name: Back up public and Auth schemas and data, then encrypt
+      - name: Back up application, compact storage and Auth schemas, then encrypt
         env:
           STATS_BACKUP_PUBLIC_KEY: ${{ vars.STATS_BACKUP_PUBLIC_KEY }}
         run: |
           test -n "$STATS_BACKUP_PUBLIC_KEY"
           umask 077
-          pg_dump --format=custom --schema=public --schema=auth --file="$RUNNER_TEMP/stats.dump"
+          # Views contain no data. Include their private storage and rollback
+          # definitions; absent optional schemas are harmless before migration.
+          pg_dump --format=custom --schema=public --schema=auth --schema=ranking_storage --schema=ranking_storage_backup --file="$RUNNER_TEMP/stats.dump"
           pg_restore --list "$RUNNER_TEMP/stats.dump" > "$RUNNER_TEMP/stats-backup-contents.txt"
           pg_restore --file=/dev/null "$RUNNER_TEMP/stats.dump"
           node .github/scripts/database-backup.mjs encrypt "$RUNNER_TEMP/stats.dump" "$RUNNER_TEMP/stats.dump.encrypted"

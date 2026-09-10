@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import type { Database } from "@/lib/supabase/database";
+import type { Database } from "@/lib/supabase/types";
 
 // Cache the Supabase client creation to prevent duplicate initialization
 export const createClient = cache(async () => {

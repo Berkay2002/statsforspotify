@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 import { authenticateUser, serverErrorResponse, unauthorizedResponse } from "@/lib/api/utils";
-import type { Database } from "@/lib/supabase/database";
+import type { Database, ArtistRanking, TrackRanking, AlbumRanking } from "@/lib/supabase/types";
 
 type Snapshot = Database['public']['Tables']['snapshots']['Row'];
-type ArtistRanking = Database['public']['Tables']['artist_rankings']['Row'];
-type TrackRanking = Database['public']['Tables']['track_rankings']['Row'];
-type AlbumRanking = Database['public']['Tables']['album_rankings']['Row'];
 
 interface ExportData {
   exported_at: string;

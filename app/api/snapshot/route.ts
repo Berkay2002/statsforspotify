@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authenticateUser, unauthorizedResponse, serverErrorResponse } from "@/lib/api/utils";
 import type { TimeRange, RankedArtist, RankedTrack, RankedAlbum } from "@/lib/spotify/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 
 const TIME_RANGES: TimeRange[] = ["short_term", "medium_term", "long_term"];
 const TIME_RANGE_DELAY_MS = 500; // 500ms delay between time ranges
@@ -53,7 +54,7 @@ interface RankingsWithPrevious {
 }
 
 async function calculatePreviousRanks(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   userId: string,
   timeRange: TimeRange,
   snapshotId: string,
@@ -188,7 +189,7 @@ async function calculatePreviousRanks(
 // ============================================================================
 
 async function createSnapshotWithRollback(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   userId: string,
   timeRange: TimeRange,
   artists: RankedArtist[],

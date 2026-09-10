@@ -6,15 +6,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
 import { FriendFollowButton } from "@/components/friend-follow-button";
 import { FriendDashboard } from "@/components/friends/friend-dashboard";
-import type { Database } from "@/lib/supabase/database";
+import type { ArtistRanking, TrackRanking, AlbumRanking } from "@/lib/supabase/types";
 
 interface Props {
   params: Promise<{ username: string; discriminator: string }>;
 }
-
-type ArtistRanking = Database['public']['Tables']['artist_rankings']['Row'];
-type TrackRanking = Database['public']['Tables']['track_rankings']['Row'];
-type AlbumRanking = Database['public']['Tables']['album_rankings']['Row'];
 
 export default async function FriendProfilePage({ params }: Props) {
   const { username, discriminator } = await params;
