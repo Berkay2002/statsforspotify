@@ -21,13 +21,15 @@ interface FriendFollowButtonProps {
     isPending: boolean;
     isIncoming: boolean;
   };
+  showStatusLabel?: boolean;
   onStatusChange?: (status: FriendshipStatus, isFriend: boolean) => void;
 }
 
 export function FriendFollowButton({ 
   friendUserId, 
   initialStatus,
-  onStatusChange 
+  onStatusChange,
+  showStatusLabel = true,
 }: FriendFollowButtonProps) {
   const [state, setState] = useState<FriendshipState>({
     isFriend: initialStatus.isFriend,
@@ -173,10 +175,12 @@ export function FriendFollowButton({
           )}
           Remove Friend
         </Button>
-        <span className="text-sm text-muted-foreground flex items-center gap-1">
-          <UserCheck className="h-4 w-4" />
-          Friends
-        </span>
+        {showStatusLabel && (
+          <span className="text-sm text-muted-foreground flex items-center gap-1">
+            <UserCheck className="h-4 w-4" />
+            Friends
+          </span>
+        )}
       </div>
     );
   }
@@ -223,9 +227,9 @@ export function FriendFollowButton({
           )}
           Cancel Request
         </Button>
-        <span className="text-sm text-muted-foreground">
-          Pending
-        </span>
+        {showStatusLabel && (
+          <span className="text-sm text-muted-foreground">Pending</span>
+        )}
       </div>
     );
   }

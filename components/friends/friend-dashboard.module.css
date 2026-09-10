@@ -1,0 +1,20 @@
+/* Reserve one desktop screen; smaller or zoomed viewports keep natural scrolling. */
+@media (min-width: 1024px) and (min-height: 700px) {
+  .overview {
+    height: calc(100svh - 3rem);
+  }
+
+  .overviewGrid {
+    height: 100%;
+    grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+
+  .overviewGrid > article {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .highlightCard {
+    min-height: 0;
+  }
+}

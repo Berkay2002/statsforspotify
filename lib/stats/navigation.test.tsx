@@ -45,9 +45,31 @@ test("own detail links do not inherit a friend or a view override", () => {
   assert.equal(statsDetailHref("artist", "kent", "medium_term"), "/dashboard/artists/kent?time_range=medium_term");
 });
 
+test("a shared friend dashboard range controls all lists without duplicate range selectors", () => {
+  const ranges = { ...data, long_term: [{ ...item, id: "all-time-favorite" }] };
+  const lists = [
+    { type: "artist", component: <ArtistsList artistsByTimeRange={ranges} userId={friendId} timeRange="long_term" /> },
+    { type: "track", component: <TracksList tracksByTimeRange={ranges} userId={friendId} timeRange="long_term" /> },
+    { type: "album", component: <AlbumsList albumsByTimeRange={ranges} userId={friendId} timeRange="long_term" /> },
+  ];
+  for (const { type, component } of lists) {
+    const html = renderToStaticMarkup(component).replaceAll("&amp;", "&");
+    assert.ok(html.includes(`/dashboard/${type}s/all-time-favorite?time_range=long_term&user_id=${friendId}`));
+    assert.ok(!html.includes(`/dashboard/${type}s/kent`));
+    assert.ok(!html.includes('role="tablist"'));
+  }
+});
+
 const overviewArtist = { ...item, id: "artist-one", popularity: 0, previous_rank: null };
 const overviewTrack = { ...item, id: "track-one", artistId: "artist-one", albumId: "album-one", popularity: 0, previous_rank: null };
 const overviewAlbum = { ...item, id: "album-one", artistId: "artist-one", releaseDate: "2026-01-01", totalTracks: 10, previous_rank: null };
+
+test("the shared hero opens the friend's artist history and uses friend wording", () => {
+  const html = renderToStaticMarkup(<HeroBanner artist={overviewArtist} timeRange="medium_term" userId={friendId} label="Their #1 Artist" />).replaceAll("&amp;", "&");
+  assert.ok(html.includes(`/dashboard/artists/artist-one?time_range=medium_term&user_id=${friendId}`));
+  assert.ok(html.includes("Their #1 Artist"));
+  assert.ok(!html.includes("Your #1 Artist"));
+});
 
 function renderedDetailLinks(component: React.ReactNode) {
   const html = renderToStaticMarkup(component).replaceAll("&amp;", "&");

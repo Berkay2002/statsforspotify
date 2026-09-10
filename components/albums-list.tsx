@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { TimeRange } from "@/lib/spotify/types";
 import { statsDetailHref } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
@@ -22,6 +23,7 @@ interface Album {
 
 interface AlbumsListProps {
   userId?: string;
+  timeRange?: TimeRange;
   albumsByTimeRange: {
     short_term: Album[];
     medium_term: Album[];
@@ -29,12 +31,13 @@ interface AlbumsListProps {
   };
 }
 
-export function AlbumsList({ albumsByTimeRange, userId }: AlbumsListProps) {
+export function AlbumsList({ albumsByTimeRange, userId, timeRange }: AlbumsListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={albumsByTimeRange}
       itemType="album"
       userId={userId}
+      timeRange={timeRange}
       className="w-full"
       tabsRightContent={<SparklineInfo />}
       renderItems={(albums, sparklines, loading, timeRange) => (
