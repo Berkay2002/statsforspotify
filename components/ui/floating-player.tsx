@@ -17,13 +17,13 @@ import {
   Music,
   GripVertical,
   PictureInPicture2,
-  PanelTopClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlayerPosition } from "@/hooks/use-player-position";
 import { usePlayerPopout } from "@/hooks/use-player-popout";
+import { PipPlayer } from "@/components/ui/pip-player";
 
 const formatTime = (ms: number = 0) => {
   const seconds = Math.floor(ms / 1000);
@@ -172,8 +172,10 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
 
   const toggleMute = useCallback(() => {
     throttledAction(() => {
-      if (isMuted) {
-        setVolume(savedVolume);
+      // A pending slider update must not undo an immediate mute/unmute action.
+      if (volumeTimeoutRef.current) clearTimeout(volumeTimeoutRef.current);
+      if (isMuted || volume === 0) {
+        setVolume(savedVolume || 0.5);
         setIsMuted(false);
       } else {
         setSavedVolume(volume);
@@ -184,12 +186,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   }, [throttledAction, isMuted, savedVolume, volume, setVolume]);
 
   // Debounced seek handler
-  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    const newPosition = Math.floor((percentage / 100) * duration);
-    
+  const seekTo = useCallback((newPosition: number) => {
     // Update UI immediately
     setLocalPosition(newPosition);
     
@@ -201,7 +198,13 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     seekTimeoutRef.current = setTimeout(() => {
       seek(newPosition);
     }, 300);
-  }, [duration, seek]);
+  }, [seek]);
+
+  const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percentage = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seekTo(Math.floor(percentage * duration));
+  }, [duration, seekTo]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -215,6 +218,18 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
 
   const progressPercentage = duration > 0 ? (localPosition / duration) * 100 : 0;
 
+  if (popout) {
+    return createPortal(
+      <PipPlayer
+        track={track} isPlaying={isPlaying} position={localPosition} duration={duration}
+        volume={isMuted ? 0 : volume} disabled={isActionCooldown}
+        onTogglePlay={handleTogglePlay} onPrevious={handlePreviousTrack} onNext={handleNextTrack}
+        onSeek={seekTo} onVolumeChange={handleVolumeChange} onToggleMute={toggleMute} onReturn={closePopout}
+      />,
+      popout.document.body
+    );
+  }
+
   const widget = (
     <AnimatePresence>
       <motion.div
@@ -223,13 +238,13 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
         aria-label="Now playing player"
         className={cn(
           "z-[100] bg-[#111111] border border-white/10 shadow-2xl pointer-events-auto",
-          popout ? "relative w-full min-h-screen" : "fixed",
+          "fixed",
           isDragging && "cursor-grabbing",
           mobileLayout ? "left-0 right-0 bottom-0 rounded-t-2xl" : "rounded-2xl",
-          !mobileLayout && !popout && "w-72 max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto",
+          !mobileLayout && "w-72 max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto",
           className
         )}
-        style={popout ? undefined : mobileLayout ? {
+        style={mobileLayout ? {
           paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' 
         } : { 
           left: playerPosition.x, 
@@ -241,7 +256,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         <div className="flex items-center gap-1 px-3 pt-2 pb-1">
-          {!mobileLayout && !popout ? (
+          {!mobileLayout ? (
             <Button
               variant="ghost"
               className="min-w-0 flex-1 justify-start gap-1 px-1 h-8 text-white/60 cursor-grab active:cursor-grabbing touch-none"
@@ -261,12 +276,12 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
             <Button
               variant="ghost" size="icon"
               className="h-8 w-8 text-white/60 hover:text-white"
-              aria-label={popout ? "Return player to website" : "Desktop player options"}
-              title={popout ? "Return to website" : "Open desktop player options"}
-              onClick={() => popout ? closePopout() : setShowPopoutOptions(value => !value)}
-              aria-expanded={popout ? undefined : showPopoutOptions}
+              aria-label="Desktop player options"
+              title="Open desktop player options"
+              onClick={() => setShowPopoutOptions(value => !value)}
+              aria-expanded={showPopoutOptions}
             >
-              {popout ? <PanelTopClose className="h-4 w-4" /> : <PictureInPicture2 className="h-4 w-4" />}
+              <PictureInPicture2 className="h-4 w-4" />
             </Button>
           )}
           <Button
@@ -278,7 +293,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
             {isMinimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
           </Button>
         </div>
-        {showPopoutOptions && !popout && !mobileLayout && (
+        {showPopoutOptions && !mobileLayout && (
           <div className="mx-3 my-2 space-y-2 rounded-lg bg-white/5 p-3 text-xs text-white/70">
             <p>Keep this player above other apps in a separate window. You can move and resize it. Keep this website tab open.</p>
             <Button className="w-full" size="sm" onClick={openPopout}>Open desktop player</Button>
@@ -447,5 +462,5 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     </AnimatePresence>
   );
 
-  return createPortal(widget, popout?.document.body ?? document.body);
+  return createPortal(widget, document.body);
 };

@@ -4,7 +4,7 @@ import { useState } from "react";
 const idle = async () => {};
 export function useSpotifyPlayer() {
   const [playerState, setState] = useState({
-    track: { name: "Test track", artists: [{ name: "Test artist" }], album: { name: "Test album", images: [] } },
+    track: { name: "Test track", artists: [{ name: "Test artist" }], album: { name: "Test album", images: [{ url: "/test-album.svg" }] } },
     isPlaying: false, position: 20000, duration: 180000, volume: 0.5,
   });
   return {

@@ -18,6 +18,9 @@ if (process.argv.includes("--bundle")) {
     plugins: [{
       name: "spotify-test-boundary",
       setup(build) {
+        build.onResolve({ filter: /^next\/image$/ }, () => ({
+          path: resolve("tests/fixtures/next-image.tsx"),
+        }));
         build.onResolve({ filter: /^@\/lib\/spotify\/player-context$/ }, () => ({
           path: resolve("tests/fixtures/spotify-player.tsx"),
         }));
@@ -39,6 +42,9 @@ const server = createServer((request, response) => {
   } else if (request.url === "/player.css") {
     response.writeHead(200, { "Content-Type": "text/css" });
     response.end(css.css);
+  } else if (request.url === "/test-album.svg" || request.url.startsWith("/_next/image")) {
+    response.writeHead(200, { "Content-Type": "image/svg+xml" });
+    response.end('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640"><defs><linearGradient id="sky" x2="1" y2="1"><stop stop-color="#354a62"/><stop offset="1" stop-color="#121f38"/></linearGradient></defs><path fill="url(#sky)" d="M0 0h640v640H0z"/><circle cx="320" cy="260" r="150" fill="#e4b592"/><path d="M0 440 260 240 400 420 640 220v420H0" fill="#203b3a"/><path d="m0 560 230-170 240 210 170-140v180H0" fill="#0e2428"/></svg>');
   } else {
     response.writeHead(200, { "Content-Type": "text/html" });
     response.end('<!doctype html><html class="dark"><head><link rel="stylesheet" href="/player.css"></head><body><div id="root"></div><script type="module" src="/player.js"></script></body></html>');
@@ -112,19 +118,54 @@ try {
 
   assert(await page.evaluate(() => "documentPictureInPicture" in window), "Chromium must support native Document PiP");
   const pipCreated = context.waitForEvent("page");
+  await page.getByRole("button", { name: "Minimize player", exact: true }).click();
   await openPlayer();
   const pip = await pipCreated;
   // Headless Chromium inherits the test viewport instead of the requested native size.
-  await pip.setViewportSize({ width: 320, height: 360 });
+  await pip.setViewportSize({ width: 420, height: 480 });
   await expect(pip.getByRole("region", { name: "Now playing player" })).toBeVisible();
   await expect(player).toHaveCount(0);
   await expect(pip.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
-  await expect.poll(() => pip.getByRole("region").evaluate(el => getComputedStyle(el).backgroundColor)).toBe("rgb(17, 17, 17)");
+  await expect.poll(() => pip.getByRole("region").evaluate(el => getComputedStyle(el).backgroundColor)).toBe("rgb(0, 0, 0)");
+  await expect(pip.getByRole("button", { name: "Expand player", exact: true })).toHaveCount(0);
+  const cover = pip.getByRole("img", { name: "Test album", exact: true });
+  await expect.poll(() => cover.evaluate(el => el.complete && el.naturalWidth > 0)).toBe(true);
+  const overlay = pip.getByRole("group", { name: "Playback controls", exact: true });
+  await pip.mouse.move(-10, -10);
+  await expect(overlay).toHaveCSS("opacity", "0");
+  if (screenshotDir) await pip.screenshot({ path: resolve(screenshotDir, "desktop-player-idle.png") });
+  await pip.bringToFront();
+  await expect(pip.getByRole("button", { name: "Pause", exact: true })).toBeEnabled();
+  await pip.getByRole("button", { name: "Pause", exact: true }).focus();
+  await expect(overlay).toHaveCSS("opacity", "1");
+  await pip.evaluate(() => document.activeElement.blur());
+  await pip.mouse.move(210, 180);
+  await expect(overlay).toHaveCSS("opacity", "1");
+  if (screenshotDir) await pip.screenshot({ path: resolve(screenshotDir, "desktop-player-hover.png") });
+  await pip.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(pip.getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  await pip.getByRole("slider", { name: "Seek", exact: true }).fill("60000");
+  await expect(pip.getByRole("slider", { name: "Seek", exact: true })).toHaveValue("60000");
+  await pip.getByRole("slider", { name: "Volume", exact: true }).fill("0.25");
+  await expect(pip.getByRole("slider", { name: "Volume", exact: true })).toHaveValue("0.25");
+  await expect(pip.getByRole("button", { name: "Next track", exact: true })).toBeEnabled();
+  await pip.getByRole("slider", { name: "Volume", exact: true }).fill("0");
+  await pip.getByRole("button", { name: "Unmute", exact: true }).click();
+  // Let the slider's debounce expire to catch stale updates undoing unmute.
+  await page.waitForTimeout(350);
+  await expect(pip.getByRole("slider", { name: "Volume", exact: true })).toHaveValue("0.25");
+  console.log("PASS artwork layout, independent minimized state, hover/focus controls, seeking and volume");
+
+  for (const size of [{ width: 800, height: 560 }, { width: 240, height: 260 }, { width: 420, height: 480 }]) {
+    await pip.setViewportSize(size);
+    assert(await pip.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight));
+  }
   await pip.getByRole("button", { name: "Next track", exact: true }).click();
   await expect(pip.getByText("Next track", { exact: true })).toBeVisible();
   if (screenshotDir) await pip.screenshot({ path: resolve(screenshotDir, "desktop-player.png") });
   await pip.getByRole("button", { name: "Return player to website", exact: true }).click();
   await expect(player).toBeVisible();
+  await expect(page.getByRole("button", { name: "Expand player", exact: true })).toBeVisible();
   await expect(page.getByText("Next track", { exact: true })).toBeVisible();
   assert(pip.isClosed());
   console.log("PASS native PiP, copied styles, shared playback state and return control");

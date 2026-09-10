@@ -49,7 +49,7 @@ export function usePlayerPopout() {
     let child: Window | null = null;
     try {
       // Called directly by the user's button click, preserving browser activation.
-      child = await api.requestWindow({ width: 320, height: 360 });
+      child = await api.requestWindow({ width: 420, height: 480 });
       if (!mounted.current || child.closed) {
         child.close();
         return;
@@ -77,7 +77,7 @@ export function usePlayerPopout() {
           }
         }
       }
-      doc.body.style.cssText = "margin:0;background:#111111;color:white;min-height:100vh;";
+      doc.body.style.cssText = "margin:0;background:#000;color:white;min-height:100vh;color-scheme:dark;";
       active.current = child;
       child.addEventListener("pagehide", () => {
         if (active.current !== child) return;
