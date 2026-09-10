@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:player": "node scripts/test-floating-player.mjs",
     "validate:schema-sync": "bash scripts/validate-schema-sync.sh"
   },
   "dependencies": {
@@ -42,6 +43,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -14,10 +15,15 @@ import {
   Minimize2,
   Maximize2,
   Music,
+  GripVertical,
+  PictureInPicture2,
+  PanelTopClose,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePlayerPosition } from "@/hooks/use-player-position";
+import { usePlayerPopout } from "@/hooks/use-player-popout";
 
 const formatTime = (ms: number = 0) => {
   const seconds = Math.floor(ms / 1000);
@@ -48,9 +54,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
     const saved = localStorage.getItem('floating-player-minimized');
     return saved === 'true';
   });
-  const [isDragging, setIsDragging] = useState(false);
-  const [playerPosition, setPlayerPosition] = useState({ x: 20, y: 20 });
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [showPopoutOptions, setShowPopoutOptions] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [savedVolume, setSavedVolume] = useState(0.5);
   const [isPlayerHidden, setIsPlayerHidden] = useState(() => {
@@ -79,7 +83,16 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   }, []);
 
   // Derive visibility from track state and user preference (mobile only)
+  const { popout, open: openPopout, close: closePopout, error: popoutError } = usePlayerPopout();
   const isVisible = track !== null && !(isMobile && isPlayerHidden);
+  const mobileLayout = isMobile && !popout;
+  const { position: playerPosition, isDragging, dragHandleProps } = usePlayerPosition(
+    playerRef, isVisible && !isMobile && !popout
+  );
+
+  useEffect(() => {
+    if (!isVisible) closePopout();
+  }, [isVisible, closePopout]);
 
   // Save minimized state to localStorage when it changes
   useEffect(() => {
@@ -136,41 +149,6 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
   const handlePreviousTrack = useCallback(() => {
     throttledAction(() => previousTrack(), 800);
   }, [throttledAction, previousTrack]);
-
-  // Handle drag (desktop only)
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (isMobile) return; // Disable dragging on mobile
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - playerPosition.x,
-      y: e.clientY - playerPosition.y,
-    });
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return;
-
-      const newX = Math.max(0, Math.min(window.innerWidth - 300, e.clientX - dragStart.x));
-      const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragStart.y));
-
-      setPlayerPosition({ x: newX, y: newY });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, dragStart]);
 
   // Debounced volume handler
   const handleVolumeChange = useCallback((newVolume: number) => {
@@ -237,50 +215,74 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
 
   const progressPercentage = duration > 0 ? (localPosition / duration) * 100 : 0;
 
-  return (
+  const widget = (
     <AnimatePresence>
       <motion.div
         ref={playerRef}
+        role="region"
+        aria-label="Now playing player"
         className={cn(
-          "fixed z-[100] bg-[#111111] border border-white/10 shadow-2xl backdrop-blur-sm pointer-events-auto",
+          "z-[100] bg-[#111111] border border-white/10 shadow-2xl pointer-events-auto",
+          popout ? "relative w-full min-h-screen" : "fixed",
           isDragging && "cursor-grabbing",
-          isMobile ? "left-0 right-0 bottom-0 rounded-t-2xl" : "rounded-2xl",
+          mobileLayout ? "left-0 right-0 bottom-0 rounded-t-2xl" : "rounded-2xl",
+          !mobileLayout && !popout && "w-72 max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto",
           className
         )}
-        style={isMobile ? { 
+        style={popout ? undefined : mobileLayout ? {
           paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' 
         } : { 
           left: playerPosition.x, 
           top: playerPosition.y 
         }}
-        initial={{ opacity: 0, scale: isMobile ? 1 : 0.8, y: isMobile ? 100 : 20 }}
+        initial={false}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: isMobile ? 1 : 0.8, y: isMobile ? 100 : 20 }}
+        exit={{ opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        {/* Drag handle (desktop only) */}
-        {!isMobile && (
-          <div
-            className="absolute top-0 left-0 right-0 h-8 cursor-grab active:cursor-grabbing z-0"
-            onMouseDown={handleMouseDown}
-          />
-        )}
-
-        {/* Header */}
-        {!isMinimized && (
-          <div className="relative z-10 flex items-center justify-between px-4 pt-3 pb-1">
-            <div className="flex items-center gap-2">
-              <Music className="h-4 w-4 text-green-500" />
-              <span className="text-xs font-medium text-white/60">Now Playing</span>
-            </div>
+        <div className="flex items-center gap-1 px-3 pt-2 pb-1">
+          {!mobileLayout && !popout ? (
             <Button
               variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-white/60 hover:text-white"
-              onClick={() => setIsMinimized(!isMinimized)}
+              className="min-w-0 flex-1 justify-start gap-1 px-1 h-8 text-white/60 cursor-grab active:cursor-grabbing touch-none"
+              aria-label="Move player"
+              title="Drag to move. Use arrow keys to move, Shift for larger steps, or Home to reset."
+              {...dragHandleProps}
             >
-              <Minimize2 className="h-3 w-3" />
+              <GripVertical className="h-4 w-4" />
+              <span className="text-xs">Now Playing</span>
             </Button>
+          ) : (
+            <div className="flex flex-1 items-center gap-2 text-xs text-white/60">
+              <Music className="h-4 w-4 text-green-500" />Now Playing
+            </div>
+          )}
+          {!mobileLayout && (
+            <Button
+              variant="ghost" size="icon"
+              className="h-8 w-8 text-white/60 hover:text-white"
+              aria-label={popout ? "Return player to website" : "Desktop player options"}
+              title={popout ? "Return to website" : "Open desktop player options"}
+              onClick={() => popout ? closePopout() : setShowPopoutOptions(value => !value)}
+              aria-expanded={popout ? undefined : showPopoutOptions}
+            >
+              {popout ? <PanelTopClose className="h-4 w-4" /> : <PictureInPicture2 className="h-4 w-4" />}
+            </Button>
+          )}
+          <Button
+            variant="ghost" size="icon"
+            className="h-8 w-8 text-white/60 hover:text-white"
+            aria-label={isMinimized ? "Expand player" : "Minimize player"}
+            onClick={() => setIsMinimized(value => !value)}
+          >
+            {isMinimized ? <Maximize2 className="h-3 w-3" /> : <Minimize2 className="h-3 w-3" />}
+          </Button>
+        </div>
+        {showPopoutOptions && !popout && !mobileLayout && (
+          <div className="mx-3 my-2 space-y-2 rounded-lg bg-white/5 p-3 text-xs text-white/70">
+            <p>Keep this player above other apps in a separate window. You can move and resize it. Keep this website tab open.</p>
+            <Button className="w-full" size="sm" onClick={openPopout}>Open desktop player</Button>
+            {popoutError && <p role="alert">{popoutError}</p>}
           </div>
         )}
 
@@ -292,7 +294,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
           <div className="flex flex-col gap-4">
             {/* Track Info */}
             <div className="flex items-center gap-3">
-              <div className={cn("relative rounded-lg overflow-hidden bg-white/10", isMinimized ? "h-12 w-12" : "h-14 w-14")}>
+              <div className={cn("relative shrink-0 rounded-lg overflow-hidden bg-white/10", isMinimized ? "h-12 w-12" : "h-14 w-14")}>
                 {track.album.images[0]?.url ? (
                   <Image
                     src={track.album.images[0].url}
@@ -316,6 +318,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                   <Button
                     size="icon"
                     className="h-8 w-8 rounded-full bg-green-500 hover:bg-green-600 text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label={isPlaying ? "Pause" : "Play"}
                     onClick={handleTogglePlay}
                     disabled={isActionCooldown}
                   >
@@ -325,14 +328,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                       <Play className="h-4 w-4 fill-current" />
                     )}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-white/60 hover:text-white"
-                    onClick={() => setIsMinimized(false)}
-                  >
-                    <Maximize2 className="h-3 w-3" />
-                  </Button>
+
                 </div>
               )}
             </div>
@@ -382,6 +378,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-white/80 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Previous track"
                   onClick={handlePreviousTrack}
                   disabled={isActionCooldown}
                 >
@@ -390,7 +387,8 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                 <Button
                   size="icon"
                   className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-black disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleTogglePlay}
+                  aria-label={isPlaying ? "Pause" : "Play"}
+                    onClick={handleTogglePlay}
                   disabled={isActionCooldown}
                 >
                   {isPlaying ? (
@@ -403,6 +401,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-white/80 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Next track"
                   onClick={handleNextTrack}
                   disabled={isActionCooldown}
                 >
@@ -418,6 +417,7 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-white/60 hover:text-white"
+                  aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
                   onClick={toggleMute}
                 >
                   {isMuted || volume === 0 ? (
@@ -446,4 +446,6 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
       </motion.div>
     </AnimatePresence>
   );
+
+  return createPortal(widget, popout?.document.body ?? document.body);
 };
