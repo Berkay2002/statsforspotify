@@ -31,6 +31,26 @@ COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE SCHEMA IF NOT EXISTS "ranking_storage";
+
+
+ALTER SCHEMA "ranking_storage" OWNER TO "postgres";
+
+
+COMMENT ON SCHEMA "ranking_storage" IS 'Private versioned ranking storage; clients use the public security-invoker views.';
+
+
+
+CREATE SCHEMA IF NOT EXISTS "ranking_storage_backup";
+
+
+ALTER SCHEMA "ranking_storage_backup" OWNER TO "postgres";
+
+
+COMMENT ON SCHEMA "ranking_storage_backup" IS 'Empty original table definitions for lossless rollback; never expose through the Data API.';
+
+
+
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
 
 
@@ -1739,14 +1759,324 @@ $$;
 
 ALTER FUNCTION "public"."update_spotify_connections_updated_at"() OWNER TO "postgres";
 
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."album_fingerprint"("p_album_id" "text", "p_album_name" "text", "p_album_image_url" "text", "p_artist_id" "text", "p_artist_name" "text", "p_release_date" "text", "p_total_tracks" integer) RETURNS "bytea"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+ SELECT sha256(convert_to(jsonb_build_array(p_album_id, p_album_name, p_album_image_url, p_artist_id, p_artist_name, p_release_date, p_total_tracks)::text,'UTF8'))
+$$;
+
+
+ALTER FUNCTION "ranking_storage"."album_fingerprint"("p_album_id" "text", "p_album_name" "text", "p_album_image_url" "text", "p_artist_id" "text", "p_artist_name" "text", "p_release_date" "text", "p_total_tracks" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."artist_fingerprint"("p_artist_id" "text", "p_artist_name" "text", "p_artist_image_url" "text", "p_genres" "text"[]) RETURNS "bytea"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+ SELECT sha256(convert_to(jsonb_build_array(p_artist_id, p_artist_name, p_artist_image_url, p_genres, array_dims(p_genres))::text,'UTF8'))
+$$;
+
+
+ALTER FUNCTION "ranking_storage"."artist_fingerprint"("p_artist_id" "text", "p_artist_name" "text", "p_artist_image_url" "text", "p_genres" "text"[]) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."caller_bypasses_rls"() RETURNS boolean
+    LANGUAGE "sql" STABLE
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+  SELECT coalesce((SELECT rolsuper OR rolbypassrls FROM pg_roles
+    WHERE rolname = coalesce(nullif(current_setting('role',true),'none'),session_user)),false)
+$$;
+
+
+ALTER FUNCTION "ranking_storage"."caller_bypasses_rls"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."lock_write"("p_users" "uuid"[], "p_snapshots" "uuid"[]) RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+DECLARE v_user uuid;
+BEGIN
+  PERFORM id FROM auth.users WHERE id=ANY(p_users) ORDER BY id FOR KEY SHARE;
+  PERFORM id FROM public.snapshots WHERE id=ANY(p_snapshots) ORDER BY id FOR KEY SHARE;
+  FOR v_user IN SELECT DISTINCT x FROM unnest(p_users) x WHERE x IS NOT NULL ORDER BY x LOOP
+    PERFORM pg_advisory_xact_lock(hashtextextended('ranking-storage:'||v_user::text,0));
+  END LOOP;
+END $$;
+
+
+ALTER FUNCTION "ranking_storage"."lock_write"("p_users" "uuid"[], "p_snapshots" "uuid"[]) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."prune_album"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'Ranking deletion requires READ COMMITTED isolation' USING ERRCODE='0A000';
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.metadata_key=NEW.metadata_key AND OLD.user_id=NEW.user_id THEN RETURN NULL; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('ranking-storage:'||OLD.user_id::text,0));
+ DELETE FROM ranking_storage.album_metadata m WHERE m.metadata_key=OLD.metadata_key
+ AND NOT EXISTS(SELECT 1 FROM ranking_storage.album_observations o WHERE o.metadata_key=m.metadata_key);
+ RETURN NULL;
+END $$;
+
+
+ALTER FUNCTION "ranking_storage"."prune_album"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."prune_artist"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'Ranking deletion requires READ COMMITTED isolation' USING ERRCODE='0A000';
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.metadata_key=NEW.metadata_key AND OLD.user_id=NEW.user_id THEN RETURN NULL; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('ranking-storage:'||OLD.user_id::text,0));
+ DELETE FROM ranking_storage.artist_metadata m WHERE m.metadata_key=OLD.metadata_key
+ AND NOT EXISTS(SELECT 1 FROM ranking_storage.artist_observations o WHERE o.metadata_key=m.metadata_key);
+ RETURN NULL;
+END $$;
+
+
+ALTER FUNCTION "ranking_storage"."prune_artist"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."prune_track"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'Ranking deletion requires READ COMMITTED isolation' USING ERRCODE='0A000';
+ END IF;
+ IF TG_OP='UPDATE' AND OLD.metadata_key=NEW.metadata_key AND OLD.user_id=NEW.user_id THEN RETURN NULL; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('ranking-storage:'||OLD.user_id::text,0));
+ DELETE FROM ranking_storage.track_metadata m WHERE m.metadata_key=OLD.metadata_key
+ AND NOT EXISTS(SELECT 1 FROM ranking_storage.track_observations o WHERE o.metadata_key=m.metadata_key);
+ RETURN NULL;
+END $$;
+
+
+ALTER FUNCTION "ranking_storage"."prune_track"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."track_fingerprint"("p_track_id" "text", "p_track_name" "text", "p_track_image_url" "text", "p_artist_id" "text", "p_artist_name" "text", "p_album_id" "text", "p_album_name" "text", "p_duration_ms" integer) RETURNS "bytea"
+    LANGUAGE "sql" IMMUTABLE
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+ SELECT sha256(convert_to(jsonb_build_array(p_track_id, p_track_name, p_track_image_url, p_artist_id, p_artist_name, p_album_id, p_album_name, p_duration_ms)::text,'UTF8'))
+$$;
+
+
+ALTER FUNCTION "ranking_storage"."track_fingerprint"("p_track_id" "text", "p_track_name" "text", "p_track_image_url" "text", "p_artist_id" "text", "p_artist_name" "text", "p_album_id" "text", "p_album_name" "text", "p_duration_ms" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."write_album"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+DECLARE v_privileged boolean := ranking_storage.caller_bypasses_rls();
+ v_metadata integer; v_hash bytea; v_collision integer; v_id uuid;
+ v_current public.album_rankings%ROWTYPE;
+BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'Ranking writes require READ COMMITTED isolation' USING ERRCODE='0A000';
+ END IF;
+ -- Match original INSERT/DELETE ownership and the absence of an UPDATE policy.
+ IF NOT v_privileged THEN
+  IF TG_OP='UPDATE' THEN RETURN NULL; END IF;
+  IF TG_OP='DELETE' AND (auth.uid() IS NULL OR OLD.user_id IS DISTINCT FROM auth.uid()) THEN RETURN NULL; END IF;
+  IF TG_OP='INSERT' AND (auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid()) THEN
+   RAISE EXCEPTION 'new row violates row-level security policy for album_rankings' USING ERRCODE='42501';
+  END IF;
+ END IF;
+ PERFORM ranking_storage.lock_write(
+  ARRAY[CASE WHEN TG_OP<>'DELETE' THEN NEW.user_id END,CASE WHEN TG_OP<>'INSERT' THEN OLD.user_id END],
+  ARRAY[CASE WHEN TG_OP<>'DELETE' THEN NEW.snapshot_id END,CASE WHEN TG_OP<>'INSERT' THEN OLD.snapshot_id END]);
+ IF TG_OP IN ('DELETE','UPDATE') THEN
+  SELECT o.id, o.snapshot_id, o.user_id, m.album_id, m.album_name, m.album_image_url, m.artist_id, m.artist_name, m.release_date, m.total_tracks, o.track_count, o.rank, o.created_at, o.previous_rank INTO v_current FROM ranking_storage.album_observations o
+   JOIN ranking_storage.album_metadata m ON m.metadata_key=o.metadata_key AND m.user_id=o.user_id
+   WHERE o.id=OLD.id FOR UPDATE OF o;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF v_current IS DISTINCT FROM OLD THEN
+   RAISE EXCEPTION 'Ranking changed concurrently; retry transaction' USING ERRCODE='40001';
+  END IF;
+ END IF;
+ IF TG_OP='DELETE' THEN
+  DELETE FROM ranking_storage.album_observations WHERE id=OLD.id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RETURN NULL; END IF;
+  RETURN OLD;
+ END IF;
+ v_hash := ranking_storage.album_fingerprint(NEW.album_id, NEW.album_name, NEW.album_image_url, NEW.artist_id, NEW.artist_name, NEW.release_date, NEW.total_tracks);
+ -- Separate statement after the lock gives a fresh READ COMMITTED snapshot.
+ SELECT metadata_key INTO v_metadata FROM ranking_storage.album_metadata m
+ WHERE m.user_id=NEW.user_id AND m.metadata_hash=v_hash AND m.album_id IS NOT DISTINCT FROM NEW.album_id AND m.album_name IS NOT DISTINCT FROM NEW.album_name AND m.album_image_url IS NOT DISTINCT FROM NEW.album_image_url AND m.artist_id IS NOT DISTINCT FROM NEW.artist_id AND m.artist_name IS NOT DISTINCT FROM NEW.artist_name AND m.release_date IS NOT DISTINCT FROM NEW.release_date AND m.total_tracks IS NOT DISTINCT FROM NEW.total_tracks;
+ IF v_metadata IS NULL THEN
+  SELECT coalesce(max(collision)+1,0) INTO v_collision FROM ranking_storage.album_metadata
+   WHERE user_id=NEW.user_id AND metadata_hash=v_hash;
+  BEGIN
+   INSERT INTO ranking_storage.album_metadata(user_id,album_id, album_name, album_image_url, artist_id, artist_name, release_date, total_tracks,collision)
+   VALUES(NEW.user_id,NEW.album_id, NEW.album_name, NEW.album_image_url, NEW.artist_id, NEW.artist_name, NEW.release_date, NEW.total_tracks,v_collision) RETURNING metadata_key INTO v_metadata;
+  EXCEPTION WHEN unique_violation THEN
+   -- Fail atomically if a concurrent administrative writer bypasses this lock.
+   RAISE EXCEPTION 'concurrent metadata change; retry transaction' USING ERRCODE='40001';
+  END;
+ END IF;
+ IF TG_OP='INSERT' THEN
+  INSERT INTO ranking_storage.album_observations(id, snapshot_id, user_id, created_at, metadata_key, track_count, rank, previous_rank) VALUES(NEW.id, NEW.snapshot_id, NEW.user_id, NEW.created_at, v_metadata, NEW.track_count, NEW.rank, NEW.previous_rank);
+ ELSE
+  UPDATE ranking_storage.album_observations SET id=NEW.id, snapshot_id=NEW.snapshot_id, user_id=NEW.user_id, created_at=NEW.created_at, metadata_key=v_metadata, track_count=NEW.track_count, rank=NEW.rank, previous_rank=NEW.previous_rank WHERE id=OLD.id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RETURN NULL; END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+
+
+ALTER FUNCTION "ranking_storage"."write_album"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."write_artist"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+DECLARE v_privileged boolean := ranking_storage.caller_bypasses_rls();
+ v_metadata integer; v_hash bytea; v_collision integer; v_id uuid;
+ v_current public.artist_rankings%ROWTYPE;
+BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'Ranking writes require READ COMMITTED isolation' USING ERRCODE='0A000';
+ END IF;
+ -- Match original INSERT/DELETE ownership and the absence of an UPDATE policy.
+ IF NOT v_privileged THEN
+  IF TG_OP='UPDATE' THEN RETURN NULL; END IF;
+  IF TG_OP='DELETE' AND (auth.uid() IS NULL OR OLD.user_id IS DISTINCT FROM auth.uid()) THEN RETURN NULL; END IF;
+  IF TG_OP='INSERT' AND (auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid()) THEN
+   RAISE EXCEPTION 'new row violates row-level security policy for artist_rankings' USING ERRCODE='42501';
+  END IF;
+ END IF;
+ PERFORM ranking_storage.lock_write(
+  ARRAY[CASE WHEN TG_OP<>'DELETE' THEN NEW.user_id END,CASE WHEN TG_OP<>'INSERT' THEN OLD.user_id END],
+  ARRAY[CASE WHEN TG_OP<>'DELETE' THEN NEW.snapshot_id END,CASE WHEN TG_OP<>'INSERT' THEN OLD.snapshot_id END]);
+ IF TG_OP IN ('DELETE','UPDATE') THEN
+  SELECT o.id, o.snapshot_id, o.user_id, m.artist_id, m.artist_name, m.artist_image_url, m.genres, o.popularity, o.rank, o.created_at, o.previous_rank INTO v_current FROM ranking_storage.artist_observations o
+   JOIN ranking_storage.artist_metadata m ON m.metadata_key=o.metadata_key AND m.user_id=o.user_id
+   WHERE o.id=OLD.id FOR UPDATE OF o;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF v_current IS DISTINCT FROM OLD THEN
+   RAISE EXCEPTION 'Ranking changed concurrently; retry transaction' USING ERRCODE='40001';
+  END IF;
+ END IF;
+ IF TG_OP='DELETE' THEN
+  DELETE FROM ranking_storage.artist_observations WHERE id=OLD.id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RETURN NULL; END IF;
+  RETURN OLD;
+ END IF;
+ v_hash := ranking_storage.artist_fingerprint(NEW.artist_id, NEW.artist_name, NEW.artist_image_url, NEW.genres);
+ -- Separate statement after the lock gives a fresh READ COMMITTED snapshot.
+ SELECT metadata_key INTO v_metadata FROM ranking_storage.artist_metadata m
+ WHERE m.user_id=NEW.user_id AND m.metadata_hash=v_hash AND m.artist_id IS NOT DISTINCT FROM NEW.artist_id AND m.artist_name IS NOT DISTINCT FROM NEW.artist_name AND m.artist_image_url IS NOT DISTINCT FROM NEW.artist_image_url AND m.genres IS NOT DISTINCT FROM NEW.genres;
+ IF v_metadata IS NULL THEN
+  SELECT coalesce(max(collision)+1,0) INTO v_collision FROM ranking_storage.artist_metadata
+   WHERE user_id=NEW.user_id AND metadata_hash=v_hash;
+  BEGIN
+   INSERT INTO ranking_storage.artist_metadata(user_id,artist_id, artist_name, artist_image_url, genres,collision)
+   VALUES(NEW.user_id,NEW.artist_id, NEW.artist_name, NEW.artist_image_url, NEW.genres,v_collision) RETURNING metadata_key INTO v_metadata;
+  EXCEPTION WHEN unique_violation THEN
+   -- Fail atomically if a concurrent administrative writer bypasses this lock.
+   RAISE EXCEPTION 'concurrent metadata change; retry transaction' USING ERRCODE='40001';
+  END;
+ END IF;
+ IF TG_OP='INSERT' THEN
+  INSERT INTO ranking_storage.artist_observations(id, snapshot_id, user_id, created_at, metadata_key, popularity, rank, previous_rank) VALUES(NEW.id, NEW.snapshot_id, NEW.user_id, NEW.created_at, v_metadata, NEW.popularity, NEW.rank, NEW.previous_rank);
+ ELSE
+  UPDATE ranking_storage.artist_observations SET id=NEW.id, snapshot_id=NEW.snapshot_id, user_id=NEW.user_id, created_at=NEW.created_at, metadata_key=v_metadata, popularity=NEW.popularity, rank=NEW.rank, previous_rank=NEW.previous_rank WHERE id=OLD.id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RETURN NULL; END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+
+
+ALTER FUNCTION "ranking_storage"."write_artist"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "ranking_storage"."write_track"() RETURNS "trigger"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'pg_catalog', 'pg_temp'
+    AS $$
+DECLARE v_privileged boolean := ranking_storage.caller_bypasses_rls();
+ v_metadata integer; v_hash bytea; v_collision integer; v_id uuid;
+ v_current public.track_rankings%ROWTYPE;
+BEGIN
+ IF current_setting('transaction_isolation') <> 'read committed' THEN
+  RAISE EXCEPTION 'Ranking writes require READ COMMITTED isolation' USING ERRCODE='0A000';
+ END IF;
+ -- Match original INSERT/DELETE ownership and the absence of an UPDATE policy.
+ IF NOT v_privileged THEN
+  IF TG_OP='UPDATE' THEN RETURN NULL; END IF;
+  IF TG_OP='DELETE' AND (auth.uid() IS NULL OR OLD.user_id IS DISTINCT FROM auth.uid()) THEN RETURN NULL; END IF;
+  IF TG_OP='INSERT' AND (auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid()) THEN
+   RAISE EXCEPTION 'new row violates row-level security policy for track_rankings' USING ERRCODE='42501';
+  END IF;
+ END IF;
+ PERFORM ranking_storage.lock_write(
+  ARRAY[CASE WHEN TG_OP<>'DELETE' THEN NEW.user_id END,CASE WHEN TG_OP<>'INSERT' THEN OLD.user_id END],
+  ARRAY[CASE WHEN TG_OP<>'DELETE' THEN NEW.snapshot_id END,CASE WHEN TG_OP<>'INSERT' THEN OLD.snapshot_id END]);
+ IF TG_OP IN ('DELETE','UPDATE') THEN
+  SELECT o.id, o.snapshot_id, o.user_id, m.track_id, m.track_name, m.track_image_url, m.artist_id, m.artist_name, m.album_id, m.album_name, m.duration_ms, o.popularity, o.rank, o.created_at, o.previous_rank INTO v_current FROM ranking_storage.track_observations o
+   JOIN ranking_storage.track_metadata m ON m.metadata_key=o.metadata_key AND m.user_id=o.user_id
+   WHERE o.id=OLD.id FOR UPDATE OF o;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  IF v_current IS DISTINCT FROM OLD THEN
+   RAISE EXCEPTION 'Ranking changed concurrently; retry transaction' USING ERRCODE='40001';
+  END IF;
+ END IF;
+ IF TG_OP='DELETE' THEN
+  DELETE FROM ranking_storage.track_observations WHERE id=OLD.id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RETURN NULL; END IF;
+  RETURN OLD;
+ END IF;
+ v_hash := ranking_storage.track_fingerprint(NEW.track_id, NEW.track_name, NEW.track_image_url, NEW.artist_id, NEW.artist_name, NEW.album_id, NEW.album_name, NEW.duration_ms);
+ -- Separate statement after the lock gives a fresh READ COMMITTED snapshot.
+ SELECT metadata_key INTO v_metadata FROM ranking_storage.track_metadata m
+ WHERE m.user_id=NEW.user_id AND m.metadata_hash=v_hash AND m.track_id IS NOT DISTINCT FROM NEW.track_id AND m.track_name IS NOT DISTINCT FROM NEW.track_name AND m.track_image_url IS NOT DISTINCT FROM NEW.track_image_url AND m.artist_id IS NOT DISTINCT FROM NEW.artist_id AND m.artist_name IS NOT DISTINCT FROM NEW.artist_name AND m.album_id IS NOT DISTINCT FROM NEW.album_id AND m.album_name IS NOT DISTINCT FROM NEW.album_name AND m.duration_ms IS NOT DISTINCT FROM NEW.duration_ms;
+ IF v_metadata IS NULL THEN
+  SELECT coalesce(max(collision)+1,0) INTO v_collision FROM ranking_storage.track_metadata
+   WHERE user_id=NEW.user_id AND metadata_hash=v_hash;
+  BEGIN
+   INSERT INTO ranking_storage.track_metadata(user_id,track_id, track_name, track_image_url, artist_id, artist_name, album_id, album_name, duration_ms,collision)
+   VALUES(NEW.user_id,NEW.track_id, NEW.track_name, NEW.track_image_url, NEW.artist_id, NEW.artist_name, NEW.album_id, NEW.album_name, NEW.duration_ms,v_collision) RETURNING metadata_key INTO v_metadata;
+  EXCEPTION WHEN unique_violation THEN
+   -- Fail atomically if a concurrent administrative writer bypasses this lock.
+   RAISE EXCEPTION 'concurrent metadata change; retry transaction' USING ERRCODE='40001';
+  END;
+ END IF;
+ IF TG_OP='INSERT' THEN
+  INSERT INTO ranking_storage.track_observations(id, snapshot_id, user_id, created_at, metadata_key, popularity, rank, previous_rank) VALUES(NEW.id, NEW.snapshot_id, NEW.user_id, NEW.created_at, v_metadata, NEW.popularity, NEW.rank, NEW.previous_rank);
+ ELSE
+  UPDATE ranking_storage.track_observations SET id=NEW.id, snapshot_id=NEW.snapshot_id, user_id=NEW.user_id, created_at=NEW.created_at, metadata_key=v_metadata, popularity=NEW.popularity, rank=NEW.rank, previous_rank=NEW.previous_rank WHERE id=OLD.id RETURNING id INTO v_id;
+  IF v_id IS NULL THEN RETURN NULL; END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+
+
+ALTER FUNCTION "ranking_storage"."write_track"() OWNER TO "postgres";
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
 
 
-CREATE TABLE IF NOT EXISTS "public"."album_rankings" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "snapshot_id" "uuid" NOT NULL,
+CREATE TABLE IF NOT EXISTS "ranking_storage"."album_metadata" (
+    "metadata_key" integer NOT NULL,
     "user_id" "uuid" NOT NULL,
     "album_id" "text" NOT NULL,
     "album_name" "text" NOT NULL,
@@ -1755,24 +2085,50 @@ CREATE TABLE IF NOT EXISTS "public"."album_rankings" (
     "artist_name" "text" NOT NULL,
     "release_date" "text",
     "total_tracks" integer,
+    "metadata_hash" "bytea" GENERATED ALWAYS AS ("ranking_storage"."album_fingerprint"("album_id", "album_name", "album_image_url", "artist_id", "artist_name", "release_date", "total_tracks")) STORED,
+    "collision" integer DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE "ranking_storage"."album_metadata" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "ranking_storage"."album_observations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "snapshot_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "metadata_key" integer NOT NULL,
     "track_count" integer DEFAULT 1 NOT NULL,
     "rank" integer NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "previous_rank" integer,
-    CONSTRAINT "album_rankings_rank_check" CHECK (("rank" >= 1))
-)
-WITH ("autovacuum_vacuum_scale_factor"='0.1', "autovacuum_analyze_scale_factor"='0.05');
+    CONSTRAINT "album_observations_rank_check" CHECK (("rank" >= 1))
+);
 
 
-ALTER TABLE "public"."album_rankings" OWNER TO "postgres";
+ALTER TABLE "ranking_storage"."album_observations" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."album_rankings" IS 'User album rankings derived from top tracks';
+CREATE OR REPLACE VIEW "public"."album_rankings" WITH ("security_invoker"='true') AS
+ SELECT "o"."id",
+    "o"."snapshot_id",
+    "o"."user_id",
+    "m"."album_id",
+    "m"."album_name",
+    "m"."album_image_url",
+    "m"."artist_id",
+    "m"."artist_name",
+    "m"."release_date",
+    "m"."total_tracks",
+    "o"."track_count",
+    "o"."rank",
+    "o"."created_at",
+    "o"."previous_rank"
+   FROM ("ranking_storage"."album_observations" "o"
+     JOIN "ranking_storage"."album_metadata" "m" ON ((("m"."metadata_key" = "o"."metadata_key") AND ("m"."user_id" = "o"."user_id"))));
 
 
-
-COMMENT ON COLUMN "public"."album_rankings"."previous_rank" IS 'Rank from previous snapshot in same time range (NULL if new entry)';
-
+ALTER VIEW "public"."album_rankings" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."artist_listening_stats" (
@@ -1798,32 +2154,54 @@ COMMENT ON TABLE "public"."artist_listening_stats" IS 'Aggregated listening stat
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."artist_rankings" (
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "snapshot_id" "uuid" NOT NULL,
+CREATE TABLE IF NOT EXISTS "ranking_storage"."artist_metadata" (
+    "metadata_key" integer NOT NULL,
     "user_id" "uuid" NOT NULL,
     "artist_id" "text" NOT NULL,
     "artist_name" "text" NOT NULL,
     "artist_image_url" "text",
-    "genres" "text"[] DEFAULT '{}'::"text"[],
+    "genres" "text"[],
+    "metadata_hash" "bytea" GENERATED ALWAYS AS ("ranking_storage"."artist_fingerprint"("artist_id", "artist_name", "artist_image_url", "genres")) STORED,
+    "collision" integer DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE "ranking_storage"."artist_metadata" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "ranking_storage"."artist_observations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "snapshot_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "metadata_key" integer NOT NULL,
     "popularity" integer,
     "rank" integer NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "previous_rank" integer,
-    CONSTRAINT "artist_rankings_rank_check" CHECK ((("rank" >= 1) AND ("rank" <= 50)))
-)
-WITH ("autovacuum_vacuum_scale_factor"='0.1', "autovacuum_analyze_scale_factor"='0.05');
+    CONSTRAINT "artist_observations_rank_check" CHECK ((("rank" >= 1) AND ("rank" <= 50)))
+);
 
 
-ALTER TABLE "public"."artist_rankings" OWNER TO "postgres";
+ALTER TABLE "ranking_storage"."artist_observations" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."artist_rankings" IS 'User top artist rankings per snapshot';
+CREATE OR REPLACE VIEW "public"."artist_rankings" WITH ("security_invoker"='true') AS
+ SELECT "o"."id",
+    "o"."snapshot_id",
+    "o"."user_id",
+    "m"."artist_id",
+    "m"."artist_name",
+    "m"."artist_image_url",
+    "m"."genres",
+    "o"."popularity",
+    "o"."rank",
+    "o"."created_at",
+    "o"."previous_rank"
+   FROM ("ranking_storage"."artist_observations" "o"
+     JOIN "ranking_storage"."artist_metadata" "m" ON ((("m"."metadata_key" = "o"."metadata_key") AND ("m"."user_id" = "o"."user_id"))));
 
 
-
-COMMENT ON COLUMN "public"."artist_rankings"."previous_rank" IS 'Rank from previous snapshot in same time range (NULL if new entry)';
-
+ALTER VIEW "public"."artist_rankings" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."friendships" (
@@ -1957,7 +2335,157 @@ COMMENT ON COLUMN "public"."spotify_connections"."status" IS 'Connection status:
 
 
 
-CREATE TABLE IF NOT EXISTS "public"."track_rankings" (
+CREATE TABLE IF NOT EXISTS "ranking_storage"."track_metadata" (
+    "metadata_key" integer NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "track_id" "text" NOT NULL,
+    "track_name" "text" NOT NULL,
+    "track_image_url" "text",
+    "artist_id" "text" NOT NULL,
+    "artist_name" "text" NOT NULL,
+    "album_id" "text" NOT NULL,
+    "album_name" "text" NOT NULL,
+    "duration_ms" integer,
+    "metadata_hash" "bytea" GENERATED ALWAYS AS ("ranking_storage"."track_fingerprint"("track_id", "track_name", "track_image_url", "artist_id", "artist_name", "album_id", "album_name", "duration_ms")) STORED,
+    "collision" integer DEFAULT 0 NOT NULL
+);
+
+
+ALTER TABLE "ranking_storage"."track_metadata" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "ranking_storage"."track_observations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "snapshot_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "metadata_key" integer NOT NULL,
+    "popularity" integer,
+    "rank" integer NOT NULL,
+    "previous_rank" integer,
+    CONSTRAINT "track_observations_rank_check" CHECK ((("rank" >= 1) AND ("rank" <= 50)))
+);
+
+
+ALTER TABLE "ranking_storage"."track_observations" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."track_rankings" WITH ("security_invoker"='true') AS
+ SELECT "o"."id",
+    "o"."snapshot_id",
+    "o"."user_id",
+    "m"."track_id",
+    "m"."track_name",
+    "m"."track_image_url",
+    "m"."artist_id",
+    "m"."artist_name",
+    "m"."album_id",
+    "m"."album_name",
+    "m"."duration_ms",
+    "o"."popularity",
+    "o"."rank",
+    "o"."created_at",
+    "o"."previous_rank"
+   FROM ("ranking_storage"."track_observations" "o"
+     JOIN "ranking_storage"."track_metadata" "m" ON ((("m"."metadata_key" = "o"."metadata_key") AND ("m"."user_id" = "o"."user_id"))));
+
+
+ALTER VIEW "public"."track_rankings" OWNER TO "postgres";
+
+
+ALTER TABLE "ranking_storage"."album_metadata" ALTER COLUMN "metadata_key" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "ranking_storage"."album_metadata_metadata_key_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+ALTER TABLE "ranking_storage"."artist_metadata" ALTER COLUMN "metadata_key" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "ranking_storage"."artist_metadata_metadata_key_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+ALTER TABLE "ranking_storage"."track_metadata" ALTER COLUMN "metadata_key" ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME "ranking_storage"."track_metadata_metadata_key_seq"
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+
+CREATE TABLE IF NOT EXISTS "ranking_storage_backup"."album_rankings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "snapshot_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "album_id" "text" NOT NULL,
+    "album_name" "text" NOT NULL,
+    "album_image_url" "text",
+    "artist_id" "text" NOT NULL,
+    "artist_name" "text" NOT NULL,
+    "release_date" "text",
+    "total_tracks" integer,
+    "track_count" integer DEFAULT 1 NOT NULL,
+    "rank" integer NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "previous_rank" integer,
+    CONSTRAINT "album_rankings_rank_check" CHECK (("rank" >= 1))
+)
+WITH ("autovacuum_vacuum_scale_factor"='0.1', "autovacuum_analyze_scale_factor"='0.05');
+
+
+ALTER TABLE "ranking_storage_backup"."album_rankings" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "ranking_storage_backup"."album_rankings" IS 'User album rankings derived from top tracks';
+
+
+
+COMMENT ON COLUMN "ranking_storage_backup"."album_rankings"."previous_rank" IS 'Rank from previous snapshot in same time range (NULL if new entry)';
+
+
+
+CREATE TABLE IF NOT EXISTS "ranking_storage_backup"."artist_rankings" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "snapshot_id" "uuid" NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "artist_id" "text" NOT NULL,
+    "artist_name" "text" NOT NULL,
+    "artist_image_url" "text",
+    "genres" "text"[] DEFAULT '{}'::"text"[],
+    "popularity" integer,
+    "rank" integer NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "previous_rank" integer,
+    CONSTRAINT "artist_rankings_rank_check" CHECK ((("rank" >= 1) AND ("rank" <= 50)))
+)
+WITH ("autovacuum_vacuum_scale_factor"='0.1', "autovacuum_analyze_scale_factor"='0.05');
+
+
+ALTER TABLE "ranking_storage_backup"."artist_rankings" OWNER TO "postgres";
+
+
+COMMENT ON TABLE "ranking_storage_backup"."artist_rankings" IS 'User top artist rankings per snapshot';
+
+
+
+COMMENT ON COLUMN "ranking_storage_backup"."artist_rankings"."previous_rank" IS 'Rank from previous snapshot in same time range (NULL if new entry)';
+
+
+
+CREATE TABLE IF NOT EXISTS "ranking_storage_backup"."track_rankings" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "snapshot_id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
@@ -1978,19 +2506,46 @@ CREATE TABLE IF NOT EXISTS "public"."track_rankings" (
 WITH ("autovacuum_vacuum_scale_factor"='0.1', "autovacuum_analyze_scale_factor"='0.05');
 
 
-ALTER TABLE "public"."track_rankings" OWNER TO "postgres";
+ALTER TABLE "ranking_storage_backup"."track_rankings" OWNER TO "postgres";
 
 
-COMMENT ON TABLE "public"."track_rankings" IS 'User top track rankings per snapshot';
-
-
-
-COMMENT ON COLUMN "public"."track_rankings"."previous_rank" IS 'Rank from previous snapshot in same time range (NULL if new entry)';
+COMMENT ON TABLE "ranking_storage_backup"."track_rankings" IS 'User top track rankings per snapshot';
 
 
 
-ALTER TABLE ONLY "public"."album_rankings"
-    ADD CONSTRAINT "album_rankings_pkey" PRIMARY KEY ("id");
+COMMENT ON COLUMN "ranking_storage_backup"."track_rankings"."previous_rank" IS 'Rank from previous snapshot in same time range (NULL if new entry)';
+
+
+
+ALTER TABLE ONLY "public"."album_rankings" ALTER COLUMN "id" SET DEFAULT "gen_random_uuid"();
+
+
+
+ALTER TABLE ONLY "public"."album_rankings" ALTER COLUMN "track_count" SET DEFAULT 1;
+
+
+
+ALTER TABLE ONLY "public"."album_rankings" ALTER COLUMN "created_at" SET DEFAULT "now"();
+
+
+
+ALTER TABLE ONLY "public"."artist_rankings" ALTER COLUMN "id" SET DEFAULT "gen_random_uuid"();
+
+
+
+ALTER TABLE ONLY "public"."artist_rankings" ALTER COLUMN "genres" SET DEFAULT '{}'::"text"[];
+
+
+
+ALTER TABLE ONLY "public"."artist_rankings" ALTER COLUMN "created_at" SET DEFAULT "now"();
+
+
+
+ALTER TABLE ONLY "public"."track_rankings" ALTER COLUMN "id" SET DEFAULT "gen_random_uuid"();
+
+
+
+ALTER TABLE ONLY "public"."track_rankings" ALTER COLUMN "created_at" SET DEFAULT "now"();
 
 
 
@@ -2001,11 +2556,6 @@ ALTER TABLE ONLY "public"."artist_listening_stats"
 
 ALTER TABLE ONLY "public"."artist_listening_stats"
     ADD CONSTRAINT "artist_listening_stats_user_id_artist_id_key" UNIQUE ("user_id", "artist_id");
-
-
-
-ALTER TABLE ONLY "public"."artist_rankings"
-    ADD CONSTRAINT "artist_rankings_pkey" PRIMARY KEY ("id");
 
 
 
@@ -2029,11 +2579,6 @@ ALTER TABLE ONLY "public"."spotify_connections"
 
 
 
-ALTER TABLE ONLY "public"."track_rankings"
-    ADD CONSTRAINT "track_rankings_pkey" PRIMARY KEY ("id");
-
-
-
 ALTER TABLE ONLY "public"."user_profiles"
     ADD CONSTRAINT "unique_display_name_discriminator" UNIQUE ("display_name", "discriminator");
 
@@ -2054,43 +2599,82 @@ ALTER TABLE ONLY "public"."user_profiles"
 
 
 
-CREATE INDEX "idx_album_rankings_history" ON "public"."album_rankings" USING "btree" ("user_id", "album_id", "created_at" DESC);
+ALTER TABLE ONLY "ranking_storage"."album_metadata"
+    ADD CONSTRAINT "album_metadata_metadata_key_user_id_key" UNIQUE ("metadata_key", "user_id");
 
 
 
-CREATE INDEX "idx_album_rankings_snapshot_id" ON "public"."album_rankings" USING "btree" ("snapshot_id");
+ALTER TABLE ONLY "ranking_storage"."album_metadata"
+    ADD CONSTRAINT "album_metadata_pkey" PRIMARY KEY ("metadata_key");
 
 
 
-CREATE INDEX "idx_album_rankings_user_album" ON "public"."album_rankings" USING "btree" ("user_id", "album_id");
+ALTER TABLE ONLY "ranking_storage"."album_metadata"
+    ADD CONSTRAINT "album_metadata_user_id_metadata_hash_collision_key" UNIQUE ("user_id", "metadata_hash", "collision");
 
 
 
-CREATE INDEX "idx_album_rankings_user_id" ON "public"."album_rankings" USING "btree" ("user_id");
+ALTER TABLE ONLY "ranking_storage"."album_observations"
+    ADD CONSTRAINT "album_observations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_metadata"
+    ADD CONSTRAINT "artist_metadata_metadata_key_user_id_key" UNIQUE ("metadata_key", "user_id");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_metadata"
+    ADD CONSTRAINT "artist_metadata_pkey" PRIMARY KEY ("metadata_key");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_metadata"
+    ADD CONSTRAINT "artist_metadata_user_id_metadata_hash_collision_key" UNIQUE ("user_id", "metadata_hash", "collision");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_observations"
+    ADD CONSTRAINT "artist_observations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_metadata"
+    ADD CONSTRAINT "track_metadata_metadata_key_user_id_key" UNIQUE ("metadata_key", "user_id");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_metadata"
+    ADD CONSTRAINT "track_metadata_pkey" PRIMARY KEY ("metadata_key");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_metadata"
+    ADD CONSTRAINT "track_metadata_user_id_metadata_hash_collision_key" UNIQUE ("user_id", "metadata_hash", "collision");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_observations"
+    ADD CONSTRAINT "track_observations_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."album_rankings"
+    ADD CONSTRAINT "album_rankings_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."artist_rankings"
+    ADD CONSTRAINT "artist_rankings_pkey" PRIMARY KEY ("id");
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."track_rankings"
+    ADD CONSTRAINT "track_rankings_pkey" PRIMARY KEY ("id");
 
 
 
 CREATE INDEX "idx_artist_listening_stats_user_artist" ON "public"."artist_listening_stats" USING "btree" ("user_id", "artist_id");
-
-
-
-CREATE INDEX "idx_artist_rankings_history" ON "public"."artist_rankings" USING "btree" ("user_id", "artist_id", "created_at" DESC);
-
-
-
-CREATE INDEX "idx_artist_rankings_snapshot_created" ON "public"."artist_rankings" USING "btree" ("snapshot_id", "created_at" DESC);
-
-
-
-CREATE INDEX "idx_artist_rankings_snapshot_id" ON "public"."artist_rankings" USING "btree" ("snapshot_id");
-
-
-
-CREATE INDEX "idx_artist_rankings_user_artist" ON "public"."artist_rankings" USING "btree" ("user_id", "artist_id");
-
-
-
-CREATE INDEX "idx_artist_rankings_user_id" ON "public"."artist_rankings" USING "btree" ("user_id");
 
 
 
@@ -2122,26 +2706,6 @@ CREATE INDEX "idx_spotify_connections_status" ON "public"."spotify_connections" 
 
 
 
-CREATE INDEX "idx_track_rankings_history" ON "public"."track_rankings" USING "btree" ("user_id", "track_id", "created_at" DESC);
-
-
-
-CREATE INDEX "idx_track_rankings_snapshot_id" ON "public"."track_rankings" USING "btree" ("snapshot_id");
-
-
-
-CREATE INDEX "idx_track_rankings_track_id" ON "public"."track_rankings" USING "btree" ("track_id");
-
-
-
-CREATE INDEX "idx_track_rankings_user_id" ON "public"."track_rankings" USING "btree" ("user_id");
-
-
-
-CREATE INDEX "idx_track_rankings_user_track" ON "public"."track_rankings" USING "btree" ("user_id", "track_id");
-
-
-
 CREATE INDEX "idx_user_profiles_display_name_gin" ON "public"."user_profiles" USING "gin" ("display_name" "extensions"."gin_trgm_ops");
 
 
@@ -2154,6 +2718,110 @@ CREATE UNIQUE INDEX "snapshots_user_date_timerange_unique" ON "public"."snapshot
 
 
 
+CREATE INDEX "album_metadata_user_id_album_id_idx" ON "ranking_storage"."album_metadata" USING "btree" ("user_id", "album_id");
+
+
+
+CREATE INDEX "album_observations_metadata_key_idx" ON "ranking_storage"."album_observations" USING "btree" ("metadata_key");
+
+
+
+CREATE INDEX "album_observations_snapshot_id_idx" ON "ranking_storage"."album_observations" USING "btree" ("snapshot_id");
+
+
+
+CREATE INDEX "album_observations_user_id_idx" ON "ranking_storage"."album_observations" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "artist_metadata_user_id_artist_id_idx" ON "ranking_storage"."artist_metadata" USING "btree" ("user_id", "artist_id");
+
+
+
+CREATE INDEX "artist_observations_metadata_key_idx" ON "ranking_storage"."artist_observations" USING "btree" ("metadata_key");
+
+
+
+CREATE INDEX "artist_observations_snapshot_id_idx" ON "ranking_storage"."artist_observations" USING "btree" ("snapshot_id");
+
+
+
+CREATE INDEX "artist_observations_user_id_idx" ON "ranking_storage"."artist_observations" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "track_metadata_user_id_track_id_idx" ON "ranking_storage"."track_metadata" USING "btree" ("user_id", "track_id");
+
+
+
+CREATE INDEX "track_observations_metadata_key_idx" ON "ranking_storage"."track_observations" USING "btree" ("metadata_key");
+
+
+
+CREATE INDEX "track_observations_snapshot_id_idx" ON "ranking_storage"."track_observations" USING "btree" ("snapshot_id");
+
+
+
+CREATE INDEX "track_observations_user_id_idx" ON "ranking_storage"."track_observations" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_album_rankings_history" ON "ranking_storage_backup"."album_rankings" USING "btree" ("user_id", "album_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_album_rankings_snapshot_id" ON "ranking_storage_backup"."album_rankings" USING "btree" ("snapshot_id");
+
+
+
+CREATE INDEX "idx_album_rankings_user_album" ON "ranking_storage_backup"."album_rankings" USING "btree" ("user_id", "album_id");
+
+
+
+CREATE INDEX "idx_album_rankings_user_id" ON "ranking_storage_backup"."album_rankings" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_artist_rankings_history" ON "ranking_storage_backup"."artist_rankings" USING "btree" ("user_id", "artist_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_artist_rankings_snapshot_created" ON "ranking_storage_backup"."artist_rankings" USING "btree" ("snapshot_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_artist_rankings_snapshot_id" ON "ranking_storage_backup"."artist_rankings" USING "btree" ("snapshot_id");
+
+
+
+CREATE INDEX "idx_artist_rankings_user_artist" ON "ranking_storage_backup"."artist_rankings" USING "btree" ("user_id", "artist_id");
+
+
+
+CREATE INDEX "idx_artist_rankings_user_id" ON "ranking_storage_backup"."artist_rankings" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_track_rankings_history" ON "ranking_storage_backup"."track_rankings" USING "btree" ("user_id", "track_id", "created_at" DESC);
+
+
+
+CREATE INDEX "idx_track_rankings_snapshot_id" ON "ranking_storage_backup"."track_rankings" USING "btree" ("snapshot_id");
+
+
+
+CREATE INDEX "idx_track_rankings_track_id" ON "ranking_storage_backup"."track_rankings" USING "btree" ("track_id");
+
+
+
+CREATE INDEX "idx_track_rankings_user_id" ON "ranking_storage_backup"."track_rankings" USING "btree" ("user_id");
+
+
+
+CREATE INDEX "idx_track_rankings_user_track" ON "ranking_storage_backup"."track_rankings" USING "btree" ("user_id", "track_id");
+
+
+
 CREATE OR REPLACE TRIGGER "set_friendships_updated_at" BEFORE UPDATE ON "public"."friendships" FOR EACH ROW EXECUTE FUNCTION "public"."set_updated_at"();
 
 
@@ -2162,28 +2830,32 @@ CREATE OR REPLACE TRIGGER "update_spotify_connections_timestamp" BEFORE UPDATE O
 
 
 
-ALTER TABLE ONLY "public"."album_rankings"
-    ADD CONSTRAINT "album_rankings_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
+CREATE OR REPLACE TRIGGER "write_album_ranking" INSTEAD OF INSERT OR DELETE OR UPDATE ON "public"."album_rankings" FOR EACH ROW EXECUTE FUNCTION "ranking_storage"."write_album"();
 
 
 
-ALTER TABLE ONLY "public"."album_rankings"
-    ADD CONSTRAINT "album_rankings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+CREATE OR REPLACE TRIGGER "write_artist_ranking" INSTEAD OF INSERT OR DELETE OR UPDATE ON "public"."artist_rankings" FOR EACH ROW EXECUTE FUNCTION "ranking_storage"."write_artist"();
+
+
+
+CREATE OR REPLACE TRIGGER "write_track_ranking" INSTEAD OF INSERT OR DELETE OR UPDATE ON "public"."track_rankings" FOR EACH ROW EXECUTE FUNCTION "ranking_storage"."write_track"();
+
+
+
+CREATE OR REPLACE TRIGGER "prune_album_metadata" AFTER DELETE OR UPDATE ON "ranking_storage"."album_observations" FOR EACH ROW EXECUTE FUNCTION "ranking_storage"."prune_album"();
+
+
+
+CREATE OR REPLACE TRIGGER "prune_artist_metadata" AFTER DELETE OR UPDATE ON "ranking_storage"."artist_observations" FOR EACH ROW EXECUTE FUNCTION "ranking_storage"."prune_artist"();
+
+
+
+CREATE OR REPLACE TRIGGER "prune_track_metadata" AFTER DELETE OR UPDATE ON "ranking_storage"."track_observations" FOR EACH ROW EXECUTE FUNCTION "ranking_storage"."prune_track"();
 
 
 
 ALTER TABLE ONLY "public"."artist_listening_stats"
     ADD CONSTRAINT "artist_listening_stats_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."artist_rankings"
-    ADD CONSTRAINT "artist_rankings_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."artist_rankings"
-    ADD CONSTRAINT "artist_rankings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2207,26 +2879,98 @@ ALTER TABLE ONLY "public"."spotify_connections"
 
 
 
-ALTER TABLE ONLY "public"."track_rankings"
-    ADD CONSTRAINT "track_rankings_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."track_rankings"
-    ADD CONSTRAINT "track_rankings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
-
-
-
 ALTER TABLE ONLY "public"."user_profiles"
     ADD CONSTRAINT "user_profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
-CREATE POLICY "Respect stats visibility when reading album rankings" ON "public"."album_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+ALTER TABLE ONLY "ranking_storage"."album_metadata"
+    ADD CONSTRAINT "album_metadata_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
-CREATE POLICY "Respect stats visibility when reading artist rankings" ON "public"."artist_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+ALTER TABLE ONLY "ranking_storage"."album_observations"
+    ADD CONSTRAINT "album_observations_metadata_key_user_id_fkey" FOREIGN KEY ("metadata_key", "user_id") REFERENCES "ranking_storage"."album_metadata"("metadata_key", "user_id");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."album_observations"
+    ADD CONSTRAINT "album_observations_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage"."album_observations"
+    ADD CONSTRAINT "album_observations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_metadata"
+    ADD CONSTRAINT "artist_metadata_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_observations"
+    ADD CONSTRAINT "artist_observations_metadata_key_user_id_fkey" FOREIGN KEY ("metadata_key", "user_id") REFERENCES "ranking_storage"."artist_metadata"("metadata_key", "user_id");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_observations"
+    ADD CONSTRAINT "artist_observations_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage"."artist_observations"
+    ADD CONSTRAINT "artist_observations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_metadata"
+    ADD CONSTRAINT "track_metadata_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_observations"
+    ADD CONSTRAINT "track_observations_metadata_key_user_id_fkey" FOREIGN KEY ("metadata_key", "user_id") REFERENCES "ranking_storage"."track_metadata"("metadata_key", "user_id");
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_observations"
+    ADD CONSTRAINT "track_observations_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage"."track_observations"
+    ADD CONSTRAINT "track_observations_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."album_rankings"
+    ADD CONSTRAINT "album_rankings_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."album_rankings"
+    ADD CONSTRAINT "album_rankings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."artist_rankings"
+    ADD CONSTRAINT "artist_rankings_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."artist_rankings"
+    ADD CONSTRAINT "artist_rankings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."track_rankings"
+    ADD CONSTRAINT "track_rankings_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "ranking_storage_backup"."track_rankings"
+    ADD CONSTRAINT "track_rankings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 
 
@@ -2234,35 +2978,11 @@ CREATE POLICY "Respect stats visibility when reading snapshots" ON "public"."sna
 
 
 
-CREATE POLICY "Respect stats visibility when reading track rankings" ON "public"."track_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
-
-
-
-CREATE POLICY "Users can delete their own album rankings" ON "public"."album_rankings" FOR DELETE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
-CREATE POLICY "Users can delete their own artist rankings" ON "public"."artist_rankings" FOR DELETE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
 CREATE POLICY "Users can delete their own snapshots" ON "public"."snapshots" FOR DELETE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
 
 
 
-CREATE POLICY "Users can delete their own track rankings" ON "public"."track_rankings" FOR DELETE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
 CREATE POLICY "Users can insert own spotify connection" ON "public"."spotify_connections" FOR INSERT WITH CHECK (("user_id" = ( SELECT "auth"."uid"() AS "uid")));
-
-
-
-CREATE POLICY "Users can insert their own album rankings" ON "public"."album_rankings" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
-CREATE POLICY "Users can insert their own artist rankings" ON "public"."artist_rankings" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
 
 
 
@@ -2275,10 +2995,6 @@ CREATE POLICY "Users can insert their own profile" ON "public"."user_profiles" F
 
 
 CREATE POLICY "Users can insert their own snapshots" ON "public"."snapshots" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
-
-
-
-CREATE POLICY "Users can insert their own track rankings" ON "public"."track_rankings" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
 
 
 
@@ -2314,26 +3030,6 @@ CREATE POLICY "Users can view all public profiles" ON "public"."user_profiles" F
 
 
 
-CREATE POLICY "Users can view their album rankings and friends' rankings" ON "public"."album_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
-        CASE
-            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
-            ELSE "f"."user_id"
-        END AS "user_id"
-   FROM "public"."friendships" "f"
-  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
-
-
-
-CREATE POLICY "Users can view their artist rankings and friends' rankings" ON "public"."artist_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
-        CASE
-            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
-            ELSE "f"."user_id"
-        END AS "user_id"
-   FROM "public"."friendships" "f"
-  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
-
-
-
 CREATE POLICY "Users can view their own artist stats" ON "public"."artist_listening_stats" FOR SELECT USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
 
 
@@ -2352,23 +3048,7 @@ CREATE POLICY "Users can view their snapshots and friends' snapshots" ON "public
 
 
 
-CREATE POLICY "Users can view their track rankings and friends' rankings" ON "public"."track_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
-        CASE
-            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
-            ELSE "f"."user_id"
-        END AS "user_id"
-   FROM "public"."friendships" "f"
-  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
-
-
-
-ALTER TABLE "public"."album_rankings" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."artist_listening_stats" ENABLE ROW LEVEL SECURITY;
-
-
-ALTER TABLE "public"."artist_rankings" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."friendships" ENABLE ROW LEVEL SECURITY;
@@ -2380,10 +3060,184 @@ ALTER TABLE "public"."snapshots" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."spotify_connections" ENABLE ROW LEVEL SECURITY;
 
 
-ALTER TABLE "public"."track_rankings" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."user_profiles" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Respect stats visibility when reading album rankings" ON "ranking_storage"."album_metadata" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading album rankings" ON "ranking_storage"."album_observations" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading artist rankings" ON "ranking_storage"."artist_metadata" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading artist rankings" ON "ranking_storage"."artist_observations" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading track rankings" ON "ranking_storage"."track_metadata" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading track rankings" ON "ranking_storage"."track_observations" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Users can view their album rankings and friends' rankings" ON "ranking_storage"."album_metadata" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+CREATE POLICY "Users can view their album rankings and friends' rankings" ON "ranking_storage"."album_observations" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+CREATE POLICY "Users can view their artist rankings and friends' rankings" ON "ranking_storage"."artist_metadata" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+CREATE POLICY "Users can view their artist rankings and friends' rankings" ON "ranking_storage"."artist_observations" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+CREATE POLICY "Users can view their track rankings and friends' rankings" ON "ranking_storage"."track_metadata" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+CREATE POLICY "Users can view their track rankings and friends' rankings" ON "ranking_storage"."track_observations" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+ALTER TABLE "ranking_storage"."album_metadata" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "ranking_storage"."album_observations" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "ranking_storage"."artist_metadata" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "ranking_storage"."artist_observations" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "ranking_storage"."track_metadata" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "ranking_storage"."track_observations" ENABLE ROW LEVEL SECURITY;
+
+
+CREATE POLICY "Respect stats visibility when reading album rankings" ON "ranking_storage_backup"."album_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading artist rankings" ON "ranking_storage_backup"."artist_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Respect stats visibility when reading track rankings" ON "ranking_storage_backup"."track_rankings" AS RESTRICTIVE FOR SELECT USING ("public"."can_view_user_stats"("user_id"));
+
+
+
+CREATE POLICY "Users can delete their own album rankings" ON "ranking_storage_backup"."album_rankings" FOR DELETE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
+CREATE POLICY "Users can delete their own artist rankings" ON "ranking_storage_backup"."artist_rankings" FOR DELETE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
+CREATE POLICY "Users can delete their own track rankings" ON "ranking_storage_backup"."track_rankings" FOR DELETE USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
+CREATE POLICY "Users can insert their own album rankings" ON "ranking_storage_backup"."album_rankings" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
+CREATE POLICY "Users can insert their own artist rankings" ON "ranking_storage_backup"."artist_rankings" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
+CREATE POLICY "Users can insert their own track rankings" ON "ranking_storage_backup"."track_rankings" FOR INSERT WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+
+
+CREATE POLICY "Users can view their album rankings and friends' rankings" ON "ranking_storage_backup"."album_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+CREATE POLICY "Users can view their artist rankings and friends' rankings" ON "ranking_storage_backup"."artist_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+CREATE POLICY "Users can view their track rankings and friends' rankings" ON "ranking_storage_backup"."track_rankings" FOR SELECT USING ((("user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("user_id" IN ( SELECT
+        CASE
+            WHEN ("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) THEN "f"."friend_id"
+            ELSE "f"."user_id"
+        END AS "user_id"
+   FROM "public"."friendships" "f"
+  WHERE ((("f"."user_id" = ( SELECT "auth"."uid"() AS "uid")) OR ("f"."friend_id" = ( SELECT "auth"."uid"() AS "uid"))) AND ("f"."status" = 'accepted'::"text"))))));
+
+
+
+ALTER TABLE "ranking_storage_backup"."album_rankings" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "ranking_storage_backup"."artist_rankings" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "ranking_storage_backup"."track_rankings" ENABLE ROW LEVEL SECURITY;
 
 
 
@@ -2803,6 +3657,47 @@ GRANT ALL ON FUNCTION "public"."update_spotify_connections_updated_at"() TO "ser
 
 
 
+REVOKE ALL ON FUNCTION "ranking_storage"."album_fingerprint"("p_album_id" "text", "p_album_name" "text", "p_album_image_url" "text", "p_artist_id" "text", "p_artist_name" "text", "p_release_date" "text", "p_total_tracks" integer) FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."artist_fingerprint"("p_artist_id" "text", "p_artist_name" "text", "p_artist_image_url" "text", "p_genres" "text"[]) FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."caller_bypasses_rls"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."lock_write"("p_users" "uuid"[], "p_snapshots" "uuid"[]) FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."prune_album"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."prune_artist"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."prune_track"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."track_fingerprint"("p_track_id" "text", "p_track_name" "text", "p_track_image_url" "text", "p_artist_id" "text", "p_artist_name" "text", "p_album_id" "text", "p_album_name" "text", "p_duration_ms" integer) FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."write_album"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."write_artist"() FROM PUBLIC;
+
+
+
+REVOKE ALL ON FUNCTION "ranking_storage"."write_track"() FROM PUBLIC;
 
 
 
@@ -2821,6 +3716,21 @@ GRANT ALL ON FUNCTION "public"."update_spotify_connections_updated_at"() TO "ser
 
 
 
+
+
+
+
+
+
+GRANT SELECT ON TABLE "ranking_storage"."album_metadata" TO "anon";
+GRANT SELECT ON TABLE "ranking_storage"."album_metadata" TO "authenticated";
+GRANT SELECT ON TABLE "ranking_storage"."album_metadata" TO "service_role";
+
+
+
+GRANT SELECT ON TABLE "ranking_storage"."album_observations" TO "anon";
+GRANT SELECT ON TABLE "ranking_storage"."album_observations" TO "authenticated";
+GRANT SELECT ON TABLE "ranking_storage"."album_observations" TO "service_role";
 
 
 
@@ -2833,6 +3743,18 @@ GRANT ALL ON TABLE "public"."album_rankings" TO "service_role";
 GRANT ALL ON TABLE "public"."artist_listening_stats" TO "anon";
 GRANT ALL ON TABLE "public"."artist_listening_stats" TO "authenticated";
 GRANT ALL ON TABLE "public"."artist_listening_stats" TO "service_role";
+
+
+
+GRANT SELECT ON TABLE "ranking_storage"."artist_metadata" TO "anon";
+GRANT SELECT ON TABLE "ranking_storage"."artist_metadata" TO "authenticated";
+GRANT SELECT ON TABLE "ranking_storage"."artist_metadata" TO "service_role";
+
+
+
+GRANT SELECT ON TABLE "ranking_storage"."artist_observations" TO "anon";
+GRANT SELECT ON TABLE "ranking_storage"."artist_observations" TO "authenticated";
+GRANT SELECT ON TABLE "ranking_storage"."artist_observations" TO "service_role";
 
 
 
@@ -2872,9 +3794,39 @@ GRANT ALL ON TABLE "public"."spotify_connections" TO "service_role";
 
 
 
+GRANT SELECT ON TABLE "ranking_storage"."track_metadata" TO "anon";
+GRANT SELECT ON TABLE "ranking_storage"."track_metadata" TO "authenticated";
+GRANT SELECT ON TABLE "ranking_storage"."track_metadata" TO "service_role";
+
+
+
+GRANT SELECT ON TABLE "ranking_storage"."track_observations" TO "anon";
+GRANT SELECT ON TABLE "ranking_storage"."track_observations" TO "authenticated";
+GRANT SELECT ON TABLE "ranking_storage"."track_observations" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."track_rankings" TO "anon";
 GRANT ALL ON TABLE "public"."track_rankings" TO "authenticated";
 GRANT ALL ON TABLE "public"."track_rankings" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "ranking_storage_backup"."album_rankings" TO "anon";
+GRANT ALL ON TABLE "ranking_storage_backup"."album_rankings" TO "authenticated";
+GRANT ALL ON TABLE "ranking_storage_backup"."album_rankings" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "ranking_storage_backup"."artist_rankings" TO "anon";
+GRANT ALL ON TABLE "ranking_storage_backup"."artist_rankings" TO "authenticated";
+GRANT ALL ON TABLE "ranking_storage_backup"."artist_rankings" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "ranking_storage_backup"."track_rankings" TO "anon";
+GRANT ALL ON TABLE "ranking_storage_backup"."track_rankings" TO "authenticated";
+GRANT ALL ON TABLE "ranking_storage_backup"."track_rankings" TO "service_role";
 
 
 

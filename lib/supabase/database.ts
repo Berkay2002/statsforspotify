@@ -14,65 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      album_rankings: {
-        Row: {
-          album_id: string
-          album_image_url: string | null
-          album_name: string
-          artist_id: string
-          artist_name: string
-          created_at: string
-          id: string
-          previous_rank: number | null
-          rank: number
-          release_date: string | null
-          snapshot_id: string
-          total_tracks: number | null
-          track_count: number
-          user_id: string
-        }
-        Insert: {
-          album_id: string
-          album_image_url?: string | null
-          album_name: string
-          artist_id: string
-          artist_name: string
-          created_at?: string
-          id?: string
-          previous_rank?: number | null
-          rank: number
-          release_date?: string | null
-          snapshot_id: string
-          total_tracks?: number | null
-          track_count?: number
-          user_id: string
-        }
-        Update: {
-          album_id?: string
-          album_image_url?: string | null
-          album_name?: string
-          artist_id?: string
-          artist_name?: string
-          created_at?: string
-          id?: string
-          previous_rank?: number | null
-          rank?: number
-          release_date?: string | null
-          snapshot_id?: string
-          total_tracks?: number | null
-          track_count?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "album_rankings_snapshot_id_fkey"
-            columns: ["snapshot_id"]
-            isOneToOne: false
-            referencedRelation: "snapshots"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       artist_listening_stats: {
         Row: {
           artist_id: string
@@ -117,56 +58,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      artist_rankings: {
-        Row: {
-          artist_id: string
-          artist_image_url: string | null
-          artist_name: string
-          created_at: string
-          genres: string[] | null
-          id: string
-          popularity: number | null
-          previous_rank: number | null
-          rank: number
-          snapshot_id: string
-          user_id: string
-        }
-        Insert: {
-          artist_id: string
-          artist_image_url?: string | null
-          artist_name: string
-          created_at?: string
-          genres?: string[] | null
-          id?: string
-          popularity?: number | null
-          previous_rank?: number | null
-          rank: number
-          snapshot_id: string
-          user_id: string
-        }
-        Update: {
-          artist_id?: string
-          artist_image_url?: string | null
-          artist_name?: string
-          created_at?: string
-          genres?: string[] | null
-          id?: string
-          popularity?: number | null
-          previous_rank?: number | null
-          rank?: number
-          snapshot_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "artist_rankings_snapshot_id_fkey"
-            columns: ["snapshot_id"]
-            isOneToOne: false
-            referencedRelation: "snapshots"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       friendships: {
         Row: {
@@ -252,68 +143,6 @@ export type Database = {
         }
         Relationships: []
       }
-      track_rankings: {
-        Row: {
-          album_id: string
-          album_name: string
-          artist_id: string
-          artist_name: string
-          created_at: string
-          duration_ms: number | null
-          id: string
-          popularity: number | null
-          previous_rank: number | null
-          rank: number
-          snapshot_id: string
-          track_id: string
-          track_image_url: string | null
-          track_name: string
-          user_id: string
-        }
-        Insert: {
-          album_id: string
-          album_name: string
-          artist_id: string
-          artist_name: string
-          created_at?: string
-          duration_ms?: number | null
-          id?: string
-          popularity?: number | null
-          previous_rank?: number | null
-          rank: number
-          snapshot_id: string
-          track_id: string
-          track_image_url?: string | null
-          track_name: string
-          user_id: string
-        }
-        Update: {
-          album_id?: string
-          album_name?: string
-          artist_id?: string
-          artist_name?: string
-          created_at?: string
-          duration_ms?: number | null
-          id?: string
-          popularity?: number | null
-          previous_rank?: number | null
-          rank?: number
-          snapshot_id?: string
-          track_id?: string
-          track_image_url?: string | null
-          track_name?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "track_rankings_snapshot_id_fkey"
-            columns: ["snapshot_id"]
-            isOneToOne: false
-            referencedRelation: "snapshots"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_profiles: {
         Row: {
           avatar_url: string | null
@@ -355,6 +184,41 @@ export type Database = {
       }
     }
     Views: {
+      album_rankings: {
+        Row: {
+          album_id: string | null
+          album_image_url: string | null
+          album_name: string | null
+          artist_id: string | null
+          artist_name: string | null
+          created_at: string | null
+          id: string | null
+          previous_rank: number | null
+          rank: number | null
+          release_date: string | null
+          snapshot_id: string | null
+          total_tracks: number | null
+          track_count: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      artist_rankings: {
+        Row: {
+          artist_id: string | null
+          artist_image_url: string | null
+          artist_name: string | null
+          created_at: string | null
+          genres: string[] | null
+          id: string | null
+          popularity: number | null
+          previous_rank: number | null
+          rank: number | null
+          snapshot_id: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       profiles_needing_real_user_id: {
         Row: {
           created_at: string | null
@@ -388,6 +252,26 @@ export type Database = {
           spotify_user_name?: string | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      track_rankings: {
+        Row: {
+          album_id: string | null
+          album_name: string | null
+          artist_id: string | null
+          artist_name: string | null
+          created_at: string | null
+          duration_ms: number | null
+          id: string | null
+          popularity: number | null
+          previous_rank: number | null
+          rank: number | null
+          snapshot_id: string | null
+          track_id: string | null
+          track_image_url: string | null
+          track_name: string | null
+          user_id: string | null
         }
         Relationships: []
       }
