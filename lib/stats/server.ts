@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database";
+import type { Database } from "@/lib/supabase/types";
 import { StatsAccessError, type StatsAccessStore } from "./access";
 
 export function createStatsAccessStore(supabase: SupabaseClient<Database>): StatsAccessStore {
