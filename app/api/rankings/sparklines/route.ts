@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { authorizeStatsOwner } from "@/lib/stats/access";
+import { createStatsAccessStore, statsErrorResponse } from "@/lib/stats/server";
 import { 
-  validateAuth, 
+  authenticateUser,
   unauthorizedResponse, 
   badRequestResponse, 
-  serverErrorResponse,
   validateItemType
 } from "@/lib/api/utils";
 
@@ -15,12 +15,13 @@ interface SparklineResponse {
 export async function GET(request: NextRequest) {
   try {
     // Validate auth
-    const user = await validateAuth();
-    if (!user) {
+    const auth = await authenticateUser();
+    if (!auth) {
       return unauthorizedResponse();
     }
 
-    const supabase = await createClient();
+    const { user, supabase } = auth;
+    const owner = await authorizeStatsOwner(user.id, request.nextUrl.searchParams.get("user_id"), createStatsAccessStore(supabase));
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;
@@ -56,15 +57,14 @@ export async function GET(request: NextRequest) {
 
     // Call the database function
     const { data, error } = await supabase.rpc("get_sparkline_data", {
-      p_user_id: user.id,
+      p_user_id: owner.userId,
       p_item_ids: ids,
       p_item_type: type,
       p_days: days,
     });
 
     if (error) {
-      console.error("Database error:", error);
-      return serverErrorResponse("Failed to fetch sparkline data");
+      throw error;
     }
 
     // Group results by item_id
@@ -95,13 +95,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        // Increase cache time since sparkline data doesn't change frequently
-        // Allow browser to cache for 5 minutes, CDN can cache for 2 minutes
-        "Cache-Control": "private, max-age=300, s-maxage=120, stale-while-revalidate=600",
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return serverErrorResponse();
+    return statsErrorResponse(error);
   }
 }

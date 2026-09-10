@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { statsDetailHref } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
@@ -21,6 +22,7 @@ interface Track {
 }
 
 interface TracksListProps {
+  userId?: string;
   tracksByTimeRange: {
     short_term: Track[];
     medium_term: Track[];
@@ -34,14 +36,15 @@ function formatDuration(durationMilliseconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function TracksList({ tracksByTimeRange }: TracksListProps) {
+export function TracksList({ tracksByTimeRange, userId }: TracksListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={tracksByTimeRange}
       itemType="track"
+      userId={userId}
       className="w-full"
       tabsRightContent={<SparklineInfo />}
-      renderItems={(tracks, sparklines, loading) => (
+      renderItems={(tracks, sparklines, loading, timeRange) => (
         <div className="space-y-2">
           {tracks.map((track, index) => (
             <div key={track.id} className="bg-transparent transition-colors hover:bg-muted/30 rounded-md">
@@ -57,7 +60,7 @@ export function TracksList({ tracksByTimeRange }: TracksListProps) {
                       {track.rank}
                     </span>
                   </div>
-                  <Link href={`/dashboard/tracks/${track.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                  <Link href={statsDetailHref("track", track.id, timeRange, userId)} className="flex items-center gap-3 flex-1 min-w-0">
                     {track.imageUrl ? (
                       <Image
                         src={track.imageUrl}

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { statsDetailHref } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
@@ -20,6 +21,7 @@ interface Album {
 }
 
 interface AlbumsListProps {
+  userId?: string;
   albumsByTimeRange: {
     short_term: Album[];
     medium_term: Album[];
@@ -27,14 +29,15 @@ interface AlbumsListProps {
   };
 }
 
-export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
+export function AlbumsList({ albumsByTimeRange, userId }: AlbumsListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={albumsByTimeRange}
       itemType="album"
+      userId={userId}
       className="w-full"
       tabsRightContent={<SparklineInfo />}
-      renderItems={(albums, sparklines, loading) => (
+      renderItems={(albums, sparklines, loading, timeRange) => (
         <div className="space-y-2">
           {albums.map((album, index) => (
             <div key={album.id} className="bg-transparent transition-colors hover:bg-muted/30 rounded-md">
@@ -50,7 +53,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
                       {album.rank}
                     </span>
                   </div>
-                  <Link href={`/dashboard/albums/${album.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                  <Link href={statsDetailHref("album", album.id, timeRange, userId)} className="flex items-center gap-3 flex-1 min-w-0">
                     {album.imageUrl ? (
                       <Image
                         src={album.imageUrl}
@@ -82,7 +85,7 @@ export function AlbumsList({ albumsByTimeRange }: AlbumsListProps) {
                   </Link>
                   <span
                     className="text-sm text-muted-foreground shrink-0 hidden sm:block"
-                    title="Tracks from this album in your top tracks"
+                    title="Tracks from this album in this listener's top tracks"
                   >
                     {album.trackCount} top tracks
                   </span>

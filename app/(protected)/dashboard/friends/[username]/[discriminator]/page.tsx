@@ -303,6 +303,7 @@ export default async function FriendProfilePage({ params }: Props) {
           </p>
         </div>
         <ArtistsList
+          userId={friendProfile.user_id}
           artistsByTimeRange={{
             short_term: transformArtists(artistsShort.data),
             medium_term: transformArtists(artistsMedium.data),
@@ -320,6 +321,7 @@ export default async function FriendProfilePage({ params }: Props) {
           </p>
         </div>
         <TracksList
+          userId={friendProfile.user_id}
           tracksByTimeRange={{
             short_term: transformTracks(tracksShort.data),
             medium_term: transformTracks(tracksMedium.data),
@@ -337,6 +339,7 @@ export default async function FriendProfilePage({ params }: Props) {
           </p>
         </div>
         <AlbumsList
+          userId={friendProfile.user_id}
           albumsByTimeRange={{
             short_term: transformAlbums(albumsShort.data),
             medium_term: transformAlbums(albumsMedium.data),

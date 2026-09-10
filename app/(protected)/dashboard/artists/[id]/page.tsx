@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { StatsViewProvider, StatsViewControls, useStatsView } from "@/components/detail/stats-view-context";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
@@ -42,6 +43,11 @@ interface Track {
 }
 
 export default function ArtistDetailPage() {
+  return <StatsViewProvider itemType="artist"><ArtistDetailPageContent /></StatsViewProvider>;
+}
+
+function ArtistDetailPageContent() {
+  const { userId, isOwn, displayName, detailHref, backHref } = useStatsView();
   const params = useParams();
   const searchParameters = useSearchParams();
   const artistId = params?.id as string;
@@ -54,6 +60,7 @@ export default function ArtistDetailPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [showAllTracks, setShowAllTracks] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tracksError, setTracksError] = useState<string | null>(null);
   const [tracksLoading, setTracksLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState<boolean>(false);
@@ -69,7 +76,7 @@ export default function ArtistDetailPage() {
         // Fetch artist details, stats, top tracks, and follow status in parallel
         const [detailsResponse, statsResponse, followResponse] = await Promise.all([
           fetch(`/api/artists/${artistId}`),
-          fetch(`/api/artists/${artistId}/stats`),
+          isOwn ? fetch(`/api/artists/${artistId}/stats`) : Promise.resolve(null),
           fetch(`/api/artists/${artistId}/follow`),
         ]);
 
@@ -78,7 +85,7 @@ export default function ArtistDetailPage() {
         const artistDetails = (await detailsResponse.json()) as ArtistDetails;
         setArtist(artistDetails);
 
-        if (statsResponse.ok) {
+        if (statsResponse?.ok) {
           const artistStats = (await statsResponse.json()) as ArtistStats;
           setStats(artistStats);
         }
@@ -97,7 +104,7 @@ export default function ArtistDetailPage() {
     if (artistId) {
       loadArtistData();
     }
-  }, [artistId]);
+  }, [artistId, isOwn]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -105,22 +112,28 @@ export default function ArtistDetailPage() {
     async function loadArtistTracks() {
       try {
         setTracksLoading(true);
+        setTracksError(null);
 
         const tracksResponse = await fetch(
-          `/api/artists/${artistId}/tracks?time_range=${timeRange}`
+          isOwn
+            ? `/api/artists/${artistId}/tracks?time_range=${timeRange}`
+            : `/api/rankings/tracks?user_id=${userId}&time_range=${timeRange}`
         );
 
         if (isCancelled) return;
 
         if (tracksResponse.ok) {
-          const artistTopTracks = (await tracksResponse.json()) as Track[];
+          const allTracks = (await tracksResponse.json()) as (Track & { artistId: string })[];
+          const artistTopTracks = isOwn ? allTracks : allTracks.filter((track) => track.artistId === artistId).slice(0, 10);
           setTracks(artistTopTracks);
         } else {
+          setTracksError("Unable to load top tracks for this listener. Please try again later.");
           setTracks([]);
         }
       } catch (caughtError) {
         if (!isCancelled) {
           console.error("Error fetching artist tracks:", caughtError);
+          setTracksError("Unable to load top tracks for this listener. Please try again later.");
           setTracks([]);
         }
       } finally {
@@ -139,7 +152,7 @@ export default function ArtistDetailPage() {
     return () => {
       isCancelled = true;
     };
-  }, [artistId, timeRange]);
+  }, [artistId, timeRange, userId, isOwn]);
 
   const formatDuration = (durationMilliseconds: number) => {
     const minutes = Math.floor(durationMilliseconds / 60000);
@@ -214,7 +227,7 @@ export default function ArtistDetailPage() {
           {error || "Artist not found"}
         </p>
         <Button asChild>
-          <Link href="/dashboard/artists">Back to Artists</Link>
+          <Link href={backHref}>Back to Artists</Link>
         </Button>
       </div>
     );
@@ -247,7 +260,7 @@ export default function ArtistDetailPage() {
           {/* Back Button */}
           <div className="absolute top-4 left-4 md:top-6 md:left-6">
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
-              <Link href="/dashboard/artists">
+              <Link href={backHref}>
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
@@ -273,13 +286,15 @@ export default function ArtistDetailPage() {
                 </>
               ) : (
                 <span className="font-medium text-white/80">
-                  Start listening to see your stats
+                  {isOwn ? "Start listening to see your stats" : `${displayName}'s listening history`}
                 </span>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      <StatsViewControls itemType="artist" itemId={artistId} itemName={artist.name} />
 
       {/* Action Buttons + Time Range */}
       <div className="px-4 md:px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -295,7 +310,7 @@ export default function ArtistDetailPage() {
                 ? "Player not ready"
                 : tracks.length === 0
                 ? "No tracks from this artist in this time range"
-                : `Play your top ${Math.min(tracks.length, 5)} track${Math.min(tracks.length, 5) === 1 ? "" : "s"} from ${artist.name}`
+                : `Play top ${Math.min(tracks.length, 5)} track${Math.min(tracks.length, 5) === 1 ? "" : "s"} from ${artist.name}`
             }
           >
             <Play className="h-6 w-6 fill-current" />
@@ -321,10 +336,12 @@ export default function ArtistDetailPage() {
         <TimeRangeQueryTabs value={timeRange} className="w-full sm:w-auto" />
       </div>
 
+      {tracksError && <p role="alert" className="px-4 pt-6 text-sm text-muted-foreground md:px-6">{tracksError}</p>}
+
       {/* My Top Tracks Section */}
       {(tracksLoading || tracks.length > 0) && (
         <div className="px-4 md:px-6 pt-8">
-          <h2 className="text-2xl font-bold mb-6">My Top Tracks</h2>
+          <h2 className="text-2xl font-bold mb-6">{isOwn ? "My Top Tracks" : `${displayName}'s Top Tracks`}</h2>
           
           <div className="space-y-1">
             {tracksLoading
@@ -369,7 +386,7 @@ export default function ArtistDetailPage() {
 
                         <div className="flex-1 min-w-0">
                           <Link
-                            href={`/dashboard/tracks/${track.id}`}
+                            href={detailHref("track", track.id)}
                             className="hover:underline"
                           >
                             <p className="text-base font-semibold truncate">{track.name}</p>
@@ -427,6 +444,8 @@ export default function ArtistDetailPage() {
           itemType="artist"
           timeRange={timeRange}
           showTimeRangeSelect={false}
+          userId={userId}
+          ownerLabel={isOwn ? "Your" : `${displayName}'s`}
         />
       </div>
 

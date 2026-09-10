@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { authorizeStatsOwner } from "@/lib/stats/access";
+import { createStatsAccessStore, statsErrorResponse } from "@/lib/stats/server";
 import { 
-  validateAuth, 
+  authenticateUser,
   unauthorizedResponse, 
   badRequestResponse,
-  notFoundResponse,
-  serverErrorResponse,
   validateItemType,
   validateTimeRange
 } from "@/lib/api/utils";
@@ -31,12 +30,13 @@ interface RankingHistoryResponse {
 export async function GET(request: NextRequest) {
   try {
     // Validate auth
-    const user = await validateAuth();
-    if (!user) {
+    const auth = await authenticateUser();
+    if (!auth) {
       return unauthorizedResponse();
     }
 
-    const supabase = await createClient();
+    const { user, supabase } = auth;
+    const owner = await authorizeStatsOwner(user.id, request.nextUrl.searchParams.get("user_id"), createStatsAccessStore(supabase));
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;
@@ -63,19 +63,21 @@ export async function GET(request: NextRequest) {
 
     // Call the database function
     const { data, error } = await supabase.rpc("get_ranking_history", {
-      p_user_id: user.id,
+      p_user_id: owner.userId,
       p_item_id: id,
       p_item_type: type,
       p_time_range: effectiveTimeRange,
     });
 
     if (error) {
-      console.error("Database error:", error);
-      return serverErrorResponse("Failed to fetch ranking history");
+      throw error;
     }
 
     if (!data || data.length === 0) {
-      return notFoundResponse("No ranking history found");
+      return NextResponse.json({ error: "No ranking history found" }, {
+        status: 404,
+        headers: { "Cache-Control": "private, no-store" },
+      });
     }
 
     // Transform snake_case to camelCase
@@ -114,12 +116,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, {
       headers: {
-        // History data is relatively stable, increase cache time
-        "Cache-Control": "private, max-age=600, s-maxage=300, stale-while-revalidate=1800",
+        "Cache-Control": "private, no-store",
       },
     });
   } catch (error) {
-    console.error("Unexpected error:", error);
-    return serverErrorResponse();
+    return statsErrorResponse(error);
   }
 }

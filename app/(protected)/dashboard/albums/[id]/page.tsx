@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { StatsViewProvider, StatsViewControls, useStatsView } from "@/components/detail/stats-view-context";
 import Link from "next/link";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -16,6 +17,11 @@ import { PlaybackPreferenceDialog } from "@/components/playback-preference-dialo
 import { ArrowLeft, Play } from "lucide-react";
 
 export default function AlbumDetailPage() {
+  return <StatsViewProvider itemType="album"><AlbumDetailPageContent /></StatsViewProvider>;
+}
+
+function AlbumDetailPageContent() {
+  const { userId, isOwn, displayName, detailHref, backHref } = useStatsView();
   const params = useParams();
   const searchParameters = useSearchParams();
   const albumId = params?.id as string;
@@ -26,6 +32,7 @@ export default function AlbumDetailPage() {
   const [album, setAlbum] = useState<{ id: string; name: string; images: { url: string }[]; artists: { name: string; id: string }[] } | null>(null);
   const [albumTracks, setAlbumTracks] = useState<{ rank: number; id: string; name: string; imageUrl: string; subtitle: string; durationMs: number; popularity: number }[]>([]);
   const [rankedAlbum, setRankedAlbum] = useState<{ trackCount: number } | null>(null);
+  const [tracksError, setTracksError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
   const [pendingPlayAction, setPendingPlayAction] = useState<(() => void) | null>(null);
@@ -34,9 +41,10 @@ export default function AlbumDetailPage() {
     async function loadAlbumData() {
       try {
         setLoading(true);
+        setTracksError(null);
         const [albumResponse, tracksResponse] = await Promise.all([
           fetch(`/api/spotify/albums/${albumId}`),
-          fetch(`/api/rankings/history?type=track&time_range=${timeRange}&limit=50`),
+          fetch(`/api/rankings/tracks?user_id=${userId}&time_range=${timeRange}`),
         ]);
 
         if (!albumResponse.ok) {
@@ -47,6 +55,9 @@ export default function AlbumDetailPage() {
         const albumData = await albumResponse.json();
         setAlbum(albumData);
 
+        if (!tracksResponse.ok) {
+          setTracksError("Unable to load saved top tracks for this listener. Please try again later.");
+        }
         if (tracksResponse.ok) {
           const tracksData = await tracksResponse.json();
           const albumTracksList = tracksData
@@ -77,7 +88,7 @@ export default function AlbumDetailPage() {
     if (albumId) {
       loadAlbumData();
     }
-  }, [albumId, timeRange]);
+  }, [albumId, timeRange, userId]);
 
   if (loading) {
     return (
@@ -95,7 +106,7 @@ export default function AlbumDetailPage() {
 
   const imageUrl = album.images[1]?.url ?? album.images[0]?.url ?? null;
   const artistName = album.artists.map((artist) => artist.name).join(", ");
-  const primaryArtistId = album.artists[0]?.id;
+  const primaryArtistId = album.artists[0]?.id ?? "";
 
   const handlePlayAlbum = () => {
     if (!playerState.isReady) return;
@@ -145,7 +156,7 @@ export default function AlbumDetailPage() {
               className="text-white hover:bg-white/20"
               asChild
             >
-              <Link href="/dashboard/albums">
+              <Link href={backHref}>
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
@@ -162,17 +173,19 @@ export default function AlbumDetailPage() {
               {rankedAlbum?.trackCount ? (
                 <span className="font-medium">
                   {rankedAlbum.trackCount}{" "}
-                  {rankedAlbum.trackCount === 1 ? "track" : "tracks"} in your top 50
+                  {rankedAlbum.trackCount === 1 ? "track" : "tracks"} in {isOwn ? "your" : `${displayName}'s`} top 50
                 </span>
               ) : (
                 <span className="font-medium text-white/80">
-                  Not in your top 50 for this time period
+                  {tracksError ? "Saved top tracks unavailable" : `Not in ${isOwn ? "your" : `${displayName}'s`} top 50 for this time period`}
                 </span>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      <StatsViewControls itemType="album" itemId={albumId} itemName={album.name} />
 
       <div className="px-4 md:px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -191,14 +204,15 @@ export default function AlbumDetailPage() {
             className="rounded-full px-8"
             asChild
           >
-            <Link href={`/dashboard/artists/${primaryArtistId}`}>View Artist</Link>
+            <Link href={detailHref("artist", primaryArtistId)}>View Artist</Link>
           </Button>
         </div>
 
         <TimeRangeQueryTabs value={timeRange} className="w-full sm:w-auto" />
       </div>
 
-      <TopTracksSection title="My Top Tracks" tracks={albumTracks} />
+      {tracksError && <p role="alert" className="px-4 pt-6 text-sm text-muted-foreground md:px-6">{tracksError}</p>}
+      <TopTracksSection title={isOwn ? "My Top Tracks" : `${displayName}'s Top Tracks`} tracks={albumTracks} detailHref={detailHref} />
 
       <div className="px-4 md:px-6 pt-8">
         <RankingHistoryLoader
@@ -206,6 +220,8 @@ export default function AlbumDetailPage() {
           itemType="album"
           timeRange={timeRange}
           showTimeRangeSelect={false}
+          userId={userId}
+          ownerLabel={isOwn ? "Your" : `${displayName}'s`}
         />
       </div>
 

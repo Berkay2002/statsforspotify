@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { StatsItemType } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ export interface TopTracksSectionTrack {
 }
 
 interface TopTracksSectionProps {
+  detailHref?: (type: StatsItemType, id: string) => string;
   title: string;
   tracks: TopTracksSectionTrack[];
   initialVisibleCount?: number;
@@ -32,6 +34,7 @@ function formatDuration(durationMilliseconds: number) {
 
 export function TopTracksSection({
   title,
+  detailHref,
   tracks,
   initialVisibleCount = 5,
   className,
@@ -77,7 +80,7 @@ export function TopTracksSection({
 
                 <div className="flex-1 min-w-0">
                   <Link
-                    href={`/dashboard/tracks/${track.id}`}
+                    href={detailHref ? detailHref("track", track.id) : `/dashboard/tracks/${track.id}`}
                     className="hover:underline"
                   >
                     <p className="text-base font-semibold truncate">

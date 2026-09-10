@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { StatsViewProvider, StatsViewControls, useStatsView } from "@/components/detail/stats-view-context";
 import Link from "next/link";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -22,6 +23,11 @@ function formatDuration(durationMilliseconds: number): string {
 }
 
 export default function TrackDetailPage() {
+  return <StatsViewProvider itemType="track"><TrackDetailPageContent /></StatsViewProvider>;
+}
+
+function TrackDetailPageContent() {
+  const { userId, isOwn, displayName, detailHref, backHref } = useStatsView();
   const params = useParams();
   const searchParameters = useSearchParams();
   const trackId = params?.id as string;
@@ -31,6 +37,7 @@ export default function TrackDetailPage() {
 
   const [track, setTrack] = useState<{ id: string; name: string; album: { id: string; name: string; images: { url: string }[] }; artists: { name: string; id: string }[]; duration_ms: number } | null>(null);
   const [relatedTracks, setRelatedTracks] = useState<{ rank: number; id: string; name: string; imageUrl: string; subtitle: string; durationMs: number; popularity: number }[]>([]);
+  const [tracksError, setTracksError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPreferenceDialog, setShowPreferenceDialog] = useState(false);
   const [pendingPlayAction, setPendingPlayAction] = useState<(() => void) | null>(null);
@@ -39,9 +46,10 @@ export default function TrackDetailPage() {
     async function loadTrackData() {
       try {
         setLoading(true);
+        setTracksError(null);
         const [trackResponse, tracksResponse] = await Promise.all([
           fetch(`/api/spotify/tracks/${trackId}`),
-          fetch(`/api/rankings/history?type=track&time_range=${timeRange}&limit=50`),
+          fetch(`/api/rankings/tracks?user_id=${userId}&time_range=${timeRange}`),
         ]);
 
         if (!trackResponse.ok) {
@@ -52,6 +60,9 @@ export default function TrackDetailPage() {
         const trackData = await trackResponse.json();
         setTrack(trackData);
 
+        if (!tracksResponse.ok) {
+          setTracksError("Unable to load saved top tracks for this listener. Please try again later.");
+        }
         if (tracksResponse.ok) {
           const tracksData = await tracksResponse.json();
           const related = tracksData
@@ -77,7 +88,7 @@ export default function TrackDetailPage() {
     if (trackId) {
       loadTrackData();
     }
-  }, [trackId, timeRange]);
+  }, [trackId, timeRange, userId]);
 
   if (loading) {
     return (
@@ -95,7 +106,7 @@ export default function TrackDetailPage() {
 
   const imageUrl = track.album.images[1]?.url ?? track.album.images[0]?.url ?? null;
   const artistName = track.artists.map((artist) => artist.name).join(", ");
-  const primaryArtistId = track.artists[0]?.id;
+  const primaryArtistId = track.artists[0]?.id ?? "";
 
   const handlePlayTrack = () => {
     if (!playerState.isReady) return;
@@ -145,7 +156,7 @@ export default function TrackDetailPage() {
               className="text-white hover:bg-white/20"
               asChild
             >
-              <Link href="/dashboard/tracks">
+              <Link href={backHref}>
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
@@ -169,6 +180,8 @@ export default function TrackDetailPage() {
         </div>
       </div>
 
+      <StatsViewControls itemType="track" itemId={trackId} itemName={track.name} />
+
       <div className="px-4 md:px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -186,7 +199,7 @@ export default function TrackDetailPage() {
             className="rounded-full px-8"
             asChild
           >
-            <Link href={`/dashboard/albums/${track.album.id}`}>View Album</Link>
+            <Link href={detailHref("album", track.album.id)}>View Album</Link>
           </Button>
           <Button
             variant="outline"
@@ -194,14 +207,15 @@ export default function TrackDetailPage() {
             className="rounded-full px-8"
             asChild
           >
-            <Link href={`/dashboard/artists/${primaryArtistId}`}>View Artist</Link>
+            <Link href={detailHref("artist", primaryArtistId)}>View Artist</Link>
           </Button>
         </div>
 
         <TimeRangeQueryTabs value={timeRange} className="w-full sm:w-auto" />
       </div>
 
-      <TopTracksSection title="More from this Album" tracks={relatedTracks} />
+      {tracksError && <p role="alert" className="px-4 pt-6 text-sm text-muted-foreground md:px-6">{tracksError}</p>}
+      <TopTracksSection title="More from this Album" tracks={relatedTracks} detailHref={detailHref} />
 
       <div className="px-4 md:px-6 pt-8">
         <RankingHistoryLoader
@@ -209,6 +223,8 @@ export default function TrackDetailPage() {
           itemType="track"
           timeRange={timeRange}
           showTimeRangeSelect={false}
+          userId={userId}
+          ownerLabel={isOwn ? "Your" : `${displayName}'s`}
         />
       </div>
 
