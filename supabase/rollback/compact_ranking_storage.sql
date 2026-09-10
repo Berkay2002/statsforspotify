@@ -1,6 +1,7 @@
 -- Restore original tables from CURRENT data, including writes since migration.
 -- Rehearse locally; apply only in the same maintenance window as the forward change.
 BEGIN;
+SET LOCAL search_path = pg_catalog, public;
 SET LOCAL lock_timeout='10s'; SET LOCAL statement_timeout='180s';
 SELECT pg_advisory_xact_lock(hashtextextended('statsforspotify:maintenance-release',0));
 LOCK TABLE public.snapshots IN SHARE ROW EXCLUSIVE MODE;

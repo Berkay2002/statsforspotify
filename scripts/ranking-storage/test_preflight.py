@@ -16,6 +16,12 @@ def main():
         "existing dependent view": "CREATE VIEW public.storage_test_dependency AS SELECT * FROM public.artist_rankings;",
     }
     passed = []
+    for path in ('public,extensions', 'public,auth,extensions'):
+        lab.sql('BEGIN; SET LOCAL search_path=' + path + ';' + source + 'ROLLBACK;')
+        if lab.sql("SELECT to_regnamespace('ranking_storage') IS NULL;") != 't':
+            raise AssertionError('Search-path rehearsal persisted changes')
+        passed.append(f'migration accepts equivalent schema with search_path={path}')
+        print('PASS', passed[-1], flush=True)
     for name, setup in cases.items():
         # Expected migration exception rolls back every DDL statement in that
         # subtransaction. The outer rollback removes the intentional drift.
