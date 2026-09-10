@@ -114,9 +114,9 @@ export const getTopArtists = cache(async (
   );
 
   return response.items.map((artist, index) => {
-    // Prefer medium-sized images (index 1) for better performance
-    // Spotify typically returns [large, medium, small]
-    const imageUrl = artist.images[1]?.url ?? artist.images[0]?.url ?? null;
+    // Spotify orders images largest first. Keep the full-size source for
+    // artwork cards; next/image creates smaller versions for thumbnails.
+    const imageUrl = artist.images[0]?.url ?? null;
     
     return {
       rank: index + 1,

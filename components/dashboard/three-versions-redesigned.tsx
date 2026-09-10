@@ -60,7 +60,7 @@ function TimeRangePanel({
   const { constants, unique_short, unique_medium, unique_long } = recap.artists;
 
   return (
-    <div className="bg-card rounded-xl border p-5">
+    <div className="bg-card rounded-3xl border p-6">
       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-4">
         {recapTimeRangeLabels[range]}
       </p>
@@ -72,8 +72,8 @@ function TimeRangePanel({
           return (
             <div key={item.id} className="flex items-center gap-3">
               {item.image_url ? (
-                <Image src={item.image_url} alt={item.name} width={44} height={44}
-                  className="rounded-md size-11 object-cover flex-shrink-0" />
+                <Image src={item.image_url} alt={item.name} width={64} height={64}
+                  className="rounded-2xl size-16 object-cover flex-shrink-0" />
               ) : (
                 <div className="size-11 rounded-md bg-muted flex-shrink-0" />
               )}
@@ -98,7 +98,7 @@ function BiggestShiftCallout({ shifts }: { shifts: RankedShiftItem[] }) {
   const biggest = shifts[0];
 
   return (
-    <div className="flex items-center gap-2 flex-wrap px-4 py-3 bg-muted border rounded-xl text-sm">
+    <div className="flex items-center gap-2 flex-wrap px-4 py-3 bg-muted border rounded-3xl text-sm">
       <span className="text-muted-foreground">Biggest shift:</span>
       {biggest.image_url ? (
         <Image src={biggest.image_url} alt={biggest.name} width={24} height={24}
@@ -128,7 +128,7 @@ export function ThreeVersionsRedesigned({
         <p className="text-sm text-muted-foreground mt-1 mb-4">
           How your taste shifts across time ranges
         </p>
-        <div className="bg-card rounded-xl border p-6 text-center">
+        <div className="bg-card rounded-3xl border p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Collecting your first snapshot… check back tomorrow
           </p>

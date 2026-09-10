@@ -21,7 +21,7 @@ export function TimeRangeTabs({
 }: TimeRangeTabsProps) {
   return (
     <Tabs value={value} onValueChange={(v) => onValueChange(v as TimeRange)} className={className}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <TabsList>
           <TabsTrigger value="short_term">
             Last 4 Weeks

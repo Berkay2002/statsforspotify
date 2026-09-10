@@ -4,15 +4,15 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Users, UserPlus, UserCheck, Clock, Loader2, ExternalLink, UserX, Bell } from "lucide-react";
+import { Search, Users, UserPlus, UserCheck, Clock, Loader2, ArrowUpRight, UserX, Bell } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import Link from "next/link";
 import { toast } from "sonner";
+import { SpotifyLogo } from "@/components/spotify-stats-logo";
 
 interface Friend {
   userId: string;
@@ -21,6 +21,7 @@ interface Friend {
   discriminator: string;
   username: string;
   avatarUrl: string | null;
+  spotifyProfileUrl?: string | null;
   statsVisibility?: string;
   friendshipStatus?: string;
   isFriend?: boolean;
@@ -41,12 +42,13 @@ interface PendingRequest {
 }
 
 export default function FriendsPage() {
+  const [activeTab, setActiveTab] = useState("friends");
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
   const queryClient = useQueryClient();
   
   // Fetch friends list
-  const { data: friendsData, isLoading: isLoadingFriends } = useQuery({
+  const { data: friendsData, isLoading: isLoadingFriends, isError: friendsError } = useQuery({
     queryKey: ["friends", "list"],
     queryFn: async () => {
       const response = await fetch("/api/friends/list");
@@ -56,7 +58,7 @@ export default function FriendsPage() {
   });
   
   // Fetch pending requests
-  const { data: pendingData, isLoading: isLoadingPending } = useQuery({
+  const { data: pendingData, isLoading: isLoadingPending, isError: pendingError } = useQuery({
     queryKey: ["friends", "pending"],
     queryFn: async () => {
       const response = await fetch("/api/friends/pending");
@@ -66,7 +68,7 @@ export default function FriendsPage() {
   });
   
   // Search users
-  const { data: searchData, isLoading: isSearching } = useQuery({
+  const { data: searchData, isLoading: isSearching, isError: searchError } = useQuery({
     queryKey: ["friends", "search", debouncedSearch],
     queryFn: async () => {
       if (!debouncedSearch || debouncedSearch.length < 2) return { results: [] };
@@ -145,189 +147,125 @@ export default function FriendsPage() {
   const pendingRequests: PendingRequest[] = pendingData?.requests || [];
   const searchResults: Friend[] = searchData?.results || [];
   
+  const searchReady = searchQuery.trim().length >= 2;
+  const searchUpdating = searchReady && (isSearching || searchQuery !== debouncedSearch);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Friends</h1>
-          <p className="text-muted-foreground">
-            Connect with friends to view their Spotify stats
-          </p>
+          <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">Your listening circle</p>
+          <h1 className="text-4xl font-semibold tracking-tight">Friends</h1>
+          <p className="mt-3 max-w-lg text-muted-foreground">Good music travels. See what your friends have on repeat.</p>
         </div>
         {friends.length > 0 && (
-          <Badge variant="secondary" className="h-8 text-sm">
-            <Users className="h-4 w-4 mr-1.5" />
-            {friends.length} {friends.length === 1 ? "Friend" : "Friends"}
-          </Badge>
-        )}
-      </div>
-      
-      {/* Search Bar with Icon */}
-      <Card className="shadow-sm">
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search users by display name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-11"
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-3" aria-hidden="true">
+              {friends.slice(0, 4).map((friend) => (
+                <Avatar key={friend.userId} className="size-11 border-4 border-background">
+                  <AvatarImage src={friend.avatarUrl || undefined} alt="" />
+                  <AvatarFallback>{friend.displayName.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            <span className="text-sm text-muted-foreground">{friends.length} {friends.length === 1 ? "friend" : "friends"}</span>
           </div>
-          {searchQuery && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Type at least 2 characters to search
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Search Results */}
-      {searchQuery && (
-        <Card className="shadow-sm border-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Search Results
-            </CardTitle>
-            <CardDescription>
-              {isSearching ? "Searching..." : `Found ${searchResults.length} ${searchResults.length === 1 ? "user" : "users"}`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isSearching ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((skeletonRowKey) => (
-                  <Skeleton key={skeletonRowKey} className="h-20 w-full" />
-                ))}
-              </div>
+        )}
+      </header>
+
+      <section className="rounded-3xl border bg-card p-6 sm:p-8" aria-labelledby="find-friends-title">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div>
+            <h2 id="find-friends-title" className="text-lg font-semibold tracking-tight">Find your people</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Search by display name to add a friend.</p>
+          </div>
+          <div className="relative w-full lg:max-w-md">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+            <Input aria-label="Search people by display name" placeholder="Search for someone..."
+              value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)}
+              className="h-12 rounded-full border-border bg-background pl-12 pr-5 shadow-none" />
+          </div>
+        </div>
+        {searchQuery && !searchReady && (
+          <p className="mt-4 text-sm text-muted-foreground" role="status">Type at least 2 characters to search.</p>
+        )}
+        {searchReady && (
+          <div className="mt-6 border-t pt-6" aria-live="polite">
+            <h3 className="mb-4 text-sm font-medium">Search results</h3>
+            {searchUpdating ? (
+              <Skeleton className="h-24 w-full rounded-2xl" />
+            ) : searchError ? (
+              <p role="alert" className="text-sm text-muted-foreground">Search is unavailable right now. Please try again.</p>
             ) : searchResults.length === 0 ? (
-              <div className="text-center py-12">
-                <UserX className="mx-auto h-12 w-12 text-muted-foreground opacity-50 mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  No users found matching &quot;{searchQuery}&quot;
-                </p>
+              <div className="flex items-center gap-3 py-4 text-sm text-muted-foreground">
+                <UserX className="size-5" /> No people found for &quot;{debouncedSearch}&quot;.
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="grid gap-3 xl:grid-cols-2">
                 {searchResults.map((user) => (
-                  <SearchResultCard
-                    key={user.userId}
-                    user={user}
+                  <SearchResultCard key={user.userId} user={user}
                     onSendRequest={() => sendRequestMutation.mutate(user.userId)}
-                    isLoading={sendRequestMutation.isPending}
-                  />
+                    isLoading={sendRequestMutation.isPending} />
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
-      
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="friends" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:w-100">
-          <TabsTrigger value="friends" className="relative">
-            <Users className="h-4 w-4 mr-2" />
-            Friends
-            {friends.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                {friends.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="relative">
-            <Bell className="h-4 w-4 mr-2" />
-            Requests
-            {pendingRequests.length > 0 && (
-              <Badge className="ml-2 h-5 px-1.5 text-xs">
-                {pendingRequests.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+          </div>
+        )}
+      </section>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-6">
+        <TabsList aria-label="Friends and requests">
+          <TabsTrigger value="friends"><Users />Friends <span className="ml-1 text-xs opacity-60">{friends.length}</span></TabsTrigger>
+          <TabsTrigger value="pending"><Bell />Requests <span className="ml-1 text-xs opacity-60">{pendingRequests.length}</span></TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="friends" className="space-y-4">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Your Friends
-              </CardTitle>
-              <CardDescription>
-                {isLoadingFriends ? "Loading..." : `${friends.length} ${friends.length === 1 ? "friend" : "friends"} total`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingFriends ? (
-                <div className="grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
-                  {[1, 2, 3, 4].map((skeletonCardKey) => (
-                    <Skeleton key={skeletonCardKey} className="h-24 w-full" />
-                  ))}
-                </div>
-              ) : friends.length === 0 ? (
-                <div className="text-center py-16">
-                  <Users className="mx-auto h-16 w-16 text-muted-foreground opacity-30 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No friends yet</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Search for users above to add them as friends and start viewing each other&apos;s Spotify stats.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
-                  {friends.map((friend) => (
-                    <FriendCard key={friend.userId} friend={friend} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="pending" className="space-y-4">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Pending Friend Requests
-              </CardTitle>
-              <CardDescription>
-                {isLoadingPending ? "Loading..." : `${pendingRequests.length} ${pendingRequests.length === 1 ? "request" : "requests"} waiting for your response`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingPending ? (
-                <div className="space-y-3">
-                  {[1, 2].map((skeletonRowKey) => (
-                    <Skeleton key={skeletonRowKey} className="h-20 w-full" />
-                  ))}
-                </div>
-              ) : pendingRequests.length === 0 ? (
-                <div className="text-center py-16">
-                  <Clock className="mx-auto h-16 w-16 text-muted-foreground opacity-30 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No pending requests</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    When someone sends you a friend request, it will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {pendingRequests.map((request) => (
-                    <PendingRequestCard
-                      key={request.friendshipId}
-                      request={request}
-                      onAccept={() => acceptMutation.mutate(request.friendshipId)}
-                      onReject={() => rejectMutation.mutate(request.friendshipId)}
-                      isAccepting={acceptMutation.isPending}
-                      isRejecting={rejectMutation.isPending}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {activeTab === "friends" ? (
+          <TabsContent value="friends">
+            {isLoadingFriends ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {[1, 2, 3].map((key) => <Skeleton key={key} className="h-80 rounded-3xl" />)}
+              </div>
+            ) : friendsError ? (
+              <div role="alert" className="rounded-3xl border p-8 text-center">
+                <p>We couldn&apos;t load your friends.</p>
+                <Button variant="outline" className="mt-4 rounded-full" onClick={() => queryClient.invalidateQueries({ queryKey: ["friends", "list"] })}>Try again</Button>
+              </div>
+            ) : friends.length === 0 ? (
+              <div className="rounded-3xl border border-dashed px-6 py-16 text-center">
+                <Users className="mx-auto mb-5 size-9 text-muted-foreground" />
+                <h2 className="text-xl font-semibold tracking-tight">Start your listening circle</h2>
+                <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">Find a friend above to explore the artists, tracks and albums they love.</p>
+              </div>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {friends.map((friend) => <FriendCard key={friend.userId} friend={friend} />)}
+              </div>
+            )}
+          </TabsContent>
+        ) : (
+          <TabsContent value="pending">
+            {isLoadingPending ? <Skeleton className="h-28 rounded-3xl" /> : pendingError ? (
+              <div role="alert" className="rounded-3xl border p-8 text-center">
+                <p>We couldn&apos;t load your requests.</p>
+                <Button variant="outline" className="mt-4 rounded-full" onClick={() => queryClient.invalidateQueries({ queryKey: ["friends", "pending"] })}>Try again</Button>
+              </div>
+            ) : pendingRequests.length === 0 ? (
+              <div className="rounded-3xl border border-dashed px-6 py-16 text-center">
+                <UserCheck className="mx-auto mb-5 size-9 text-muted-foreground" />
+                <h2 className="text-xl font-semibold tracking-tight">You&apos;re all caught up</h2>
+                <p className="mt-3 text-sm text-muted-foreground">New friend requests will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pendingRequests.map((request) => (
+                  <PendingRequestCard key={request.friendshipId} request={request}
+                    onAccept={() => acceptMutation.mutate(request.friendshipId)}
+                    onReject={() => rejectMutation.mutate(request.friendshipId)}
+                    isAccepting={acceptMutation.isPending} isRejecting={rejectMutation.isPending} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
@@ -345,7 +283,7 @@ function SearchResultCard({ user, onSendRequest, isLoading }: SearchResultCardPr
   const canView = user.canViewStats !== false;
   
   return (
-    <div className="flex items-center gap-4 p-4 border rounded-lg transition-all hover:shadow-md hover:border-primary/30 bg-card">
+    <div className="flex flex-wrap items-center gap-4 rounded-2xl border p-4 transition-colors hover:bg-muted/30 bg-background">
       <Avatar className="h-14 w-14 border-2 border-muted">
         <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />
         <AvatarFallback className="text-lg font-medium">
@@ -360,32 +298,32 @@ function SearchResultCard({ user, onSendRequest, isLoading }: SearchResultCardPr
         </p>
         <div className="flex items-center gap-2 mt-1.5">
           {isFriend && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs rounded-full">
               <UserCheck className="h-3 w-3 mr-1" />
               Friends
             </Badge>
           )}
           {isPending && !user.isPendingIncoming && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs rounded-full">
               <Clock className="h-3 w-3 mr-1" />
               Pending
             </Badge>
           )}
           {user.isPendingIncoming && (
-            <Badge className="text-xs">
+            <Badge className="text-xs rounded-full">
               Wants to be friends
             </Badge>
           )}
         </div>
       </div>
       
-      <div className="flex gap-2 flex-shrink-0">
+      <div className="flex flex-wrap gap-2 max-sm:w-full">
         {!isFriend && !isPending && (
           <Button
             size="sm"
             onClick={onSendRequest}
             disabled={isLoading}
-            className="gap-1.5"
+            className="gap-1.5 rounded-full"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -399,9 +337,9 @@ function SearchResultCard({ user, onSendRequest, isLoading }: SearchResultCardPr
         )}
         
         {canView && (
-          <Button size="sm" variant="outline" asChild className="gap-1.5">
+          <Button size="sm" variant="outline" asChild className="gap-1.5 rounded-full">
             <Link href={`/dashboard/friends/${encodeURIComponent(user.displayName)}/${user.discriminator}`}>
-              <ExternalLink className="h-4 w-4" />
+              <ArrowUpRight className="h-4 w-4" />
               View
             </Link>
           </Button>
@@ -423,7 +361,7 @@ function PendingRequestCard({ request, onAccept, onReject, isAccepting, isReject
   const timeAgo = getTimeAgo(request.createdAt);
   
   return (
-    <div className="flex items-center gap-4 p-4 border-2 border-primary/20 rounded-lg transition-all hover:shadow-lg hover:border-primary/40 bg-primary/5">
+    <div className="flex flex-wrap items-center gap-4 rounded-3xl border bg-card p-5 sm:p-6">
       <Avatar className="h-14 w-14 border-2 border-primary/30">
         <AvatarImage src={request.avatarUrl || undefined} alt={request.displayName} />
         <AvatarFallback className="text-lg font-medium bg-primary/10">
@@ -442,12 +380,12 @@ function PendingRequestCard({ request, onAccept, onReject, isAccepting, isReject
         </p>
       </div>
       
-      <div className="flex gap-2 flex-shrink-0">
+      <div className="flex flex-wrap gap-2 max-sm:w-full">
         <Button
           size="sm"
           onClick={onAccept}
           disabled={isAccepting || isRejecting}
-          className="gap-1.5"
+          className="gap-1.5 rounded-full"
         >
           {isAccepting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -461,6 +399,7 @@ function PendingRequestCard({ request, onAccept, onReject, isAccepting, isReject
         <Button
           size="sm"
           variant="outline"
+          className="rounded-full"
           onClick={onReject}
           disabled={isAccepting || isRejecting}
         >
@@ -499,52 +438,54 @@ function FriendCard({ friend }: FriendCardProps) {
   const canView = friend.statsVisibility !== "private";
   const friendsSince = friend.friendsSince ? new Date(friend.friendsSince).toLocaleDateString() : null;
   
+  const actionClassName = "h-11 min-w-0 rounded-full border-white/25 bg-black/35 px-2 text-xs text-white shadow-none hover:bg-white/15 hover:text-white dark:bg-black/35 dark:hover:bg-white/15 focus-visible:ring-white/60";
+
   return (
-    <div className="flex items-center gap-4 p-4 border rounded-lg transition-all hover:shadow-md hover:border-primary/30 bg-card group">
-      <Avatar className="h-14 w-14 border-2 border-muted group-hover:border-primary/30 transition-colors">
-        <AvatarImage src={friend.avatarUrl || undefined} alt={friend.displayName} />
-        <AvatarFallback className="text-lg font-medium">
+    <article className="group relative isolate flex min-h-96 min-w-0 flex-col justify-end overflow-hidden rounded-3xl bg-neutral-900 text-white ring-1 ring-inset ring-white/10">
+      <Avatar className="pointer-events-none absolute inset-0 size-full overflow-hidden rounded-none after:rounded-none">
+        <AvatarImage src={friend.avatarUrl || undefined} alt={friend.displayName}
+          className="rounded-none object-cover object-[center_30%] transition-transform duration-700 motion-safe:group-hover:scale-105" />
+        <AvatarFallback className="items-start rounded-none bg-neutral-900 pt-16 text-7xl font-medium text-white/15">
           {friend.displayName.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
-      
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold truncate text-base">
-          {friend.displayName}
-          <span className="text-muted-foreground text-sm ml-1">#{friend.discriminator}</span>
-        </p>
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          <Badge variant="secondary" className="text-xs">
-            <UserCheck className="h-3 w-3 mr-1" />
-            Friends
-          </Badge>
-          {friend.statsVisibility === "public" && (
-            <Badge variant="outline" className="text-xs">
-              Public Profile
-            </Badge>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-linear-to-t from-black via-black/60 to-black/5" />
+      <div className="z-10 p-6 pt-48">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="break-words text-2xl font-semibold tracking-tight">{friend.displayName}</h2>
+            <p className="mt-1 text-xs text-white/80">#{friend.discriminator}</p>
+          </div>
+          <UserCheck className="mt-1 size-4 shrink-0 text-white/80" aria-label="Friends" />
+        </div>
+        <p className="mt-5 text-xs text-white/80">{friendsSince ? `Friends since ${friendsSince}` : "In your listening circle"}</p>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          {canView ? (
+            <Button variant="outline" asChild className={actionClassName}>
+              <Link href={`/dashboard/friends/${encodeURIComponent(friend.displayName)}/${friend.discriminator}`}
+                className="after:absolute after:inset-0 after:z-10 after:rounded-3xl after:content-['']">
+                View stats
+              </Link>
+            </Button>
+          ) : (
+            <Button variant="outline" disabled className={actionClassName}>Private profile</Button>
           )}
-          {friendsSince && (
-            <span className="text-xs text-muted-foreground">
-              Since {friendsSince}
-            </span>
+          {friend.spotifyProfileUrl ? (
+            <Button variant="outline" asChild className={`${actionClassName} relative z-20 gap-1.5`}>
+              <a href={friend.spotifyProfileUrl} target="_blank" rel="noopener noreferrer"
+                aria-label={`Open ${friend.displayName}'s Spotify profile`} title="Open Spotify profile">
+                <SpotifyLogo showWordmark={false} className="size-3.5 shrink-0" />
+                Spotify profile
+              </a>
+            </Button>
+          ) : (
+            <Button variant="outline" disabled aria-label="Spotify profile unavailable" title="Spotify profile unavailable" className={`${actionClassName} relative z-20 gap-1.5`}>
+              <SpotifyLogo showWordmark={false} className="size-3.5 shrink-0" />
+              Spotify profile
+            </Button>
           )}
         </div>
       </div>
-      
-      <div className="flex gap-2 flex-shrink-0">
-        {canView ? (
-          <Button size="sm" variant="outline" asChild className="gap-1.5">
-            <Link href={`/dashboard/friends/${encodeURIComponent(friend.displayName)}/${friend.discriminator}`}>
-              <ExternalLink className="h-4 w-4" />
-              View Stats
-            </Link>
-          </Button>
-        ) : (
-          <Button size="sm" variant="outline" disabled>
-            Private
-          </Button>
-        )}
-      </div>
-    </div>
+    </article>
   );
 }

@@ -1,5 +1,16 @@
 import { getTopGenres, getTopArtists } from "@/lib/spotify/api";
+import type { RankedArtist, RankedGenre } from "@/lib/spotify/types";
 import { GenresPageClient } from "./genres-page-client";
+
+function withArtwork(genres: RankedGenre[], artists: RankedArtist[]) {
+  return genres.map((genre) => ({
+    ...genre,
+    artistImages: artists
+      .filter((artist) => artist.genres.includes(genre.name) && artist.imageUrl)
+      .slice(0, 4)
+      .map((artist) => ({ id: artist.id, name: artist.name, imageUrl: artist.imageUrl! })),
+  }));
+}
 
 // Server component that fetches all time ranges in parallel
 export default async function GenresPage() {
@@ -20,9 +31,9 @@ export default async function GenresPage() {
   return (
     <GenresPageClient
       genresByTimeRange={{
-        short_term: shortTermGenres,
-        medium_term: mediumTermGenres,
-        long_term: longTermGenres,
+        short_term: withArtwork(shortTermGenres, shortTermArtists),
+        medium_term: withArtwork(mediumTermGenres, mediumTermArtists),
+        long_term: withArtwork(longTermGenres, longTermArtists),
       }}
     />
   );
