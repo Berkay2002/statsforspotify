@@ -1,7 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { rankingStorageMaintenance, blocksMaintenanceRequest } from "@/lib/maintenance";
 
 export async function proxy(request: NextRequest) {
+  if (rankingStorageMaintenance && blocksMaintenanceRequest(request.nextUrl.pathname, request.method)) {
+    return NextResponse.json(
+      { error: "Brief maintenance in progress. Please try again shortly." },
+      { status: 503, headers: {
+        "Cache-Control": "private, no-store",
+        "Retry-After": "300",
+        "X-Ranking-Storage-Maintenance": process.env.VERCEL_GIT_COMMIT_SHA ?? "local",
+      } },
+    );
+  }
   // Handle auth callback redirect after successful authentication
   if (request.nextUrl.pathname === "/auth/callback") {
     const { user, supabaseResponse } = await updateSession(request);
@@ -17,6 +28,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const { user, supabaseResponse } = await updateSession(request);
+
+  if (request.nextUrl.pathname === "/api/snapshot") {
+    supabaseResponse.headers.set("X-Ranking-Storage-Release", process.env.VERCEL_GIT_COMMIT_SHA ?? "local");
+  }
 
   // Protected routes - redirect to home if not authenticated
   if (request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/profile")) {
