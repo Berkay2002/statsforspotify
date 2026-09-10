@@ -51,6 +51,12 @@ export function RankingComparison({ open, onOpenChange, itemType, itemId, itemNa
     }
   });
   const chartData = [...points.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const isolatedDot = (series: "yours" | "friend") => function IsolatedDot({ cx, cy, index }: { cx?: number; cy?: number; index?: number }) {
+    if (index === undefined || chartData[index]?.[series] == null ||
+      chartData[index - 1]?.[series] != null || chartData[index + 1]?.[series] != null) return null;
+    return <circle cx={cx} cy={cy} r={3} fill={series === "yours" ? "var(--primary)" : "var(--chart-amber)"} />;
+  };
+  const formatDate = (value: string) => new Date(`${value}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   const rangeLabel = { short_term: "Past 4 weeks", medium_term: "Past 6 months", long_term: "All time" }[timeRange];
 
   return (
@@ -76,18 +82,18 @@ export function RankingComparison({ open, onOpenChange, itemType, itemId, itemNa
         ) : isPending ? <p role="status">Loading ranking comparison...</p> : data && (
           <>
             <div className="flex flex-wrap gap-4 text-sm">
-              <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-primary" />You</span>
-              <span className="flex items-center gap-2"><span className="size-2 rounded-full bg-chart-amber" />{friend.displayName}</span>
+              <span className="flex items-center gap-2"><span className="w-6 border-t-2 border-primary" />You</span>
+              <span className="flex items-center gap-2"><span className="w-6 border-t-2 border-dashed border-chart-amber" />{friend.displayName}</span>
             </div>
             <div className="h-72 w-full" role="img" aria-label={`Your ranking history compared with ${friend.displayName} for ${itemName}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 16, bottom: 5, left: 0 }}>
-                  <CartesianGrid stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="date" tickFormatter={(value: string) => value.slice(5)} minTickGap={35} />
-                  <YAxis reversed domain={[1, 50]} ticks={[1, 10, 20, 30, 40, 50]} tickFormatter={(value: number) => `#${value}`} width={40} />
-                  <Tooltip contentStyle={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--foreground)" }} />
-                  <Line type="linear" dataKey="yours" name="You" stroke="var(--primary)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
-                  <Line type="linear" dataKey="friend" name={friend.displayName} stroke="var(--chart-amber)" strokeWidth={2} strokeDasharray="5 3" dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
+                  <CartesianGrid stroke="var(--border)" strokeOpacity={0.5} vertical={false} />
+                  <XAxis dataKey="date" tickFormatter={formatDate} minTickGap={50} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} tickMargin={10} />
+                  <YAxis reversed domain={[1, 50]} ticks={[1, 10, 20, 30, 40, 50]} tickFormatter={(value: number) => `#${value}`} width={40} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
+                  <Tooltip labelFormatter={(label) => formatDate(String(label))} formatter={(value) => `#${value}`} cursor={{ stroke: "var(--muted-foreground)", strokeDasharray: "3 4" }} contentStyle={{ background: "var(--card)", borderColor: "var(--border)", borderRadius: 12, color: "var(--foreground)", fontSize: 13 }} />
+                  <Line type="linear" dataKey="yours" name="You" stroke="var(--primary)" strokeWidth={2.5} dot={isolatedDot("yours")} activeDot={{ r: 5, stroke: "var(--card)", strokeWidth: 2 }} connectNulls={false} isAnimationActive={false} />
+                  <Line type="linear" dataKey="friend" name={friend.displayName} stroke="var(--chart-amber)" strokeWidth={2.5} strokeDasharray="6 4" dot={isolatedDot("friend")} activeDot={{ r: 5, stroke: "var(--card)", strokeWidth: 2 }} connectNulls={false} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
