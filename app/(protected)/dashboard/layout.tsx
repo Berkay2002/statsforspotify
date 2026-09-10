@@ -1,5 +1,3 @@
-import { FloatingPlayer } from "@/components/ui/floating-player";
-
 export default async function DashboardLayout({
   children,
 }: {
@@ -8,7 +6,6 @@ export default async function DashboardLayout({
   return (
     <>
       {children}
-      <FloatingPlayer />
     </>
   );
 }

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { getCurrentUser, SpotifyAPIError } from "@/lib/spotify/api";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { MobileNavigation } from "@/components/mobile-navigation";
+import { FloatingPlayer } from "@/components/ui/floating-player";
 import { InstallPrompt } from "@/components/install-prompt";
 
 export default async function ProtectedLayout({
@@ -56,6 +57,7 @@ export default async function ProtectedLayout({
             </main>
           </SidebarInset>
           <InstallPrompt />
+          <FloatingPlayer />
         </SidebarProvider>
       </TooltipProvider>
     </ErrorBoundary>
