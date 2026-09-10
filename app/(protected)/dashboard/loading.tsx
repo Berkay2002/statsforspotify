@@ -1,76 +1,50 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { ArtworkCardLoading, HeroBannerLoading, PageHeaderLoading, TimeRangeTabsLoading } from "@/components/ui/loading-skeletons";
 
 export default function DashboardLoading() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-48 mt-2" />
-        </div>
-        <Skeleton className="h-6 w-24" />
-      </div>
-
-      <Skeleton className="h-10 w-80" />
-
-      <div className="flex flex-col md:flex-row gap-5 items-center md:items-center">
-        <Skeleton className="w-[120px] h-[120px] rounded-lg" />
-        <div className="text-center md:text-left">
-          <Skeleton className="h-3 w-24 mb-2" />
-          <Skeleton className="h-9 w-48 mb-2" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-card rounded-xl border p-5">
-            <Skeleton className="h-3 w-20 mb-3" />
-            <div className="flex items-center gap-3">
-              <Skeleton className="size-12 rounded-md" />
-              <div>
-                <Skeleton className="h-5 w-28 mb-1" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-            </div>
+    <div role="status" aria-label="Loading overview" aria-busy="true" className="space-y-6">
+      <PageHeaderLoading attributionOnMobile />
+      <div className="space-y-8">
+        <div className="flex flex-col gap-8 md:min-h-[calc(100svh-8rem)]">
+          <TimeRangeTabsLoading />
+          <HeroBannerLoading />
+          <div className="grid grid-cols-1 gap-4 md:flex-1 md:grid-cols-3 md:[&>*]:min-h-72">
+            {[1, 2, 3].map(index => <ArtworkCardLoading key={index} />)}
           </div>
-        ))}
-      </div>
-
-      <Separator />
-
-      <div>
-        <Skeleton className="h-6 w-44 mb-1" />
-        <Skeleton className="h-4 w-64 mb-4" />
-        <div className="hidden md:grid md:grid-cols-3 gap-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-card rounded-xl border p-5">
-              <Skeleton className="h-3 w-24 mb-4" />
-              {[1, 2, 3].map((j) => (
-                <div key={j} className="flex items-center gap-3 mb-3">
-                  <Skeleton className="size-11 rounded-md" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
-              ))}
-            </div>
-          ))}
         </div>
-      </div>
-
-      <Separator />
-
-      <div>
-        <Skeleton className="h-6 w-28 mb-1" />
-        <Skeleton className="h-4 w-56 mb-4" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-card rounded-xl border p-5 text-center">
-              <Skeleton className="h-9 w-12 mx-auto mb-1" />
-              <Skeleton className="h-3 w-20 mx-auto mb-2" />
-              <Skeleton className="h-4 w-24 mx-auto" />
-            </div>
-          ))}
+        <Separator />
+        <div>
+          <Skeleton className="mb-1 h-7 w-48 max-w-full" />
+          <Skeleton className="mb-4 h-5 w-72 max-w-full" />
+          <div className="grid gap-4 md:grid-cols-3">
+            {[1, 2, 3].map(index => (
+              <div key={index} className={`rounded-3xl border bg-card p-6 ${index > 1 ? "hidden md:block" : ""}`}>
+                <Skeleton className="mb-4 h-4 w-28 max-w-full" />
+                <div className="space-y-3">
+                  {[1, 2, 3].map(row => (
+                    <div key={row} className="flex items-center gap-3">
+                      <Skeleton className="size-16 shrink-0 rounded-2xl" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Skeleton className="h-5 w-32 max-w-full" />
+                        <Skeleton className="h-3 w-16 max-w-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <Skeleton className="mt-4 h-12 w-full rounded-3xl" />
+        </div>
+        <Separator />
+        <div>
+          <Skeleton className="mb-1 h-7 w-32 max-w-full" />
+          <Skeleton className="mb-4 h-5 w-64 max-w-full" />
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[1, 2, 3, 4].map(index => <ArtworkCardLoading key={index} className="p-5 sm:p-6" />)}
+          </div>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FriendCardsLoading, FriendRowLoading } from "@/components/friends/friends-loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Users, UserPlus, UserCheck, Clock, Loader2, ArrowUpRight, UserX, Bell } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -193,7 +193,7 @@ export default function FriendsPage() {
           <div className="mt-6 border-t pt-6" aria-live="polite">
             <h3 className="mb-4 text-sm font-medium">Search results</h3>
             {searchUpdating ? (
-              <Skeleton className="h-24 w-full rounded-2xl" />
+              <FriendRowLoading label="Searching people" />
             ) : searchError ? (
               <p role="alert" className="text-sm text-muted-foreground">Search is unavailable right now. Please try again.</p>
             ) : searchResults.length === 0 ? (
@@ -221,9 +221,7 @@ export default function FriendsPage() {
         {activeTab === "friends" ? (
           <TabsContent value="friends">
             {isLoadingFriends ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {[1, 2, 3].map((key) => <Skeleton key={key} className="h-80 rounded-3xl" />)}
-              </div>
+              <FriendCardsLoading />
             ) : friendsError ? (
               <div role="alert" className="rounded-3xl border p-8 text-center">
                 <p>We couldn&apos;t load your friends.</p>
@@ -243,7 +241,7 @@ export default function FriendsPage() {
           </TabsContent>
         ) : (
           <TabsContent value="pending">
-            {isLoadingPending ? <Skeleton className="h-28 rounded-3xl" /> : pendingError ? (
+            {isLoadingPending ? <FriendRowLoading label="Loading friend requests" /> : pendingError ? (
               <div role="alert" className="rounded-3xl border p-8 text-center">
                 <p>We couldn&apos;t load your requests.</p>
                 <Button variant="outline" className="mt-4 rounded-full" onClick={() => queryClient.invalidateQueries({ queryKey: ["friends", "pending"] })}>Try again</Button>
