@@ -1,20 +1,24 @@
 "use client";
 
-import Image from "next/image";
+import { ArtworkBackground } from "@/components/ui/artwork-background";
 import Link from "next/link";
 import type { RankedTrackWithPrevious, RankedAlbumWithPrevious } from "@/lib/spotify/helpers";
 import type { PlotTwistsRecap } from "@/components/recaps/plot-twists";
 import type { RecapTimeRange } from "@/components/recaps/shared";
+import { statsDetailHref } from "@/lib/stats/navigation";
 
 function getBiggestClimb(
   recap: PlotTwistsRecap | null,
   timeRange: RecapTimeRange
-): { name: string; delta: number } | null {
+): { name: string; delta: number; imageUrl: string | null; href: string } | null {
   if (!recap) return null;
   const range = recap[timeRange];
   if (!range) return null;
 
-  const allEvents = [...range.artists, ...range.albums];
+  const allEvents = [
+    ...range.artists.map((event) => ({ ...event, href: statsDetailHref("artist", event.item_id, timeRange) })),
+    ...range.albums.map((event) => ({ ...event, href: statsDetailHref("album", event.item_id, timeRange) })),
+  ];
   const climbs = allEvents.filter(
     (e) => e.event_type === "biggest_climb" && e.delta !== null
   );
@@ -25,17 +29,7 @@ function getBiggestClimb(
     Math.abs(curr.delta!) > Math.abs(best.delta!) ? curr : best
   );
 
-  return { name: biggest.item_name, delta: Math.abs(biggest.delta!) };
-}
-
-function Thumbnail({ src, alt }: { src: string | null; alt: string }) {
-  if (src) {
-    return (
-      <Image src={src} alt={alt} width={48} height={48}
-        className="rounded-md size-12 object-cover flex-shrink-0" />
-    );
-  }
-  return <div className="size-12 rounded-md bg-muted flex-shrink-0" />;
+  return { name: biggest.item_name, delta: Math.abs(biggest.delta!), imageUrl: biggest.item_image_url, href: biggest.href };
 }
 
 export function HighlightCards({
@@ -50,41 +44,38 @@ export function HighlightCards({
   const biggestClimb = getBiggestClimb(plotTwists, timeRange);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <Link href="/dashboard/tracks"
-        className="bg-card rounded-xl border p-5 hover:bg-muted/50 transition-colors">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Top Track</p>
-        <div className="flex items-center gap-3">
-          <Thumbnail src={track.imageUrl} alt={track.name} />
-          <div className="min-w-0">
-            <p className="text-base font-medium truncate">{track.name}</p>
-            <p className="text-sm text-muted-foreground truncate">by {track.artistName}</p>
+    <div className="grid grid-cols-1 gap-4 md:flex-1 md:grid-cols-3 md:[&>*]:min-h-72">
+      {[
+        { label: "Top Track", item: track, href: statsDetailHref("track", track.id, timeRange) },
+        { label: "Top Album", item: album, href: statsDetailHref("album", album.id, timeRange) },
+      ].map(({ label, item, href }) => (
+        <Link key={label} href={href}
+          className="group relative isolate flex min-h-60 flex-col justify-between overflow-hidden rounded-3xl p-6 text-white ring-1 ring-inset ring-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
+          <ArtworkBackground src={item.imageUrl} />
+          <p className="relative text-xs font-medium uppercase tracking-widest text-white/90">{label}</p>
+          <div className="relative min-w-0 pt-16">
+            <p className="text-2xl font-semibold leading-tight tracking-tight break-words">{item.name}</p>
+            <p className="mt-2 text-sm text-white/90">by {item.artistName}</p>
           </div>
-        </div>
-      </Link>
-
-      <Link href="/dashboard/albums"
-        className="bg-card rounded-xl border p-5 hover:bg-muted/50 transition-colors">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Top Album</p>
-        <div className="flex items-center gap-3">
-          <Thumbnail src={album.imageUrl} alt={album.name} />
-          <div className="min-w-0">
-            <p className="text-base font-medium truncate">{album.name}</p>
-            <p className="text-sm text-muted-foreground truncate">by {album.artistName}</p>
-          </div>
-        </div>
-      </Link>
-
-      <div className="bg-card rounded-xl border p-5">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Biggest Move</p>
-        <div className="min-w-0">
+        </Link>
+      ))}
+      <div className="group relative isolate flex min-h-60 flex-col justify-between overflow-hidden rounded-3xl p-6 text-white ring-1 ring-inset ring-white/10">
+        {biggestClimb && (
+          <Link href={biggestClimb.href}
+            className="absolute inset-0 z-10 rounded-3xl focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring">
+            <span className="sr-only">Biggest Move: {biggestClimb.name}, up {biggestClimb.delta} spots</span>
+          </Link>
+        )}
+        <ArtworkBackground src={biggestClimb?.imageUrl} />
+        <p className="relative text-xs font-medium uppercase tracking-widest text-white/90">Biggest Move</p>
+        <div className="relative min-w-0 pt-16">
           {biggestClimb ? (
             <>
-              <p className="text-base font-semibold text-primary">↑ {biggestClimb.delta} spots</p>
-              <p className="text-sm text-muted-foreground truncate mt-1">{biggestClimb.name}</p>
+              <p className="text-3xl font-semibold tracking-tight">↑ {biggestClimb.delta} spots</p>
+              <p className="mt-2 text-sm text-white/90 break-words">{biggestClimb.name}</p>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-white/90">
               {hasSnapshots ? "No changes this period" : "Collecting data..."}
             </p>
           )}

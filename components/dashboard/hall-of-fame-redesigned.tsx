@@ -1,11 +1,13 @@
 "use client";
 
+import { ArtworkBackground } from "@/components/ui/artwork-background";
 import { type HallOfFameRecap } from "@/components/recaps/hall-of-fame";
 
 type StatCardData = {
   value: string;
   label: string;
   itemName: string;
+  imageUrl?: string | null;
 };
 
 function extractStats(recap: HallOfFameRecap): StatCardData[] {
@@ -28,6 +30,7 @@ function extractStats(recap: HallOfFameRecap): StatCardData[] {
             value: String(days),
             label: "Most Days at #1",
             itemName: entity.most_number_one_days.name,
+            imageUrl: entity.most_number_one_days.image_url,
           };
         }
       }
@@ -39,6 +42,7 @@ function extractStats(recap: HallOfFameRecap): StatCardData[] {
             value: String(days),
             label: "Longest Streak",
             itemName: entity.longest_streak.name,
+            imageUrl: entity.longest_streak.image_url,
           };
         }
       }
@@ -50,6 +54,7 @@ function extractStats(recap: HallOfFameRecap): StatCardData[] {
             value: `#${rank}`,
             label: "Best Peak Rank",
             itemName: entity.best_peak_rank.name,
+            imageUrl: entity.best_peak_rank.image_url,
           };
         }
       }
@@ -61,6 +66,7 @@ function extractStats(recap: HallOfFameRecap): StatCardData[] {
             value: String(top.days_charted),
             label: "Most Days Charted",
             itemName: top.name,
+            imageUrl: top.image_url,
           };
         }
       }
@@ -72,12 +78,15 @@ function extractStats(recap: HallOfFameRecap): StatCardData[] {
 
 function StatCard({ stat }: { stat: StatCardData }) {
   return (
-    <div className="bg-card rounded-xl border p-5 text-center">
-      <p className="text-3xl font-extrabold">{stat.value}</p>
-      <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
-      {stat.itemName && (
-        <p className="text-sm font-medium mt-2 truncate">{stat.itemName}</p>
-      )}
+    <div className="group relative isolate flex min-h-60 flex-col justify-between overflow-hidden rounded-3xl p-5 text-white sm:p-6">
+      <ArtworkBackground src={stat.imageUrl} sizes="(max-width: 768px) 50vw, 25vw" />
+      <p className="relative text-xs font-medium uppercase tracking-wider text-white/90">{stat.label}</p>
+      <div className="relative pt-12">
+        <p className="text-5xl font-semibold tracking-tighter">{stat.value}</p>
+        {stat.itemName && (
+          <p className="mt-3 text-sm font-medium break-words text-white/90">{stat.itemName}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -95,7 +104,7 @@ export function HallOfFameRedesigned({
         <p className="text-sm text-muted-foreground mt-1 mb-4">
           Your all-time achievements and streaks
         </p>
-        <div className="bg-card rounded-xl border p-6 text-center">
+        <div className="bg-card rounded-3xl border p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Collecting your first snapshot… check back tomorrow
           </p>
@@ -112,7 +121,7 @@ export function HallOfFameRedesigned({
       <p className="text-sm text-muted-foreground mt-1 mb-4">
         Your all-time achievements and streaks
       </p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}

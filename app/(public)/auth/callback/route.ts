@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import type { SpotifyUser } from "@/lib/spotify/types";
+import { getProfileAvatarUpdate } from "@/lib/spotify/profile-avatar";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -88,6 +90,7 @@ export async function GET(request: Request) {
           // Fetch the REAL Spotify user ID from the Spotify API
           // The identity_data.sub is the username, not the actual ID
           let actualSpotifyUserId: string | null = null;
+          let spotifyProfile: SpotifyUser | null = null;
           
           try {
             const spotifyResponse = await fetch('https://api.spotify.com/v1/me', {
@@ -97,7 +100,7 @@ export async function GET(request: Request) {
             });
             
             if (spotifyResponse.ok) {
-              const spotifyProfile = await spotifyResponse.json();
+              spotifyProfile = await spotifyResponse.json() as SpotifyUser;
               actualSpotifyUserId = spotifyProfile.id; // This is the REAL Spotify user ID
               console.log('[Auth Callback] Full Spotify profile response:', JSON.stringify(spotifyProfile, null, 2));
               console.log('[Auth Callback] Fetched Spotify user ID:', actualSpotifyUserId, '(length:', actualSpotifyUserId?.length, ')');
@@ -111,27 +114,34 @@ export async function GET(request: Request) {
           }
           
           const displayName = spotifyIdentity.identity_data.name || spotifyIdentity.identity_data.full_name || 'User';
-          const avatarUrl = spotifyIdentity.identity_data.picture?.url || null;
+          const avatarUrl = getProfileAvatarUpdate(spotifyProfile, spotifyIdentity.identity_data);
 
           // Update user profile with latest Spotify data (keeps discriminator unchanged)
           const updateData: Record<string, string | null> = {
             spotify_user_name: spotifyUsername,
             display_name: displayName,
-            avatar_url: avatarUrl,
             updated_at: new Date().toISOString(),
           };
+
+          if (avatarUrl !== undefined) {
+            updateData.avatar_url = avatarUrl;
+          }
           
           // Only update spotify_user_id if we successfully fetched it
           if (actualSpotifyUserId) {
             updateData.spotify_user_id = actualSpotifyUserId;
           }
           
-          await supabase
+          const { error: profileUpdateError } = await supabase
             .from('user_profiles')
             .update(updateData)
             .eq('user_id', user.id);
-          
-          console.log('[Auth Callback] Updated user profile - username:', spotifyUsername, 'user_id:', actualSpotifyUserId || 'not fetched');
+
+          if (profileUpdateError) {
+            console.error('[Auth Callback] Failed to update user profile:', profileUpdateError.message);
+          } else {
+            console.log('[Auth Callback] Updated user profile - username:', spotifyUsername, 'user_id:', actualSpotifyUserId || 'not fetched');
+          }
 
           // Store refresh token in spotify_connections table
           // This is critical for cron jobs to work when users are offline

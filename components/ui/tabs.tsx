@@ -135,12 +135,12 @@ type TabsListProps = React.ComponentProps<'div'> & {
 
 function TabsList({ className, ...props }: TabsListProps) {
   return (
-    <TabsHighlight className="absolute z-0 inset-0 border border-transparent rounded-md bg-background dark:border-input dark:bg-input/30 shadow-sm">
+    <TabsHighlight className="absolute z-0 inset-0 rounded-full bg-background ring-1 ring-foreground/10 dark:bg-white/15">
       <div
         role="tablist"
         data-slot="tabs-list"
         className={cn(
-          'bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-0.75',
+          'bg-muted/50 text-muted-foreground inline-flex min-h-11 w-fit max-w-full items-center justify-center gap-1 rounded-full p-1',
           className,
         )}
         {...props}
@@ -189,10 +189,11 @@ function TabsTrigger({
         ref={localRef}
         data-slot="tabs-trigger"
         role="tab"
+        aria-selected={activeValue === value}
         onClick={() => handleValueChange(value)}
         data-state={activeValue === value ? 'active' : 'inactive'}
         className={cn(
-          "data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md w-full px-2 py-1 text-sm font-medium whitespace-nowrap transition-colors duration-500 ease-in-out focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+          "data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-muted-foreground inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full w-full px-3 py-2 text-xs sm:px-4 sm:text-sm font-medium whitespace-nowrap hover:bg-foreground/5 hover:text-foreground transition-colors duration-200 focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
           className,
         )}
         {...props}

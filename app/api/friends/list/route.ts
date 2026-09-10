@@ -38,7 +38,7 @@ export async function GET() {
     // Fetch friend profiles
     const { data: profiles, error: profileError } = await supabase
       .from("user_profiles")
-      .select("user_id, display_name, discriminator, avatar_url, stats_visibility")
+      .select("user_id, display_name, discriminator, avatar_url, stats_visibility, spotify_user_id")
       .in("user_id", friendUserIds);
     
     if (profileError) {
@@ -61,6 +61,9 @@ export async function GET() {
         discriminator: profile?.discriminator || "0000",
         username: `${profile?.display_name || "Unknown"}#${profile?.discriminator || "0000"}`,
         avatarUrl: profile?.avatar_url || null,
+        spotifyProfileUrl: profile?.spotify_user_id
+          ? `https://open.spotify.com/user/${encodeURIComponent(profile.spotify_user_id)}`
+          : null,
         statsVisibility: profile?.stats_visibility || "private",
         friendsSince: friendship.created_at,
       };

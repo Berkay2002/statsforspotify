@@ -4,7 +4,6 @@ import Image from "next/image";
 import { statsDetailHref } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { SpotifyIcon } from "@/components/ui/spotify-icon";
 import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
@@ -84,15 +83,6 @@ export function ArtistsList({ artistsByTimeRange, userId }: ArtistsListProps) {
                     className="ml-0"
                   />
                 </div>
-                <a
-                  href={`https://open.spotify.com/artist/${artist.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hidden sm:flex items-center justify-center gap-2 w-full py-2 px-3 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full transition-colors text-sm font-medium mt-auto"
-                >
-                  <SpotifyIcon className="h-4 w-4" />
-                  Open in Spotify
-                </a>
               </CardContent>
             </Card>
           ))}

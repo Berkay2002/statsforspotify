@@ -45,25 +45,29 @@ export function DashboardContent({
 
   return (
     <div className="space-y-8">
-      <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-        <TabsList>
-          {timeRangeKeys.map((key) => (
-            <TabsTrigger key={key} value={key}>
-              {recapTimeRangeLabels[key]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      {/* Reserve the first desktop screen for the range tabs and featured music.
+          The 8rem allowance covers the page heading and surrounding padding. */}
+      <div className="flex flex-col gap-8 md:min-h-[calc(100svh-8rem)]">
+        <Tabs value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
+          <TabsList>
+            {timeRangeKeys.map((key) => (
+              <TabsTrigger key={key} value={key}>
+                {recapTimeRangeLabels[key]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-      <HeroBanner artist={currentArtist} />
+        <HeroBanner artist={currentArtist} timeRange={timeRange} />
 
-      <HighlightCards
-        track={currentTrack}
-        album={currentAlbum}
-        plotTwists={plotTwists}
-        timeRange={timeRange}
-        hasSnapshots={hasSnapshots}
-      />
+        <HighlightCards
+          track={currentTrack}
+          album={currentAlbum}
+          plotTwists={plotTwists}
+          timeRange={timeRange}
+          hasSnapshots={hasSnapshots}
+        />
+      </div>
 
       <Separator />
 
