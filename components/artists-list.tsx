@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { TimeRange } from "@/lib/spotify/types";
 import { statsDetailHref } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,7 @@ interface Artist {
 
 interface ArtistsListProps {
   userId?: string;
+  timeRange?: TimeRange;
   artistsByTimeRange: {
     short_term: Artist[];
     medium_term: Artist[];
@@ -28,12 +30,13 @@ interface ArtistsListProps {
   };
 }
 
-export function ArtistsList({ artistsByTimeRange, userId }: ArtistsListProps) {
+export function ArtistsList({ artistsByTimeRange, userId, timeRange }: ArtistsListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={artistsByTimeRange}
       itemType="artist"
       userId={userId}
+      timeRange={timeRange}
       className="w-full"
       tabsRightContent={<SparklineInfo />}
       renderItems={(artists, sparklines, loading, timeRange) => (

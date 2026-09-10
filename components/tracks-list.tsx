@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { TimeRange } from "@/lib/spotify/types";
 import { statsDetailHref } from "@/lib/stats/navigation";
 import Link from "next/link";
 import { SpotifyIcon } from "@/components/ui/spotify-icon";
@@ -23,6 +24,7 @@ interface Track {
 
 interface TracksListProps {
   userId?: string;
+  timeRange?: TimeRange;
   tracksByTimeRange: {
     short_term: Track[];
     medium_term: Track[];
@@ -36,12 +38,13 @@ function formatDuration(durationMilliseconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function TracksList({ tracksByTimeRange, userId }: TracksListProps) {
+export function TracksList({ tracksByTimeRange, userId, timeRange }: TracksListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={tracksByTimeRange}
       itemType="track"
       userId={userId}
+      timeRange={timeRange}
       className="w-full"
       tabsRightContent={<SparklineInfo />}
       renderItems={(tracks, sparklines, loading, timeRange) => (

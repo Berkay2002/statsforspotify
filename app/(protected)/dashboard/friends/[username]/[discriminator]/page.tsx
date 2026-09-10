@@ -1,15 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
-import { ArtistsList } from "@/components/artists-list";
-import { TracksList } from "@/components/tracks-list";
-import { AlbumsList } from "@/components/albums-list";
-import { SpotifyAttribution } from "@/components/spotify-stats-logo";
 import { FriendFollowButton } from "@/components/friend-follow-button";
+import { FriendDashboard } from "@/components/friends/friend-dashboard";
 import type { Database } from "@/lib/supabase/database";
 
 interface Props {
@@ -259,95 +255,31 @@ export default async function FriendProfilePage({ params }: Props) {
     }));
   
   return (
-    <div className="space-y-6">
-      {/* Profile Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start gap-4 justify-between">
-            <div className="flex items-start gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={friendProfile.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl">
-                  {friendProfile.display_name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <CardTitle className="text-2xl">
-                  {friendProfile.display_name}
-                  <span className="text-muted-foreground">#{friendProfile.discriminator}</span>
-                </CardTitle>
-                <CardDescription className="mt-2 space-y-2">
-                  <div>
-                    <Badge variant="secondary">
-                      {friendProfile.stats_visibility === "public" ? "Public Profile" : "Friend"}
-                    </Badge>
-                  </div>
-                  <FriendFollowButton
-                    friendUserId={friendProfile.user_id}
-                    initialStatus={friendshipStatus}
-                  />
-                </CardDescription>
-              </div>
-            </div>
-            <SpotifyAttribution />
-          </div>
-        </CardHeader>
-      </Card>
-      
-      {/* Top Artists */}
-      <div>
-        <div className="mb-4">
-          <h2 className="text-xl font-bold tracking-tight">Top Artists</h2>
-          <p className="text-sm text-muted-foreground">
-            Their most played artists on Spotify
-          </p>
-        </div>
-        <ArtistsList
-          userId={friendProfile.user_id}
-          artistsByTimeRange={{
-            short_term: transformArtists(artistsShort.data),
-            medium_term: transformArtists(artistsMedium.data),
-            long_term: transformArtists(artistsLong.data),
-          }}
-        />
-      </div>
-      
-      {/* Top Tracks */}
-      <div>
-        <div className="mb-4">
-          <h2 className="text-xl font-bold tracking-tight">Top Tracks</h2>
-          <p className="text-sm text-muted-foreground">
-            Their most played tracks on Spotify
-          </p>
-        </div>
-        <TracksList
-          userId={friendProfile.user_id}
-          tracksByTimeRange={{
-            short_term: transformTracks(tracksShort.data),
-            medium_term: transformTracks(tracksMedium.data),
-            long_term: transformTracks(tracksLong.data),
-          }}
-        />
-      </div>
-      
-      {/* Top Albums */}
-      <div>
-        <div className="mb-4">
-          <h2 className="text-xl font-bold tracking-tight">Top Albums</h2>
-          <p className="text-sm text-muted-foreground">
-            Their most played albums on Spotify
-          </p>
-        </div>
-        <AlbumsList
-          userId={friendProfile.user_id}
-          albumsByTimeRange={{
-            short_term: transformAlbums(albumsShort.data),
-            medium_term: transformAlbums(albumsMedium.data),
-            long_term: transformAlbums(albumsLong.data),
-          }}
-        />
-      </div>
-    </div>
+    <FriendDashboard
+      profile={{
+        userId: friendProfile.user_id,
+        displayName: friendProfile.display_name,
+        discriminator: friendProfile.discriminator,
+        avatarUrl: friendProfile.avatar_url,
+        spotifyUserId: friendProfile.spotify_user_id,
+      }}
+      friendshipStatus={friendshipStatus}
+      artists={{
+        short_term: transformArtists(artistsShort.data),
+        medium_term: transformArtists(artistsMedium.data),
+        long_term: transformArtists(artistsLong.data),
+      }}
+      tracks={{
+        short_term: transformTracks(tracksShort.data),
+        medium_term: transformTracks(tracksMedium.data),
+        long_term: transformTracks(tracksLong.data),
+      }}
+      albums={{
+        short_term: transformAlbums(albumsShort.data),
+        medium_term: transformAlbums(albumsMedium.data),
+        long_term: transformAlbums(albumsLong.data),
+      }}
+    />
   );
 }
 

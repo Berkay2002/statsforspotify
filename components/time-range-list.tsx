@@ -22,6 +22,8 @@ interface TimeRangeListProps<T extends ItemWithId> {
   itemType: "artist" | "track" | "album";
   renderItems: (items: T[], sparklinesByItemId: SparklinesByItemId, isLoading: boolean, timeRange: TimeRange) => ReactNode;
   userId?: string;
+  /** An external range replaces the list's own time-range controls. */
+  timeRange?: TimeRange;
   className?: string;
   tabsRightContent?: ReactNode;
 }
@@ -37,14 +39,21 @@ export function TimeRangeList<T extends ItemWithId>({
   renderItems,
   className,
   tabsRightContent,
+  timeRange: externalTimeRange,
 }: TimeRangeListProps<T>) {
-  const [timeRange, setTimeRange] = useState<TimeRange>("short_term");
+  const [localTimeRange, setTimeRange] = useState<TimeRange>("short_term");
+  const timeRange = externalTimeRange ?? localTimeRange;
   const items = itemsByTimeRange[timeRange];
   const itemIds = useMemo(() => items.map((item) => item.id), [items]);
 
   return (
     <SparklineLoader key={`${userId ?? "me"}:${timeRange}`} itemIds={itemIds} itemType={itemType} userId={userId}>
-      {(sparklinesByItemId, isLoading) => (
+      {(sparklinesByItemId, isLoading) => externalTimeRange ? (
+        <div className={className}>
+          {tabsRightContent && <div className="mb-4 flex justify-end">{tabsRightContent}</div>}
+          {renderItems(items, sparklinesByItemId, isLoading, timeRange)}
+        </div>
+      ) : (
         <TimeRangeTabs
           value={timeRange}
           onValueChange={setTimeRange}
