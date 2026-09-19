@@ -14,14 +14,14 @@ import { TimeRangeQueryTabs } from "@/components/time-range-query-tabs";
 import { useSpotifyPlayer } from "@/lib/spotify/player-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PlaybackPreferenceDialog } from "@/components/playback-preference-dialog";
-import { ArrowLeft, Play } from "lucide-react";
+import { Play } from "lucide-react";
 
 export default function AlbumDetailPage() {
   return <StatsViewProvider itemType="album"><AlbumDetailPageContent /></StatsViewProvider>;
 }
 
 function AlbumDetailPageContent() {
-  const { userId, isOwn, displayName, detailHref, backHref } = useStatsView();
+  const { userId, isOwn, displayName, detailHref } = useStatsView();
   const params = useParams();
   const searchParameters = useSearchParams();
   const albumId = params?.id as string;
@@ -130,6 +130,10 @@ function AlbumDetailPageContent() {
 
   return (
     <div className="space-y-0 -mt-4 md:-mt-6 -mx-4 md:-mx-6 pb-6">
+      <TimeRangeQueryTabs
+        value={timeRange}
+        leading={<StatsViewControls itemType="album" itemId={albumId} itemName={album.name} />}
+      />
       <div className="relative h-[500px] overflow-hidden">
         <div className="absolute inset-0">
           {imageUrl ? (
@@ -149,18 +153,6 @@ function AlbumDetailPageContent() {
         </div>
 
         <div className="relative h-full flex flex-col justify-end px-4 md:px-6 pb-8">
-          <div className="absolute top-4 left-4 md:top-6 md:left-6">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              asChild
-            >
-              <Link href={backHref}>
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
 
           <div className="space-y-6">
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white tracking-tight break-words">
@@ -185,7 +177,6 @@ function AlbumDetailPageContent() {
         </div>
       </div>
 
-      <StatsViewControls itemType="album" itemId={albumId} itemName={album.name} />
 
       <div className="px-4 md:px-6 pt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -207,8 +198,6 @@ function AlbumDetailPageContent() {
             <Link href={detailHref("artist", primaryArtistId)}>View Artist</Link>
           </Button>
         </div>
-
-        <TimeRangeQueryTabs value={timeRange} className="w-full sm:w-auto" />
       </div>
 
       {tracksError && <p role="alert" className="px-4 pt-6 text-sm text-muted-foreground md:px-6">{tracksError}</p>}

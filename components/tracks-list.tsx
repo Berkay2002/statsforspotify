@@ -9,7 +9,6 @@ import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
-import { SparklineInfo } from "@/components/charts/sparkline-info";
 
 interface Track {
   id: string;
@@ -25,6 +24,7 @@ interface Track {
 interface TracksListProps {
   userId?: string;
   timeRange?: TimeRange;
+  leading?: React.ReactNode;
   tracksByTimeRange: {
     short_term: Track[];
     medium_term: Track[];
@@ -38,15 +38,15 @@ function formatDuration(durationMilliseconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export function TracksList({ tracksByTimeRange, userId, timeRange }: TracksListProps) {
+export function TracksList({ tracksByTimeRange, userId, timeRange, leading }: TracksListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={tracksByTimeRange}
       itemType="track"
       userId={userId}
       timeRange={timeRange}
+      leading={leading}
       className="w-full"
-      tabsRightContent={<SparklineInfo />}
       renderItems={(tracks, sparklines, loading, timeRange) => (
         <div className="space-y-2">
           {tracks.map((track, index) => (

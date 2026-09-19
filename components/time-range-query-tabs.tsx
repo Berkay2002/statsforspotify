@@ -1,20 +1,23 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "@/components/ui/tabs";
+import { TimeRangeTabsList } from "@/components/ui/time-range-tabs";
+import { StickyBar } from "@/components/ui/sticky-bar";
 import type { TimeRange } from "@/lib/spotify/types";
 
 interface TimeRangeQueryTabsProps {
   value: TimeRange;
-  className?: string;
+  /** Control shown at the left of the toolbar, e.g. a back button. */
+  leading?: ReactNode;
   queryParameterName?: string;
   defaultValue?: TimeRange;
 }
 
 export function TimeRangeQueryTabs({
   value,
-  className,
+  leading,
   queryParameterName = "time_range",
   defaultValue = "medium_term",
 }: TimeRangeQueryTabsProps) {
@@ -39,16 +42,11 @@ export function TimeRangeQueryTabs({
   );
 
   return (
-    <Tabs
-      value={value}
-      onValueChange={(nextValue) => handleValueChange(nextValue as TimeRange)}
-      className={className}
-    >
-      <TabsList>
-        <TabsTrigger value="short_term">Past 4 weeks</TabsTrigger>
-        <TabsTrigger value="medium_term">Past 6 months</TabsTrigger>
-        <TabsTrigger value="long_term">All time</TabsTrigger>
-      </TabsList>
+    // "contents" so the sticky bar is constrained by the page, not by this wrapper.
+    <Tabs value={value} onValueChange={(nextValue) => handleValueChange(nextValue as TimeRange)} className="contents">
+      <StickyBar leading={leading} className="mx-0 mt-0 -mb-[calc(4.5rem+env(safe-area-inset-top,0px))] md:mx-0 md:mt-0 md:-mb-20">
+        <TimeRangeTabsList />
+      </StickyBar>
     </Tabs>
   );
 }

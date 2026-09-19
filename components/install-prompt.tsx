@@ -1,90 +1,95 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { X, Download, Smartphone } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import Image from "next/image"
+import { Share, X } from "lucide-react"
+import { cn } from "@/lib/utils"
 
+type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void> }
+
+const DISMISSED_KEY = "pwa-install-dismissed"
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) && !("MSStream" in window)
+const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches
+
+/** Install banner. Shows only when installing is actually possible: Chromium's install prompt, or iOS share-sheet instructions. */
 export function InstallPrompt() {
-  const [isIOS] = useState(() => {
-    // Check if running on iOS (client-side only)
-    if (typeof window === 'undefined') return false
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
-  })
-  const [isStandalone] = useState(() => {
-    // Check if already installed (client-side only)
-    if (typeof window === 'undefined') return false
-    return window.matchMedia('(display-mode: standalone)').matches
-  })
-  const [showPrompt, setShowPrompt] = useState(false)
+  const [mode, setMode] = useState<"ios" | "install" | null>(null)
+  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
 
   useEffect(() => {
-    // Check if already installed
-    const standalone = window.matchMedia('(display-mode: standalone)').matches
-    
-    // Show prompt after a short delay if not installed and not dismissed
-    const dismissed = localStorage.getItem('pwa-install-dismissed')
-    
-    if (!standalone && !dismissed) {
-      const timer = setTimeout(() => setShowPrompt(true), 3000)
-      return () => clearTimeout(timer)
+    if (isStandalone() || localStorage.getItem(DISMISSED_KEY)) return
+    const onInstallable = (e: Event) => {
+      e.preventDefault()
+      setInstallEvent(e as BeforeInstallPromptEvent)
+    }
+    window.addEventListener("beforeinstallprompt", onInstallable)
+    const timer = setTimeout(() => setMode(isIOS() ? "ios" : "install"), 3000)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("beforeinstallprompt", onInstallable)
     }
   }, [])
 
-  const handleDismiss = () => {
-    setShowPrompt(false)
-    localStorage.setItem('pwa-install-dismissed', 'true')
+  const dismiss = () => {
+    setMode(null)
+    localStorage.setItem(DISMISSED_KEY, "true")
   }
 
-  if (isStandalone || !showPrompt) {
-    return null
+  const install = async () => {
+    await installEvent?.prompt()
+    dismiss()
   }
+
+  if (!mode || (mode === "install" && !installEvent)) return null
 
   return (
-    <Card className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 shadow-lg border-primary/20">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="shrink-0 mt-1">
-            <Download className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm mb-1">Install Stats for Spotify</h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              {isIOS
-                ? "Add to your home screen for quick access and a better experience"
-                : "Install our app for quick access and offline support"}
-            </p>
-            {isIOS ? (
-              <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded-md">
-                <Smartphone className="h-4 w-4 shrink-0 mt-0.5" />
-                <p>
-                  Tap the share button{" "}
-                  <span className="inline-block">
-                    <svg className="inline h-4 w-4" viewBox="0 0 50 50" fill="currentColor">
-                      <path d="M30.3 13.7L25 8.4l-5.3 5.3-1.4-1.4L25 5.6l6.7 6.7z" />
-                      <path d="M24 7h2v21h-2z" />
-                      <path d="M35 40H15c-1.7 0-3-1.3-3-3V19c0-1.7 1.3-3 3-3h7v2h-7c-.6 0-1 .4-1 1v18c0 .6.4 1 1 1h20c.6 0 1-.4 1-1V19c0-.6-.4-1-1-1h-7v-2h7c1.7 0 3 1.3 3 3v18c0 1.7-1.3 3-3 3z" />
-                    </svg>
-                  </span>{" "}
-                  and select &ldquo;Add to Home Screen&rdquo;
-                </p>
-              </div>
-            ) : (
-              <Button size="sm" className="w-full" onClick={handleDismiss}>
-                Got it
-              </Button>
-            )}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={handleDismiss}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+    <div
+      role="dialog"
+      aria-label="Install Stats for Spotify"
+      className={cn(
+        "animate-pop-up fixed inset-x-4 z-50 origin-bottom md:inset-x-auto md:right-4 md:bottom-4 md:w-96",
+        "bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]",
+        "rounded-3xl border border-border bg-card p-4 text-card-foreground shadow-[var(--shadow-island)]",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <Image
+          src="/icon-192x192.png"
+          alt=""
+          width={48}
+          height={48}
+          className="size-12 shrink-0 rounded-xl shadow-md ring-1 ring-primary/30"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold">Stats for Spotify</p>
+          <p className="text-xs text-muted-foreground">
+            {mode === "ios" ? "Add to your Home Screen" : "Install for quick, full-screen access"}
+          </p>
         </div>
-      </CardContent>
-    </Card>
+        {mode === "install" && (
+          <button
+            type="button"
+            onClick={install}
+            className="press shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-bold text-black"
+          >
+            Install
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Dismiss"
+          className="press -mr-1 flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+        >
+          <X className="size-4" />
+        </button>
+      </div>
+      {mode === "ios" && (
+        <p className="mt-3 flex items-center gap-1.5 rounded-2xl bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+          Tap <Share className="size-4 text-primary" aria-label="Share" /> then{" "}
+          <span className="font-semibold text-foreground">Add to Home Screen</span>
+        </p>
+      )}
+    </div>
   )
 }

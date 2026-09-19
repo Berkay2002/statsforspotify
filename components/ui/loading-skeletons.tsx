@@ -20,7 +20,7 @@ export function PageHeaderLoading({ showSpotifyAttribution = true, attributionOn
 
 export function TimeRangeTabsLoading({ sections = false }: { sections?: boolean }) {
   return (
-    <div aria-hidden="true" className={cn("flex h-11 max-w-full items-center gap-1 rounded-full bg-muted/50 p-1", sections ? "w-full sm:w-84" : "w-84")}>
+    <div aria-hidden="true" className={cn("glass flex h-11 max-w-full items-center gap-1 rounded-full p-1", sections ? "w-full sm:w-84" : "w-84")}>
       {Array.from({ length: sections ? 4 : 3 }, (_, index) => (
         <Skeleton key={index} className={cn("h-9 min-w-0 flex-1 rounded-full", index > 0 && "bg-muted/40")} />
       ))}

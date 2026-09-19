@@ -25,6 +25,8 @@ interface TimeRangeListProps<T extends ItemWithId> {
   /** An external range replaces the list's own time-range controls. */
   timeRange?: TimeRange;
   className?: string;
+  /** Page title block for the sticky top bar. */
+  leading?: ReactNode;
   tabsRightContent?: ReactNode;
 }
 
@@ -38,6 +40,7 @@ export function TimeRangeList<T extends ItemWithId>({
   userId,
   renderItems,
   className,
+  leading,
   tabsRightContent,
   timeRange: externalTimeRange,
 }: TimeRangeListProps<T>) {
@@ -50,6 +53,7 @@ export function TimeRangeList<T extends ItemWithId>({
     <SparklineLoader key={`${userId ?? "me"}:${timeRange}`} itemIds={itemIds} itemType={itemType} userId={userId}>
       {(sparklinesByItemId, isLoading) => externalTimeRange ? (
         <div className={className}>
+          {leading}
           {tabsRightContent && <div className="mb-4 flex justify-end">{tabsRightContent}</div>}
           {renderItems(items, sparklinesByItemId, isLoading, timeRange)}
         </div>
@@ -58,6 +62,7 @@ export function TimeRangeList<T extends ItemWithId>({
           value={timeRange}
           onValueChange={setTimeRange}
           className={className}
+          leading={leading}
           rightContent={tabsRightContent}
         >
           <TabsContent value={timeRange} className="mt-6">

@@ -2,7 +2,7 @@ import { fetchAlbumsByTimeRange, fetchArtistsByTimeRange, fetchTracksByTimeRange
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { LoginDialog } from "@/components/login-dialog";
-import { SpotifyAttribution } from "@/components/spotify-stats-logo";
+import { PageTitle } from "@/components/ui/page-title";
 import { AutoSnapshotTrigger } from "@/components/auto-snapshot-trigger";
 import { DashboardContent } from "@/components/dashboard/dashboard-content";
 import { type ThreeVersionsRecap } from "@/components/recaps/three-versions";
@@ -71,20 +71,15 @@ export default async function DashboardPage() {
   const plotTwistsRecap = (plotTwistsResult.data ?? null) as PlotTwistsRecap | null;
   const hallOfFameRecap = (hallOfFameResult.data ?? null) as HallOfFameRecap | null;
 
+  const overviewTitle = <PageTitle title="Overview" description="Your top music on Spotify" />;
+
   return (
     <>
       <AutoSnapshotTrigger />
       <div className="space-y-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
-            <p className="text-muted-foreground">Your top music on Spotify</p>
-          </div>
-          <SpotifyAttribution />
-        </div>
-
         {overviewError || !artists || !tracks || !albums ? (
           <div className="flex flex-col items-center justify-center gap-4 py-12">
+            {overviewTitle}
             <p className="text-muted-foreground">
               {overviewError ?? "Failed to load Overview"}
             </p>
@@ -94,6 +89,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <DashboardContent
+            leading={overviewTitle}
             artists={artists}
             tracks={tracks}
             albums={albums}

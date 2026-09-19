@@ -51,11 +51,11 @@ export default async function ProtectedLayout({
           <AppSidebar user={userInfo} />
           <SidebarInset className="h-screen overflow-hidden">
             <main className="h-full overflow-y-auto">
-              {/* Mobile navigation with expandable tabs - visible only on mobile */}
-              <MobileNavigation className="md:hidden" />
-              <div className="p-4 md:p-6">{children}</div>
+              {/* Room for the floating tab bar on phones */}
+              <div className="p-4 pb-28 md:p-6">{children}</div>
             </main>
           </SidebarInset>
+          <MobileNavigation className="md:hidden" />
           <InstallPrompt />
           <FloatingPlayer />
         </SidebarProvider>

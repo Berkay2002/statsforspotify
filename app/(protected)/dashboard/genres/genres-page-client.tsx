@@ -7,7 +7,7 @@ import { ArtworkBackground } from "@/components/ui/artwork-background";
 import { Button } from "@/components/ui/button";
 import { TimeRangeTabs } from "@/components/ui/time-range-tabs";
 import { TabsContent } from "@/components/ui/tabs";
-import { SpotifyAttribution } from "@/components/spotify-stats-logo";
+import { PageTitle } from "@/components/ui/page-title";
 import { Pause, Play } from "lucide-react";
 
 interface Genre {
@@ -41,15 +41,8 @@ export function GenresPageClient({ genresByTimeRange }: GenresPageProps) {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Top Genres</h1>
-          <p className="mt-1 text-muted-foreground">The sounds you keep coming back to</p>
-        </div>
-        <SpotifyAttribution className="hidden md:flex" />
-      </div>
-
       <TimeRangeTabs value={timeRange} onValueChange={setTimeRange} className="w-full"
+        leading={<PageTitle title="Top Genres" description="The sounds you keep coming back to" />}
         rightContent={hasSlides && !reducedMotion ? (
           <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setPaused(!paused)}
             aria-label={paused ? "Play artist slideshow" : "Pause artist slideshow"}>

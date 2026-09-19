@@ -1,5 +1,5 @@
 import { fetchTracksByTimeRange } from "@/lib/spotify/helpers";
-import { SpotifyAttribution } from "@/components/spotify-stats-logo";
+import { PageTitle } from "@/components/ui/page-title";
 import { TracksList } from "@/components/tracks-list";
 
 export default async function TracksPage() {
@@ -7,17 +7,7 @@ export default async function TracksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Top Tracks</h1>
-          <p className="text-muted-foreground">
-            Your most played songs on Spotify
-          </p>
-        </div>
-        <SpotifyAttribution className="hidden md:flex" />
-      </div>
-
-      <TracksList tracksByTimeRange={tracksByTimeRange} />
+      <TracksList tracksByTimeRange={tracksByTimeRange} leading={<PageTitle title="Top Tracks" description="Your most played songs on Spotify" />} />
     </div>
   );
 }

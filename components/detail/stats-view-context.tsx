@@ -4,7 +4,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseTimeRange } from "@/lib/spotify/time-range";
@@ -88,7 +88,7 @@ export function StatsViewProvider({ itemType, children }: { itemType: StatsItemT
 export function StatsViewControls({ itemType, itemId, itemName }: {
   itemType: StatsItemType; itemId: string; itemName: string;
 }) {
-  const { viewer, owner, friends, isOwn, displayName } = useStatsView();
+  const { viewer, owner, friends, isOwn, backHref } = useStatsView();
   const pathname = usePathname();
   const search = useSearchParams();
   const router = useRouter();
@@ -101,19 +101,28 @@ export function StatsViewControls({ itemType, itemId, itemName }: {
     router.push(`${pathname}?${next}`, { scroll: false });
   };
 
+  // One glass group for the related view actions; the label survives only where there is room.
   return (
-    <div className="mx-4 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4 md:mx-6">
-      <p className="text-sm font-medium">{isOwn ? "Viewing your stats" : `Viewing ${displayName}'s stats`}</p>
-      <div className="flex flex-wrap gap-2">
+    <>
+      <div className="glass flex h-11 items-center gap-0.5 rounded-full p-1">
+        <Link href={backHref} aria-label="Back" className="press flex size-9 items-center justify-center rounded-full">
+          <ArrowLeft className="size-5" />
+        </Link>
         {owner.userId !== viewer.userId && (
-          <Button variant="outline" size="sm" onClick={switchView}>
-            {isOwn ? `View ${owner.displayName}'s history` : "View my history"}
-          </Button>
+          <button type="button" onClick={switchView} className="press h-9 rounded-full px-3 text-sm font-medium">
+            {isOwn ? `View ${owner.displayName}'s` : "View mine"}
+          </button>
         )}
         {friends.length > 0 && (
-          <Button variant="outline" size="sm" onClick={() => setComparisonOpen(true)}>
-            <Users className="size-4" /> Compare with friends
-          </Button>
+          <button
+            type="button"
+            onClick={() => setComparisonOpen(true)}
+            aria-label="Compare with friends"
+            className="press flex h-9 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium"
+          >
+            <Users className="size-5" />
+            <span className="hidden sm:inline">Compare</span>
+          </button>
         )}
       </div>
       {friends.length > 0 && (
@@ -130,6 +139,6 @@ export function StatsViewControls({ itemType, itemId, itemName }: {
           initialFriendId={owner.userId}
         />
       )}
-    </div>
+    </>
   );
 }

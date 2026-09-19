@@ -9,7 +9,6 @@ import { InlineSparkline } from "@/components/charts/sparkline-loader";
 import RankBadgeInline from "@/components/charts/rank-badge-inline";
 import { TimeRangeList } from "@/components/time-range-list";
 import { BLUR_DATA_URL } from "@/lib/constants";
-import { SparklineInfo } from "@/components/charts/sparkline-info";
 
 interface Album {
   id: string;
@@ -24,6 +23,7 @@ interface Album {
 interface AlbumsListProps {
   userId?: string;
   timeRange?: TimeRange;
+  leading?: React.ReactNode;
   albumsByTimeRange: {
     short_term: Album[];
     medium_term: Album[];
@@ -31,15 +31,15 @@ interface AlbumsListProps {
   };
 }
 
-export function AlbumsList({ albumsByTimeRange, userId, timeRange }: AlbumsListProps) {
+export function AlbumsList({ albumsByTimeRange, userId, timeRange, leading }: AlbumsListProps) {
   return (
     <TimeRangeList
       itemsByTimeRange={albumsByTimeRange}
       itemType="album"
       userId={userId}
       timeRange={timeRange}
+      leading={leading}
       className="w-full"
-      tabsRightContent={<SparklineInfo />}
       renderItems={(albums, sparklines, loading, timeRange) => (
         <div className="space-y-2">
           {albums.map((album, index) => (

@@ -5,7 +5,7 @@ import { ArtworkCardLoading, HeroBannerLoading, PageHeaderLoading, TimeRangeTabs
 export default function DashboardLoading() {
   return (
     <div role="status" aria-label="Loading overview" aria-busy="true" className="space-y-6">
-      <PageHeaderLoading attributionOnMobile />
+      <PageHeaderLoading />
       <div className="space-y-8">
         <div className="flex flex-col gap-8 md:min-h-[calc(100svh-8rem)]">
           <TimeRangeTabsLoading />

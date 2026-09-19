@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TimeRangeTabs } from "@/components/ui/time-range-tabs";
+import { StickyBar } from "@/components/ui/sticky-bar";
 import { statsDetailHref } from "@/lib/stats/navigation";
 import type { TimeRange } from "@/lib/spotify/types";
 
@@ -61,7 +62,7 @@ export function FriendDashboard({ profile, friendshipStatus, artists, tracks, al
           <Link href="/dashboard/friends" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="size-4" /> All friends
           </Link>
-          <SpotifyAttribution />
+          <SpotifyAttribution className="hidden md:flex" />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-5">
           <div className="flex min-w-0 items-center gap-4">
@@ -95,8 +96,8 @@ export function FriendDashboard({ profile, friendshipStatus, artists, tracks, al
       </header>
 
       <Tabs ref={navigationRef} value={section} onValueChange={value => selectSection(value as Section)} className="min-h-0 flex-1 gap-4">
-        <div className="sticky top-0 z-30 -mx-1 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/60 bg-background/95 px-1 py-3 backdrop-blur-xl">
-          <TabsList aria-label="Friend stats sections" className="w-full sm:w-fit">
+        <StickyBar className="-mx-1 shrink-0 px-1">
+          <TabsList aria-label="Friend stats sections" className="glass w-full sm:w-fit">
             {sections.map((value, index) => (
               <TabsTrigger key={value} value={value} id={`${id}-${value}`} aria-controls={`${id}-panel`} tabIndex={section === value ? 0 : -1}
                 className="px-2 sm:px-4"
@@ -113,10 +114,10 @@ export function FriendDashboard({ profile, friendshipStatus, artists, tracks, al
               </TabsTrigger>
             ))}
           </TabsList>
-          <TimeRangeTabs value={timeRange} onValueChange={value => { returnToNavigation(); setTimeRange(value); }}>
+          <TimeRangeTabs sticky={false} value={timeRange} onValueChange={value => { returnToNavigation(); setTimeRange(value); }}>
             <></>
           </TimeRangeTabs>
-        </div>
+        </StickyBar>
 
         <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-${section}`} tabIndex={0} className="min-h-0 min-w-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-ring">
           {section === "Overview" ? (

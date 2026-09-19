@@ -240,12 +240,12 @@ export const FloatingPlayer: React.FC<FloatingPlayerProps> = ({ className }) => 
           "z-[100] bg-[#111111] border border-white/10 shadow-2xl pointer-events-auto",
           "fixed",
           isDragging && "cursor-grabbing",
-          mobileLayout ? "left-0 right-0 bottom-0 rounded-t-2xl" : "rounded-2xl",
+          mobileLayout ? "inset-x-3 rounded-2xl" : "rounded-2xl",
           !mobileLayout && "w-72 max-w-[calc(100vw-16px)] max-h-[calc(100dvh-16px)] overflow-y-auto",
           className
         )}
         style={mobileLayout ? {
-          paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' 
+          bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))'
         } : { 
           left: playerPosition.x, 
           top: playerPosition.y 

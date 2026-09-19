@@ -28,26 +28,27 @@ export function PublicLayout({
   return (
     <div className="flex min-h-[100dvh] flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-        <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
-          <Link href="/" className="flex items-center gap-2">
+      <header className="pointer-events-none sticky top-0 z-50">
+        <div aria-hidden className="fade-down" />
+        <div className="pointer-events-auto container mx-auto flex items-center justify-between gap-4 px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top,0px))]">
+          <Link href="/" className="glass press flex h-11 items-center gap-2 rounded-full pl-2.5 pr-4">
             <SpotifyLogo
               className="h-6 w-6 text-primary"
               showWordmark={false}
             />
-            <span className="text-xl font-bold">Stats for Spotify</span>
+            <span className="text-base font-bold">Stats for Spotify</span>
           </Link>
 
           {showLandingNav && (
             <nav
               aria-label="Landing page"
-              className="hidden items-center gap-6 text-sm text-muted-foreground md:flex"
+              className="glass hidden h-11 items-center gap-1 rounded-full px-2 text-sm text-muted-foreground md:flex"
             >
               {landingLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="transition-colors hover:text-foreground"
+                  className="press rounded-full px-3 py-1.5 hover:text-foreground"
                 >
                   {item.label}
                 </Link>
@@ -56,7 +57,7 @@ export function PublicLayout({
           )}
 
           {showBackButton ? (
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" asChild className="glass press h-11 rounded-full px-4">
               <Link href={backHref}>
                 <ArrowLeft data-icon="inline-start" />
                 Back to Home
@@ -66,7 +67,7 @@ export function PublicLayout({
             <Button
               asChild
               className={cn(
-                "bg-primary text-black hover:bg-primary/90",
+                "press h-11 rounded-full bg-primary px-5 text-black hover:bg-primary/90",
                 showLandingNav && "hidden sm:inline-flex",
               )}
             >
