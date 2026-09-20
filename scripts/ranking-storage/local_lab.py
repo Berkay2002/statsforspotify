@@ -8,10 +8,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("RANKING_STORAGE_LAB",
-    "C:/Users/berka/.codex/scratch/statsforspotify-storage-lab-20260910"))
+_LAB = os.environ.get("RANKING_STORAGE_LAB")
+if not _LAB:
+    raise SystemExit("Set RANKING_STORAGE_LAB to the private artifact directory outside Git.")
+ROOT = Path(_LAB)
 CONTAINER = "statsforspotify-storage-lab-20260910"
-PREFIX = (["wsl", "-d", os.environ.get("RANKING_STORAGE_DOCKER_DISTRO", "DeepSWE-Docker"), "--"]
+PREFIX = (["wsl", "-d", os.environ.get("RANKING_STORAGE_DOCKER_DISTRO", "Ubuntu"), "--"]
           if sys.platform == "win32" else []) + ["docker", "--host", "unix:///var/run/docker.sock"]
 DATABASES = {"stats_storage_baseline", "stats_storage_ready", "stats_storage_candidate"}
 _verified = False

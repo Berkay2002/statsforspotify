@@ -18,16 +18,16 @@ Private `ranking_storage` tables have RLS and no API-role schema access. SELECT 
 
 ## Local verification
 
-All tests connect only through Docker exec to the fixed container `statsforspotify-storage-lab-20260910`, using the allowlisted databases `stats_storage_baseline` and `stats_storage_ready`. The transport verifies `--network none`, no host ports and `cron.launch_active_jobs=off`. It accepts no remote database URL. On Windows it uses native Docker in `DeepSWE-Docker` WSL; `RANKING_STORAGE_DOCKER_DISTRO` can select another local distribution.
+All tests connect only through Docker exec to the fixed container `statsforspotify-storage-lab-20260910`, using the allowlisted databases `stats_storage_baseline` and `stats_storage_ready`. The transport verifies `--network none`, no host ports and `cron.launch_active_jobs=off`. It accepts no remote database URL. On Windows it uses native Docker in WSL; set `RANKING_STORAGE_DOCKER_DISTRO` to the distribution that hosts it.
 
-Set `RANKING_STORAGE_LAB` to the private artifact directory outside Git. The current lab uses `C:/Users/berka/.codex/scratch/statsforspotify-storage-lab-20260910`. Backups include Auth data and Spotify connection credentials: retain the directory's restricted ACLs. Do not upload the raw exports or private comparison logs.
+Set `RANKING_STORAGE_LAB` to the private artifact directory outside Git. It must sit outside the repository. Backups include Auth data and Spotify connection credentials: retain the directory's restricted ACLs. Do not upload the raw exports or private comparison logs.
 
 The original clone was restored from schema and COPY exports prepared with Supabase CLI 2.117.0, using read-only export sessions. It uses `public.ecr.aws/supabase/postgres:17.6.1.063`. Candidate databases are independent copies of the untouched restored source. The lab uses no scheduled workers or external Auth/Spotify integrations.
 
 Start the retained container in an attached terminal so WSL remains active:
 
 ```powershell
-wsl -d DeepSWE-Docker -- docker --host unix:///var/run/docker.sock start --attach statsforspotify-storage-lab-20260910
+wsl -d "$RANKING_STORAGE_DOCKER_DISTRO" -- docker --host unix:///var/run/docker.sock start --attach statsforspotify-storage-lab-20260910
 ```
 
 Run tests **sequentially**, without other test writers. Some create committed temporary snapshots and clean them in `finally`; concurrent test suites would invalidate full-data comparisons.
@@ -44,8 +44,8 @@ python scripts/ranking-storage/test_rollback.py
 `test_rest.py` additionally requires the retained PostgREST containers: `statsforspotify-storage-rest-ready` on loopback 3000 and `statsforspotify-storage-rest-baseline` on loopback 3001. They share the network-disabled database container's namespace. `/lab/loopback_proxy.py`, launched inside the database container, bridges namespace-local 5432 to its Unix socket. It exposes no host port. Restart this test-only bridge after restarting the database container; then start those two REST containers. Both use the local-only signing key in `test_rest.py`, never a production credential.
 
 ```powershell
-wsl -d DeepSWE-Docker -- docker --host unix:///var/run/docker.sock exec -d statsforspotify-storage-lab-20260910 python3 /lab/loopback_proxy.py
-wsl -d DeepSWE-Docker -- docker --host unix:///var/run/docker.sock start statsforspotify-storage-rest-ready statsforspotify-storage-rest-baseline
+wsl -d "$RANKING_STORAGE_DOCKER_DISTRO" -- docker --host unix:///var/run/docker.sock exec -d statsforspotify-storage-lab-20260910 python3 /lab/loopback_proxy.py
+wsl -d "$RANKING_STORAGE_DOCKER_DISTRO" -- docker --host unix:///var/run/docker.sock start statsforspotify-storage-rest-ready statsforspotify-storage-rest-baseline
 python scripts/ranking-storage/test_rest.py
 ```
 
@@ -53,7 +53,7 @@ python scripts/ranking-storage/test_rest.py
 
 `generate.py` regenerates forward and rollback SQL without connecting to any database. Re-run the migration rehearsal after changing its templates. JSON result summaries are written to the private artifact directory.
 
-Type generation was tested through postgres-meta v0.99.0 against the migrated local database, including `postgrest_version=14.5`. Both migrated and original generated types compile through `lib/supabase/types.ts`. The checked-in generated files continue to describe production; see [schema synchronization](../../SCHEMA_SYNC.md).
+Type generation was tested through postgres-meta v0.99.0 against the migrated local database, including `postgrest_version=14.5`. Both migrated and original generated types compile through `lib/supabase/types.ts`. The checked-in generated files continue to describe production; see [schema synchronization](../../docs/schema-sync.md).
 
 ## Production rollout procedure
 

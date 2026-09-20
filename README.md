@@ -1,230 +1,164 @@
+<div align="center">
+
+<img src="public/app-logo-transparent.png" alt="Stats for Spotify" width="120">
+
 # Stats for Spotify
 
-A web app to track your Spotify listening history and visualize how your music taste evolves over time
+**Your Spotify listening history, remembered.**
+
+See your top artists, tracks, albums, and genres — then watch how they move over weeks, months, and years.
+
+[**Open the app →**](https://statsforspotify-chi.vercel.app)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![Schema Sync](https://github.com/Berkay2002/statsforspotify/actions/workflows/sync-supabase-schema.yml/badge.svg)](https://github.com/Berkay2002/statsforspotify/actions/workflows/sync-supabase-schema.yml)
+
+[Features](#features) • [Screenshots](#screenshots) • [Getting started](#getting-started) • [How it works](#how-it-works)
+
+</div>
+
+---
+
+Spotify shows you a top-50 list, but only for right now. Refresh next month and the old one is gone. **Stats for Spotify** saves a snapshot every time you visit, so your rankings become a timeline instead of a single frame — with charts, rank-change badges, and recaps that tell you what actually shifted. Sign in with Spotify and it starts tracking from your first visit.
 
 ## Features
 
-### Music Tracking
-- **Top Artists, Tracks & Albums** — View your top 50 items across different time ranges (4 weeks, 6 months, all time)
-- **Top Genres** — Discover your favorite genres derived from top artists
-- **Historical Tracking** — Automatic snapshots save your rankings to track changes over time
-- **Trend Visualization** — Recharts-powered line graphs and sparklines showing ranking history
-- **Auto-Snapshot Collection** — Rankings are automatically collected when you visit the dashboard (respects 24-hour interval)
-- **Rank Change Visualization** — Color-coded badges showing position changes (↑5, ↓3, NEW, —)
-  - Inline badges in artist/track/album lists
-  - Enhanced charts with colored dots at significant rank changes (±5 positions)
-  - Tooltips show previous rank: "Rank 3 (was 8, ↑5)"
-  - Progressive enhancement: works with or without historical data
+### Your stats
+- **Top artists, tracks, albums & genres** across three time ranges — last 4 weeks, last 6 months, and all time
+- **Rank-change badges** — `↑5`, `↓3`, `NEW` inline on every list, so movement is visible at a glance
+- **Trend charts** — ranking history plotted over time, with sparklines on list rows and tooltips like *"Rank 3 (was 8, ↑5)"*
+- **Recaps** — album takeovers, hall-of-fame returns, and plot twists generated from your own history
 
-### Social Features
-- **Friends System** — Connect with friends who mutually follow you on Spotify
-- **Privacy Controls** — Choose who can view your stats (public, friends-only, or private)
-- **User Profiles** — Discord-style usernames with discriminators (#0000)
-- **Friend Discovery** — Search for users and see follow-back suggestions
-- **View Friends' Stats** — Browse your friends' top artists, tracks, and listening history
+### Social
+- **Friends** — connect with people who mutually follow you on Spotify
+- **Profiles** — a username with a Discord-style discriminator (`#0000`)
+- **Privacy controls** — set your stats to public, friends-only, or private
+- **Compare** — browse a friend's top artists and tracks, when they allow it
 
-### Profile & Data
-- **Detailed Statistics** — View comprehensive stats including total snapshots, rankings breakdown, and tracking duration
-- **Data Portability** — Export all your data as JSON or CSV
-- **Data Management** — Delete all your data at any time (Spotify compliance)
-- **Profile Customization** — Manage privacy settings and view your listening patterns
+### Playback & control
+- **In-app player** — preview tracks without leaving the page (Spotify Premium required, via the Web Playback SDK)
 
-### User Experience
-- **Dark Mode** — Beautiful dark theme by default with light mode toggle
-- **Performance Monitoring** — Integrated Vercel Analytics and Speed Insights
-- **Mobile-Friendly** — Responsive design with mobile sidebar support
-- **Smooth Animations** — Framer Motion powered transitions and interactions
+### Your data
+- **Export** everything as JSON or CSV, any time
+- **Delete** your data or your entire account with one click
+- **Dark mode** by default, light mode on request, and a layout that works on a phone
 
-## Tech Stack
+> [!NOTE]
+> This is an independent project. It is not affiliated with, endorsed by, or sponsored by Spotify AB.
 
-- **Framework**: Next.js 16 (App Router) with React 19
-- **Database**: Supabase (PostgreSQL + Auth)
-- **Styling**: Tailwind CSS 4 + shadcn/ui
-- **Charts**: Recharts with custom sparklines
-- **Animations**: Framer Motion
-- **State Management**: TanStack React Query (for social features)
-- **Auth**: Spotify OAuth via Supabase
-- **Runtime**: Node.js 18+ or Bun
+## Screenshots
 
-## Getting Started
+|                                             |                                             |
+| ------------------------------------------- | ------------------------------------------- |
+| ![Overview](public/landing/app-overview-hero.png) | ![Artists](public/landing/app-artist-grid.png) |
+| ![Ranking chart](public/landing/app-ranking-chart.png) | ![Hero panel](public/landing/app-hero-panel-tight.png) |
+
+## Getting started
 
 ### Prerequisites
 
-- Node.js 18+ or Bun
-- Supabase project
-- Spotify Developer App
+- [Bun](https://bun.sh) (recommended) or Node.js 18+
+- A [Supabase](https://supabase.com) project
+- A [Spotify Developer](https://developer.spotify.com/dashboard) app
 
-### 1. Clone and Install
+### 1. Install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Berkay2002/statsforspotify.git
 cd statsforspotify
 bun install
 ```
 
-### 2. Set Up Supabase
+### 2. Set up Supabase
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Set up your database schema:
-   - **Option A (Recommended)**: Apply the schema from `supabase/schema/schema.sql`
-   - **Option B**: Create tables manually (snapshots, rankings, user profiles, etc.)
-3. Enable Row Level Security (RLS) on all tables
-4. Go to **Authentication > Providers > Spotify** and configure:
-   - Client ID and Secret from your [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-   - Callback URL: `https://<your-project>.supabase.co/auth/v1/callback`
-   - Add required scopes: `user-read-email`, `user-top-read`, `user-follow-read`, `user-follow-modify`, `streaming`, `user-modify-playback-state`, `user-read-playback-state`
+1. Create a project at [supabase.com](https://supabase.com).
+2. Apply the schema in [`supabase/schema/schema.sql`](supabase/schema/schema.sql). Row Level Security is part of the schema — every table is locked to its owner.
+3. Under **Authentication → Providers → Spotify**, paste your Spotify client ID and secret, and set the callback URL to `https://<your-project>.supabase.co/auth/v1/callback`.
+4. In the Spotify dashboard, add that same callback URL as a redirect URI.
 
-**Note**: The database schema is automatically synchronized from Supabase to this repository via GitHub Actions. See [SCHEMA_SYNC.md](SCHEMA_SYNC.md) for details.
+The app requests these scopes:
 
-### 3. Configure Environment
-
-Copy the example env file and fill in your values:
-
-```bash
-cp .env.local.example .env.local
 ```
+user-read-email  user-top-read  user-follow-read  user-follow-modify
+streaming  user-modify-playback-state  user-read-playback-state
+```
+
+### 3. Configure environment
+
+Create `.env.local` in the project root:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### 4. Run Development Server
+> [!WARNING]
+> `.env*` is gitignored. Never commit real keys — the anon key is public by design, but anything else belongs in your host's secret store.
+
+### 4. Run it
 
 ```bash
-bun dev
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open <http://localhost:3000>.
 
-## Project Structure
+## How it works
+
+1. **Connect** — Spotify OAuth through Supabase starts the session.
+2. **Read** — your top items, albums, genres, and profile load from the Spotify Web API.
+3. **Snapshot** — ranking positions are written to Postgres, at most once every 24 hours.
+4. **Compare** — charts, recaps, and friend views turn that stored movement into something readable.
+
+Snapshots are triggered automatically when you open the dashboard. For a server-side schedule, the Supabase Edge Function in [`supabase/functions/collect-snapshots`](supabase/functions/collect-snapshots) can run on `pg_cron`, or any external cron can call `/api/snapshot`.
+
+## Tech stack
+
+| Layer      | Choice                                                      |
+| ---------- | ----------------------------------------------------------- |
+| Framework  | Next.js 16 (App Router) + React 19                          |
+| Database   | Supabase — Postgres, Auth, Edge Functions, RLS on all tables |
+| Styling    | Tailwind CSS v4 + shadcn/ui, Lucide icons                   |
+| Charts     | Recharts v3                                                 |
+| State      | TanStack Query v5                                           |
+| Animation  | Framer Motion                                               |
+| Runtime    | Bun (or Node.js 18+), deployed on Vercel                    |
+
+## Project structure
 
 ```
-├── app/
-│   ├── (public)/           # Landing, login, auth callback, privacy, terms
-│   ├── (protected)/        # Dashboard, profile (auth required)
-│   │   ├── dashboard/      # Main dashboard with artists, tracks, albums, genres, friends
-│   │   └── profile/        # User profile, settings, data export, privacy controls
-│   └── api/                # API routes
-│       ├── snapshot/       # Snapshot collection endpoint
-│       ├── rankings/       # Ranking history queries
-│       ├── friends/        # Friend system (follow, unfollow, search, sync)
-│       ├── artists/        # Artist-specific data
-│       └── user/           # User settings (privacy, profile)
-├── components/
-│   ├── ui/                 # shadcn/ui components (50+ components)
-│   ├── charts/             # Recharts components (sparklines, ranking charts)
-│   ├── app-sidebar.tsx     # Dashboard navigation with theme toggle
-│   ├── *-list.tsx          # List components for artists, tracks, albums
-│   ├── query-provider.tsx  # React Query configuration
-│   └── auto-snapshot-trigger.tsx  # Auto-snapshot on dashboard load
-├── lib/
-│   ├── supabase/           # Supabase client utilities + generated types
-│   ├── spotify/            # Spotify API layer & types
-│   └── constants.ts        # App-wide constants
-├── hooks/
-│   ├── use-debounce.ts     # Debounce hook for search
-│   └── use-mobile.ts       # Mobile detection hook
-├── supabase/
-│   └── functions/          # Edge Functions (cron snapshots)
-└── proxy.ts                # Auth protection for /dashboard/* (Next.js 16)
+app/
+  (public)/     Landing, auth callback, privacy, terms
+  (protected)/  Dashboard, profile — auth required
+  api/          Snapshots, rankings, friends, artists, user data
+components/
+  ui/           shadcn/ui primitives
+  charts/       Sparklines and ranking charts
+  recaps/       Album takeover, hall of fame, plot twists
+lib/
+  spotify/      Spotify API layer and types
+  supabase/     Clients and generated types
+supabase/
+  schema/       Authoritative schema.sql
+  functions/    Edge Functions
+proxy.ts        Auth middleware for protected routes
 ```
-
-## Database Schema
-
-### Automated Schema Synchronization
-
-The database schema is automatically synchronized from Supabase to this repository:
-
-- **Schema file**: `supabase/schema/schema.sql` (complete database structure)
-- **TypeScript types**: `lib/supabase/database.ts` (auto-generated)
-- **Sync frequency**: Daily at 2 AM UTC via GitHub Actions
-- **Documentation**: See [SCHEMA_SYNC.md](SCHEMA_SYNC.md) for details
-
-This ensures the repository always reflects the authoritative database schema, with all changes tracked in Git.
-
-### Core Tables
-- **snapshots** — Tracks when data was collected (auto-collected on dashboard visits)
-- **artist_rankings** — User's top artist rankings per snapshot
-- **track_rankings** — User's top track rankings per snapshot  
-- **album_rankings** — Albums derived from top tracks
-- **artist_listening_stats** — Aggregated listening statistics per artist
-
-### Social Features
-- **user_profiles** — Public user profiles with Discord-style usernames and privacy settings
-- **follow_cache** — Cached Spotify follow verification results (reduces API calls)
-
-All tables have Row Level Security (RLS) enabled to ensure users can only access their own data and public data from friends.
-
-## Automated Snapshots
-
-Snapshots are automatically collected when users visit the dashboard (see [auto-snapshot-trigger.tsx](components/auto-snapshot-trigger.tsx)). The system respects a 24-hour interval to avoid excessive API calls. You can also set up:
-
-- **Scheduled snapshots** via Supabase Edge Functions with pg_cron
-- **External cron services** calling `/api/snapshot` with authentication
-
-## Key Features Explained
-
-### Friend System
-The friends feature lets users:
-- See their Spotify followers who also use the app
-- Follow back suggestions for mutual connections
-- Search for other users by display name
-- View stats from friends (respects privacy settings)
-- Cache follow relationships to reduce Spotify API calls
-
-### Privacy Controls
-Users can set their stats visibility to:
-- **Public** — Anyone can view your stats
-- **Friends Only** — Only mutual Spotify followers can see your stats
-- **Private** — Only you can see your stats
-
-### Auto-Generated Database Types
-The project uses Supabase CLI to generate TypeScript types directly from the database schema. This ensures type safety and eliminates manual type definitions:
-
-```bash
-supabase gen types typescript --project-id <id> > lib/supabase/database.ts
-```
-
-All database queries use these generated types for maximum type safety.
 
 ## Scripts
 
-```bash
-bun dev          # Start development server
-bun build        # Build for production
-bun start        # Start production server
-bun lint         # Run ESLint
-```
+| Command                        | What it does                           |
+| ------------------------------ | -------------------------------------- |
+| `bun run dev`                  | Start the dev server                   |
+| `bun run build`                | Production build                       |
+| `bun run start`                | Serve the production build             |
+| `bun run lint`                 | ESLint                                 |
+| `bun run validate:schema-sync` | Check generated types match the schema |
 
-## Deploy on Vercel
+> [!TIP]
+> `lib/supabase/database.ts` is generated from the database — don't edit it by hand. A daily GitHub Action keeps it and `schema.sql` in sync; see [docs/schema-sync.md](docs/schema-sync.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
+## Deploying
 
-### Environment Variables for Vercel
-Make sure to add these in your Vercel project settings:
-```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### Post-Deployment
-- Vercel Analytics and Speed Insights are automatically enabled
-- Update your Spotify app redirect URIs to include your Vercel domain
-- Update Supabase Auth settings to allow your Vercel domain
-
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Performance Optimizations
-
-This app includes several performance optimizations:
-- **Parallel data fetching** — Multiple time ranges fetched simultaneously
-- **React Query caching** — Social features use TanStack Query for efficient state management
-- **Server Components** — Most pages are server-rendered for faster initial loads
-- **Image optimization** — Next.js Image component with Spotify CDN integration
-- **Request deduplication** — Follow status cached to reduce Spotify API calls
-- **Code splitting** — Client components lazy-loaded only when needed
-
-## License
-
-MIT
+Deploy to [Vercel](https://vercel.com/new), set the two `NEXT_PUBLIC_SUPABASE_*` variables in the project settings, then add your production domain to both the Spotify app's redirect URIs and Supabase's allowed redirect URLs.

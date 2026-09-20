@@ -33,8 +33,8 @@ echo "✅ Schema file exists"
 
 # Check if documentation exists
 DOCS=(
-    ".github/WORKFLOW_MONITORING.md"
-    ".github/SECRETS_SETUP.md"
+    "docs/schema-sync.md"
+    "docs/github-actions.md"
     "supabase/schema/README.md"
 )
 
@@ -119,7 +119,7 @@ echo "✅ All validation checks passed!"
 echo "================================"
 echo ""
 echo "Next steps:"
-echo "1. Configure GitHub secrets (see .github/SECRETS_SETUP.md)"
+echo "1. Configure GitHub secrets (see docs/github-actions.md)"
 echo "2. Manually trigger the workflow from GitHub Actions UI"
 echo "3. Verify the schema dump is correct"
 echo "4. Set up scheduled runs (already configured in workflow)"

@@ -33,7 +33,7 @@ All **111,376 artist, 119,850 track and 92,555 album rankings** and **2,397 snap
 - Forward migration checks every typed row using bidirectional EXCEPT ALL. Rollback and reapply preserved original data plus committed post-migration inserts, edits, deletions and a non-default PostgreSQL array lower bound; fixture cleanup returned the exact original fingerprints.
 - The updated backup command worked both before and after migration. A full custom-format backup restored into a separate database; all **37 application, Auth and private tables** matched typed-row fingerprints.
 - ESLint, TypeScript and Next.js production build passed. The build was checked against both generated candidate types and the original production types; local placeholder Supabase settings were supplied for prerendering. No live Spotify/OAuth browser flow was executed.
-- Schema-sync validation passed through Git Bash. The default Windows `bash` command resolves to an unavailable WSL shell; this is documented in SCHEMA_SYNC.md.
+- Schema-sync validation passed through Git Bash. The default Windows `bash` command resolves to an unavailable WSL shell; this is documented in [schema synchronization](../../docs/schema-sync.md).
 - Independent read-only review found no remaining concrete blocker in the migration generator after the concurrency, policy and dependency fixes.
 
 ## Query timings
